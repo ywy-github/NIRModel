@@ -300,21 +300,28 @@ class Model(nn.Module):
     def forward(self, x):
         z = self._encoder(x)
         z = self._pre_vq_conv(z)
-        recon_loss, quantized, perplexity, _ = self._vq_vae(z)
+        loss, quantized, perplexity, _ = self._vq_vae(z)
         classifier_outputs = self.classifier(quantized)
         x_recon = self._decoder(quantized)
 
-        return recon_loss, x_recon, perplexity, classifier_outputs
+        return loss, x_recon, perplexity, classifier_outputs
 
 # 定义联合模型的损失函数
-def joint_loss_function(recon_loss,vq_loss,classifier_outputs,targets,lambda_recon,lambda_vq,lambda_classifier):
-    # 分类器损失
-    classifier_loss = nn.CrossEntropyLoss()(classifier_outputs, targets)
-
+def joint_loss_function(recon_loss,vq_loss,classifier_loss,lambda_recon,lambda_vq,lambda_classifier):
     # 总损失
     total_loss = lambda_recon * recon_loss + lambda_vq*vq_loss + lambda_classifier * classifier_loss
 
     return total_loss
+
+# 定义自定义损失函数，加权二进制交叉熵
+class WeightedBinaryCrossEntropyLoss(nn.Module):
+    def __init__(self, weight_positive):
+        super(WeightedBinaryCrossEntropyLoss, self).__init__()
+        self.weight_positive = weight_positive
+
+    def forward(self, y_true, y_pred):
+        loss = - (self.weight_positive * y_true * torch.log(y_pred + 1e-7) + (1 - y_true) * torch.log(1 - y_pred + 1e-7))
+        return torch.mean(loss)
 
 
 if __name__ == '__main__':
@@ -334,11 +341,14 @@ if __name__ == '__main__':
 
     decay = 0.99
 
-    learning_rate = 1e-5
+    weight_positive = 2.0  # 调整这个权重以提高对灵敏度的重视
+
+    learning_rate = 1e-3
 
     lambda_recon = 0.4
-    lambda_vq =  0.2
+    lambda_vq = 0.2
     lambda_classifier = 0.4
+
 
     # 读取数据集
     transform = transforms.Compose([transforms.Resize([128, 128]), transforms.ToTensor()])
@@ -365,6 +375,8 @@ if __name__ == '__main__':
                   num_embeddings, embedding_dim,
                   commitment_cost, decay).to(device)
 
+
+    criterion = WeightedBinaryCrossEntropyLoss(weight_positive)
     optimizer = optim.Adam(model.parameters(), lr=learning_rate, amsgrad=False)
 
     train_res_recon_error = []
@@ -390,7 +402,8 @@ if __name__ == '__main__':
 
             data_variance = torch.var(data)
             recon_loss = F.mse_loss(data_recon, data) / data_variance
-            total_loss = joint_loss_function(recon_loss,vq_loss,classifier_outputs,targets,lambda_recon,lambda_vq,lambda_classifier)
+            classifier_loss = criterion(targets, classifier_outputs)
+            total_loss = joint_loss_function(recon_loss,vq_loss,classifier_loss,lambda_recon,lambda_vq,lambda_classifier)
             total_loss.backward()
             optimizer.step()
 
@@ -413,7 +426,8 @@ if __name__ == '__main__':
                 vq_loss, data_recon, perplexity, classifier_outputs = model(data)
                 data_variance = torch.var(data)
                 recon_loss = F.mse_loss(data_recon, data) / data_variance
-                total_loss = joint_loss_function(recon_loss,vq_loss,classifier_outputs,targets,lambda_recon,lambda_vq,lambda_classifier)
+                classifier_loss = criterion(targets, classifier_outputs)
+                total_loss = joint_loss_function(recon_loss, vq_loss, classifier_loss, lambda_recon, lambda_vq,lambda_classifier)
 
                 _, predicted = torch.max(classifier_outputs, 1)
                 val_predictions.extend(predicted.cpu().numpy())
