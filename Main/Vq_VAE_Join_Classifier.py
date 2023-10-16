@@ -266,10 +266,12 @@ class Classifier(nn.Module):
         super(Classifier, self).__init__()
         self.fc1 = nn.Linear(input_dim, hidden_dim)
         self.fc2 = nn.Linear(hidden_dim, num_classes)
+        self.sigmoid = nn.Sigmoid()
 
     def forward(self, x):
         x = torch.relu(self.fc1(x))
         x = self.fc2(x)
+        x = self.sigmoid(x)  # 通过 sigmoid 函数将输出映射到 [0, 1] 的范围
         return x
 
 class Model(nn.Module):
@@ -290,7 +292,7 @@ class Model(nn.Module):
         else:
             self._vq_vae = VectorQuantizer(num_embeddings, embedding_dim,
                                            commitment_cost)
-        self.classifier = Classifier(8*32*32,256,2)
+        self.classifier = Classifier(8*32*32,256,1)
 
         self._decoder = Decoder(embedding_dim,
                                 num_hiddens,
@@ -301,7 +303,7 @@ class Model(nn.Module):
         z = self._encoder(x)
         z = self._pre_vq_conv(z)
         loss, quantized, perplexity, _ = self._vq_vae(z)
-        classifier_outputs = self.classifier(quantized)
+        classifier_outputs = self.classifier(quantized.view(quantized.size(0),-1))
         x_recon = self._decoder(quantized)
 
         return loss, x_recon, perplexity, classifier_outputs
@@ -320,6 +322,7 @@ class WeightedBinaryCrossEntropyLoss(nn.Module):
         self.weight_positive = weight_positive
 
     def forward(self, y_true, y_pred):
+        y_true = y_true.to(dtype=torch.float32)
         loss = - (self.weight_positive * y_true * torch.log(y_pred + 1e-7) + (1 - y_true) * torch.log(1 - y_pred + 1e-7))
         return torch.mean(loss)
 
@@ -377,6 +380,7 @@ if __name__ == '__main__':
 
 
     criterion = WeightedBinaryCrossEntropyLoss(weight_positive)
+    criterion.to(device)
     optimizer = optim.Adam(model.parameters(), lr=learning_rate, amsgrad=False)
 
     train_res_recon_error = []
@@ -407,8 +411,7 @@ if __name__ == '__main__':
             total_loss.backward()
             optimizer.step()
 
-            _, predicted = torch.max(classifier_outputs, 1)
-            train_predictions.extend(predicted.cpu().numpy())
+            train_predictions.extend(classifier_outputs.detach().cpu().numpy())
             train_targets.extend(targets.cpu().numpy())
 
             train_res_recon_error.append(recon_loss.item())
@@ -429,8 +432,7 @@ if __name__ == '__main__':
                 classifier_loss = criterion(targets, classifier_outputs)
                 total_loss = joint_loss_function(recon_loss, vq_loss, classifier_loss, lambda_recon, lambda_vq,lambda_classifier)
 
-                _, predicted = torch.max(classifier_outputs, 1)
-                val_predictions.extend(predicted.cpu().numpy())
+                val_predictions.extend(classifier_outputs.detach().cpu().numpy())
                 val_targets.extend(targets.cpu().numpy())
                 val_res_recon_error.append(recon_loss.item())
                 val_res_perplexity.append(perplexity.item())
