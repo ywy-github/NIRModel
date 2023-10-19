@@ -7,6 +7,7 @@ from six.moves import xrange
 
 import torch.nn as nn
 import torch.nn.functional as F
+from torch.optim.lr_scheduler import ReduceLROnPlateau
 from torch.utils.data import DataLoader
 import torch.optim as optim
 from torchvision import transforms
@@ -17,7 +18,6 @@ import numpy as np
 from PIL import Image
 import glob
 import random
-from tqdm import tqdm
 
 from Main.Metrics import all_metrics
 from Main.data_loader import MyData
@@ -331,7 +331,7 @@ if __name__ == '__main__':
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
     batch_size = 64
-    epochs = 1000
+    epochs = 500
 
     num_hiddens = 128
     num_residual_hiddens = 32
@@ -344,13 +344,13 @@ if __name__ == '__main__':
 
     decay = 0.99
 
-    weight_positive = 2.0  # 调整这个权重以提高对灵敏度的重视
+    weight_positive = 2  # 调整这个权重以提高对灵敏度的重视
 
-    learning_rate = 1e-3
+    learning_rate = 1e-5
 
-    lambda_recon = 0.4
+    lambda_recon = 0.2
     lambda_vq = 0.2
-    lambda_classifier = 0.4
+    lambda_classifier = 0.6
 
 
     # 读取数据集
@@ -382,7 +382,7 @@ if __name__ == '__main__':
     criterion = WeightedBinaryCrossEntropyLoss(weight_positive)
     criterion.to(device)
     optimizer = optim.Adam(model.parameters(), lr=learning_rate, amsgrad=False)
-
+    scheduler = ReduceLROnPlateau(optimizer, mode='min', factor=0.1, patience=2)
     train_res_recon_error = []
     train_res_perplexity = []
 
@@ -411,7 +411,8 @@ if __name__ == '__main__':
             total_loss.backward()
             optimizer.step()
 
-            train_predictions.extend(classifier_outputs.detach().cpu().numpy())
+            predicted_labels = (classifier_outputs >= 0.5).int().squeeze()
+            train_predictions.extend(predicted_labels.cpu().numpy())
             train_targets.extend(targets.cpu().numpy())
 
             train_res_recon_error.append(recon_loss.item())
@@ -432,19 +433,20 @@ if __name__ == '__main__':
                 classifier_loss = criterion(targets, classifier_outputs)
                 total_loss = joint_loss_function(recon_loss, vq_loss, classifier_loss, lambda_recon, lambda_vq,lambda_classifier)
 
-                val_predictions.extend(classifier_outputs.detach().cpu().numpy())
+                predicted_labels = (classifier_outputs >= 0.5).int().squeeze()
+                val_predictions.extend(predicted_labels.cpu().numpy())
                 val_targets.extend(targets.cpu().numpy())
                 val_res_recon_error.append(recon_loss.item())
                 val_res_perplexity.append(perplexity.item())
                 total_val_loss +=total_loss.item()
         # 将测试步骤中的真实数据、重构数据和上述生成的新数据绘图
 
-        if ((epoch + 1) % 100 == 0):
-            torch.save(model, "VQ_VAE_join_classifier{}.pth".format(epoch + 1))
-            concat = torch.cat((data[0].view(128, 128),
-                                data_recon[0].view(128, 128)), 1)
-            plt.matshow(concat.cpu().detach().numpy())
-            plt.show()
+        if ((epoch + 1) % 50 == 0):
+            # torch.save(model, "../models/VQ_VAE_Join_Classifier/{}.pth".format(epoch + 1))
+            # concat = torch.cat((data[0].view(128, 128),
+            #                     data_recon[0].view(128, 128)), 1)
+            # plt.matshow(concat.cpu().detach().numpy())
+            # plt.show()
 
             print('%d iterations' % (epoch + 1))
             train_acc, train_sen, train_spe = all_metrics(train_targets, train_predictions)
