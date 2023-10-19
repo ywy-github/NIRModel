@@ -6,3 +6,5 @@ train_recon_error: 0.028
 train_perplexity: 102.446
 val_recon_error: 0.026
 val_perplexity: 102.726
+
+测试集 acc: 0.5507sen: 0.3912spe: 0.6635loss: 4.8730
