@@ -1,0 +1,9 @@
+test1:
+
+500 iterations
+训练集 acc: 0.5572sen: 0.6359spe: 0.5177loss: 11.7232
+验证集 acc: 0.5154sen: 0.5920spe: 0.4714loss: 8.2873
+train_recon_error: 0.186
+train_perplexity: 451.003
+val_recon_error: 0.186
+val_perplexity: 446.749

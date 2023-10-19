@@ -7,7 +7,6 @@ from six.moves import xrange
 
 import torch.nn as nn
 import torch.nn.functional as F
-from tensorboard import summary
 from torch.optim.lr_scheduler import ReduceLROnPlateau
 from torch.utils.data import DataLoader
 import torch.optim as optim
@@ -19,7 +18,6 @@ import numpy as np
 from PIL import Image
 import glob
 import random
-from tqdm import tqdm
 
 from Main.Metrics import all_metrics
 from Main.data_loader import MyData
@@ -270,7 +268,7 @@ if __name__ == '__main__':
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
     batch_size = 64
-    epochs = 100
+    epochs = 1000
 
     embedding_dim = 8
     num_embeddings = 512
@@ -283,8 +281,8 @@ if __name__ == '__main__':
 
     learning_rate = 1e-5
 
-    lambda_recon = 0.4
-    lambda_vq = 0.2
+    lambda_recon = 0.3
+    lambda_vq = 0.3
     lambda_classifier = 0.4
 
 
@@ -378,8 +376,8 @@ if __name__ == '__main__':
                 total_val_loss +=total_loss.item()
         # 将测试步骤中的真实数据、重构数据和上述生成的新数据绘图
 
-        if ((epoch + 1) % 1 == 0):
-            # torch.save(model, "../models/VQ_VAE_Join_Classifier/{}.pth".format(epoch + 1))
+        if ((epoch + 1) % 100 == 0):
+            torch.save(model, "../models/VQ_VAE_Join_Classifier2/{}.pth".format(epoch + 1))
             # concat = torch.cat((data[0].view(128, 128),
             #                     data_recon[0].view(128, 128)), 1)
             # plt.matshow(concat.cpu().detach().numpy())

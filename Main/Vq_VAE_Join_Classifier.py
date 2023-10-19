@@ -348,9 +348,9 @@ if __name__ == '__main__':
 
     learning_rate = 1e-5
 
-    lambda_recon = 0.2
-    lambda_vq = 0.2
-    lambda_classifier = 0.6
+    lambda_recon = 0.3
+    lambda_vq = 0.3
+    lambda_classifier = 0.4
 
 
     # 读取数据集
