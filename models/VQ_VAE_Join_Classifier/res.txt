@@ -1,14 +1,8 @@
 
-250 iterations
-训练集 acc: 0.5457sen: 0.5743spe: 0.5313loss: 9.9126
-验证集 acc: 0.5662sen: 0.4279spe: 0.6457loss: 6.9727
-train_recon_error: 0.026
-train_perplexi
-
-500 iterations
-训练集 acc: 0.6618sen: 0.3841spe: 0.8011loss: 14.5229
-验证集 acc: 0.6134sen: 0.2985spe: 0.7943loss: 10.1599
-train_recon_error: 0.016
-train_perplexity: 92.261
-val_recon_error: 0.015
-val_perplexity: 84.274
+350 iterations
+训练集 acc: 0.6473sen: 0.4964spe: 0.7230loss: 9.8574
+验证集 acc: 0.6171sen: 0.4677spe: 0.7029loss: 6.9500
+train_recon_error: 0.028
+train_perplexity: 102.446
+val_recon_error: 0.026
+val_perplexity: 102.726
