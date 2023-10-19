@@ -230,7 +230,7 @@ class Decoder(nn.Module):
 
         self._conv_trans_1 = nn.ConvTranspose2d(in_channels=num_hiddens,
                                                 out_channels=num_hiddens // 2,
-                                                kernel_size=4,
+                                                kernel_size=(5,4),
                                                 stride=2, padding=1)
 
         self._conv_trans_2 = nn.ConvTranspose2d(in_channels=num_hiddens // 2,
@@ -292,7 +292,7 @@ class Model(nn.Module):
         else:
             self._vq_vae = VectorQuantizer(num_embeddings, embedding_dim,
                                            commitment_cost)
-        self.classifier = Classifier(8*32*32,256,1)
+        self.classifier = Classifier(6400,256,1)
 
         self._decoder = Decoder(embedding_dim,
                                 num_hiddens,
@@ -354,7 +354,7 @@ if __name__ == '__main__':
 
 
     # 读取数据集
-    transform = transforms.Compose([transforms.Resize([128, 128]), transforms.ToTensor()])
+    transform = transforms.Compose([transforms.ToTensor()])
 
     train_benign_data = MyData("../data/train/benign", "benign", transform=transform)
     train_malignat_data = MyData("../data/train/malignant", "malignant", transform=transform)
