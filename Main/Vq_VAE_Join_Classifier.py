@@ -326,24 +326,6 @@ class WeightedBinaryCrossEntropyLoss(nn.Module):
         loss = - (self.weight_positive * y_true * torch.log(y_pred + 1e-7) + (1 - y_true) * torch.log(1 - y_pred + 1e-7))
         return torch.mean(loss)
 
-# 定义 Focal Loss
-class Focal_Loss(nn.Module):
-    def __init__(self, alpha=0.6, gamma=2.0):
-        super(Focal_Loss, self).__init__()
-        self.alpha = alpha
-        self.gamma = gamma
-
-    def forward(self, preds, labels):
-        """
-        preds:sigmoid的输出结果
-        labels：标签
-        """
-        labels = labels.to(dtype=torch.float32)
-        eps = 1e-7
-        loss_1 = -1 * self.alpha * torch.pow((1 - preds), self.gamma) * torch.log(preds + eps) * labels
-        loss_0 = -1 * (1 - self.alpha) * torch.pow(preds, self.gamma) * torch.log(1 - preds + eps) * (1 - labels)
-        loss = loss_0 + loss_1
-        return torch.mean(loss)
 
 if __name__ == '__main__':
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -372,10 +354,7 @@ if __name__ == '__main__':
 
 
     # 读取数据集
-    transform = transforms.Compose([
-        transforms.ToTensor(),
-        transforms.Normalize((0.3281,), (0.2366,))  # 设置均值和标准差
-    ])
+    transform = transforms.Compose([transforms.Normalize((0.5,),(0.5,)),transforms.ToTensor()])
 
     train_benign_data = MyData("../data/train/benign", "benign", transform=transform)
     train_malignat_data = MyData("../data/train/malignant", "malignant", transform=transform)
@@ -400,7 +379,7 @@ if __name__ == '__main__':
                   commitment_cost, decay).to(device)
 
 
-    criterion =  Focal_Loss()
+    criterion = WeightedBinaryCrossEntropyLoss(weight_positive)
     criterion.to(device)
     optimizer = optim.Adam(model.parameters(), lr=learning_rate, amsgrad=False)
     scheduler = ReduceLROnPlateau(optimizer, mode='min', factor=0.1, patience=2)
@@ -409,15 +388,14 @@ if __name__ == '__main__':
 
     val_res_recon_error = []
     val_res_perplexity = []
-    total_train_loss = []
-    total_val_loss = []
+
     start_time = time.time()  # 记录训练开始时间
 
     for epoch in xrange(epochs):
         model.train()
         train_predictions = []
         train_targets = []
-
+        total_train_loss = 0
         for batch in training_loader:
             data, targets = batch
             data = data.to(device)
@@ -428,7 +406,7 @@ if __name__ == '__main__':
 
             data_variance = torch.var(data)
             recon_loss = F.mse_loss(data_recon, data) / data_variance
-            classifier_loss = criterion(classifier_outputs, targets.view(-1, 1))
+            classifier_loss = criterion(targets, classifier_outputs)
             total_loss = joint_loss_function(recon_loss,vq_loss,classifier_loss,lambda_recon,lambda_vq,lambda_classifier)
             total_loss.backward()
             optimizer.step()
@@ -439,10 +417,10 @@ if __name__ == '__main__':
 
             train_res_recon_error.append(recon_loss.item())
             train_res_perplexity.append(perplexity.item())
-            total_train_loss.append(total_loss.item())
+            total_train_loss += total_loss.item()
         val_predictions = []
         val_targets = []
-
+        total_val_loss = 0
         model.eval()
         with torch.no_grad():
             for batch in validation_loader:
@@ -452,7 +430,7 @@ if __name__ == '__main__':
                 vq_loss, data_recon, perplexity, classifier_outputs = model(data)
                 data_variance = torch.var(data)
                 recon_loss = F.mse_loss(data_recon, data) / data_variance
-                classifier_loss = criterion(classifier_outputs, targets.view(-1, 1))
+                classifier_loss = criterion(targets, classifier_outputs)
                 total_loss = joint_loss_function(recon_loss, vq_loss, classifier_loss, lambda_recon, lambda_vq,lambda_classifier)
 
                 predicted_labels = (classifier_outputs >= 0.5).int().squeeze()
@@ -460,10 +438,10 @@ if __name__ == '__main__':
                 val_targets.extend(targets.cpu().numpy())
                 val_res_recon_error.append(recon_loss.item())
                 val_res_perplexity.append(perplexity.item())
-                total_val_loss.append(total_loss.item())
+                total_val_loss +=total_loss.item()
         # 将测试步骤中的真实数据、重构数据和上述生成的新数据绘图
 
-        if ((epoch + 1) % 10 == 0):
+        if ((epoch + 1) % 50 == 0):
             torch.save(model, "../models/VQ_VAE_Join_Classifier/{}.pth".format(epoch + 1))
             # concat = torch.cat((data[0].view(128, 128),
             #                     data_recon[0].view(128, 128)), 1)
@@ -473,16 +451,16 @@ if __name__ == '__main__':
             print('%d iterations' % (epoch + 1))
             train_acc, train_sen, train_spe = all_metrics(train_targets, train_predictions)
             print("训练集 acc: {:.4f}".format(train_acc) + "sen: {:.4f}".format(train_sen) +
-                  "spe: {:.4f}".format(train_spe) + "loss: {:.4f}".format(np.mean(total_train_loss[-10:])))
+                  "spe: {:.4f}".format(train_spe) + "loss: {:.4f}".format(total_train_loss))
 
             val_acc, val_sen, val_spe = all_metrics(val_targets, val_predictions)
             print("验证集 acc: {:.4f}".format(val_acc) + "sen: {:.4f}".format(val_sen) +
-                  "spe: {:.4f}".format(val_spe) + "loss: {:.4f}".format(np.mean(total_val_loss[-10:])))
+                  "spe: {:.4f}".format(val_spe) + "loss: {:.4f}".format(total_val_loss))
 
-            print('train_recon_error: %.3f' % np.mean(train_res_recon_error[-10:]))
-            print('train_perplexity: %.3f' % np.mean(train_res_perplexity[-10:]))
-            print('val_recon_error: %.3f' % np.mean(val_res_recon_error[-10:]))
-            print('val_perplexity: %.3f' % np.mean(val_res_perplexity[-10:]))
+            print('train_recon_error: %.3f' % np.mean(train_res_recon_error[-100:]))
+            print('train_perplexity: %.3f' % np.mean(train_res_perplexity[-100:]))
+            print('val_recon_error: %.3f' % np.mean(val_res_recon_error[-100:]))
+            print('val_perplexity: %.3f' % np.mean(val_res_perplexity[-100:]))
 
     # 结束训练时间
     end_time = time.time()
