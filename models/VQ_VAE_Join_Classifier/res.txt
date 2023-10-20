@@ -1,3 +1,4 @@
+test1:没有进行归一化
 
 350 iterations
 训练集 acc: 0.6473sen: 0.4964spe: 0.7230loss: 9.8574
