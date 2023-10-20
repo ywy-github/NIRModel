@@ -327,24 +327,23 @@ class WeightedBinaryCrossEntropyLoss(nn.Module):
         return torch.mean(loss)
 
 # 定义 Focal Loss
-class FocalLoss(nn.Module):
-    def __init__(self, gamma=0.25, alpha=2):
-        super(FocalLoss, self).__init__()
-        self.gamma = gamma
+class Focal_Loss(nn.Module):
+    def __init__(self, alpha=0.25, gamma=2):
+        super(Focal_Loss, self).__init__()
         self.alpha = alpha
+        self.gamma = gamma
 
-    def forward(self, inputs, targets):
-        targets = targets.to(dtype=torch.float32)
-        # 计算交叉熵损失
-        ce_loss = nn.functional.binary_cross_entropy_with_logits(inputs, targets, reduction='none')
-        pt = torch.exp(-ce_loss)
-        # 计算 Focal Loss
-        focal_loss = (1 - pt) ** self.gamma * ce_loss
-        # 加上 alpha 权重
-        if self.alpha is not None:
-            alpha_t = self.alpha * targets + (1 - self.alpha) * (1 - targets)
-            focal_loss = alpha_t * focal_loss
-        return focal_loss.mean()
+    def forward(self, preds, labels):
+        """
+        preds:sigmoid的输出结果
+        labels：标签
+        """
+        labels = labels.to(dtype=torch.float32)
+        eps = 1e-7
+        loss_1 = -1 * self.alpha * torch.pow((1 - preds), self.gamma) * torch.log(preds + eps) * labels
+        loss_0 = -1 * (1 - self.alpha) * torch.pow(preds, self.gamma) * torch.log(1 - preds + eps) * (1 - labels)
+        loss = loss_0 + loss_1
+        return torch.mean(loss)
 
 if __name__ == '__main__':
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -401,7 +400,7 @@ if __name__ == '__main__':
                   commitment_cost, decay).to(device)
 
 
-    criterion =  FocalLoss()
+    criterion =  Focal_Loss()
     criterion.to(device)
     optimizer = optim.Adam(model.parameters(), lr=learning_rate, amsgrad=False)
     scheduler = ReduceLROnPlateau(optimizer, mode='min', factor=0.1, patience=2)
@@ -417,7 +416,7 @@ if __name__ == '__main__':
         model.train()
         train_predictions = []
         train_targets = []
-        total_train_loss = 0
+        total_train_loss = []
         for batch in training_loader:
             data, targets = batch
             data = data.to(device)
@@ -439,10 +438,10 @@ if __name__ == '__main__':
 
             train_res_recon_error.append(recon_loss.item())
             train_res_perplexity.append(perplexity.item())
-            total_train_loss += total_loss.item()
+            total_train_loss.append(total_loss.item())
         val_predictions = []
         val_targets = []
-        total_val_loss = 0
+        total_val_loss = []
         model.eval()
         with torch.no_grad():
             for batch in validation_loader:
@@ -460,10 +459,10 @@ if __name__ == '__main__':
                 val_targets.extend(targets.cpu().numpy())
                 val_res_recon_error.append(recon_loss.item())
                 val_res_perplexity.append(perplexity.item())
-                total_val_loss +=total_loss.item()
+                total_val_loss.append(total_loss.item())
         # 将测试步骤中的真实数据、重构数据和上述生成的新数据绘图
 
-        if ((epoch + 1) % 1 == 0):
+        if ((epoch + 1) % 50 == 0):
             torch.save(model, "../models/VQ_VAE_Join_Classifier/{}.pth".format(epoch + 1))
             # concat = torch.cat((data[0].view(128, 128),
             #                     data_recon[0].view(128, 128)), 1)
@@ -473,16 +472,16 @@ if __name__ == '__main__':
             print('%d iterations' % (epoch + 1))
             train_acc, train_sen, train_spe = all_metrics(train_targets, train_predictions)
             print("训练集 acc: {:.4f}".format(train_acc) + "sen: {:.4f}".format(train_sen) +
-                  "spe: {:.4f}".format(train_spe) + "loss: {:.4f}".format(total_train_loss))
+                  "spe: {:.4f}".format(train_spe) + "loss: {:.4f}".format(np.mean(total_train_loss[-10:])))
 
             val_acc, val_sen, val_spe = all_metrics(val_targets, val_predictions)
             print("验证集 acc: {:.4f}".format(val_acc) + "sen: {:.4f}".format(val_sen) +
-                  "spe: {:.4f}".format(val_spe) + "loss: {:.4f}".format(total_val_loss))
+                  "spe: {:.4f}".format(val_spe) + "loss: {:.4f}".format(np.mean(total_val_loss[-10:])))
 
-            print('train_recon_error: %.3f' % np.mean(train_res_recon_error[-100:]))
-            print('train_perplexity: %.3f' % np.mean(train_res_perplexity[-100:]))
-            print('val_recon_error: %.3f' % np.mean(val_res_recon_error[-100:]))
-            print('val_perplexity: %.3f' % np.mean(val_res_perplexity[-100:]))
+            print('train_recon_error: %.3f' % np.mean(train_res_recon_error[-10:]))
+            print('train_perplexity: %.3f' % np.mean(train_res_perplexity[-10:]))
+            print('val_recon_error: %.3f' % np.mean(val_res_recon_error[-10:]))
+            print('val_perplexity: %.3f' % np.mean(val_res_perplexity[-10:]))
 
     # 结束训练时间
     end_time = time.time()
