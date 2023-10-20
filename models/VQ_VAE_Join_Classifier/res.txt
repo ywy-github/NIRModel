@@ -9,3 +9,11 @@ train_perplexity: 102.446
 val_recon_error: 0.026
 val_perplexity: 102.726
 
+test2:进行了归一化，使用了Focal loss  0.75
+20 iterations
+训练集 acc: 0.5554sen: 0.8478spe: 0.4087loss: 0.0595
+验证集 acc: 0.5372sen: 0.8109spe: 0.3800loss: 0.0608
+train_recon_error: 0.104
+train_perplexity: 25.227
+val_recon_error: 0.101
+val_perplexity: 25.289

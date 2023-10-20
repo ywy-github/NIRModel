@@ -328,7 +328,7 @@ class WeightedBinaryCrossEntropyLoss(nn.Module):
 
 # 定义 Focal Loss
 class Focal_Loss(nn.Module):
-    def __init__(self, alpha=0.25, gamma=2):
+    def __init__(self, alpha=0.6, gamma=2.0):
         super(Focal_Loss, self).__init__()
         self.alpha = alpha
         self.gamma = gamma
@@ -409,14 +409,15 @@ if __name__ == '__main__':
 
     val_res_recon_error = []
     val_res_perplexity = []
-
+    total_train_loss = []
+    total_val_loss = []
     start_time = time.time()  # 记录训练开始时间
 
     for epoch in xrange(epochs):
         model.train()
         train_predictions = []
         train_targets = []
-        total_train_loss = []
+
         for batch in training_loader:
             data, targets = batch
             data = data.to(device)
@@ -441,7 +442,7 @@ if __name__ == '__main__':
             total_train_loss.append(total_loss.item())
         val_predictions = []
         val_targets = []
-        total_val_loss = []
+
         model.eval()
         with torch.no_grad():
             for batch in validation_loader:
@@ -462,7 +463,7 @@ if __name__ == '__main__':
                 total_val_loss.append(total_loss.item())
         # 将测试步骤中的真实数据、重构数据和上述生成的新数据绘图
 
-        if ((epoch + 1) % 50 == 0):
+        if ((epoch + 1) % 10 == 0):
             torch.save(model, "../models/VQ_VAE_Join_Classifier/{}.pth".format(epoch + 1))
             # concat = torch.cat((data[0].view(128, 128),
             #                     data_recon[0].view(128, 128)), 1)
