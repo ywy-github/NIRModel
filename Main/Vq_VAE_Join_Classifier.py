@@ -354,7 +354,10 @@ if __name__ == '__main__':
 
 
     # 读取数据集
-    transform = transforms.Compose([transforms.ToTensor()])
+    transform = transforms.Compose([
+        transforms.ToTensor(),
+        transforms.Normalize((0.3281,), (0.2366,))  # 设置均值和标准差
+    ])
 
     train_benign_data = MyData("../data/train/benign", "benign", transform=transform)
     train_malignat_data = MyData("../data/train/malignant", "malignant", transform=transform)
