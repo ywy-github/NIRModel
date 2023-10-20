@@ -326,6 +326,25 @@ class WeightedBinaryCrossEntropyLoss(nn.Module):
         loss = - (self.weight_positive * y_true * torch.log(y_pred + 1e-7) + (1 - y_true) * torch.log(1 - y_pred + 1e-7))
         return torch.mean(loss)
 
+# 定义 Focal Loss
+class FocalLoss(nn.Module):
+    def __init__(self, gamma=0.25, alpha=2):
+        super(FocalLoss, self).__init__()
+        self.gamma = gamma
+        self.alpha = alpha
+
+    def forward(self, inputs, targets):
+        targets = targets.to(dtype=torch.float32)
+        # 计算交叉熵损失
+        ce_loss = nn.functional.binary_cross_entropy_with_logits(inputs, targets, reduction='none')
+        pt = torch.exp(-ce_loss)
+        # 计算 Focal Loss
+        focal_loss = (1 - pt) ** self.gamma * ce_loss
+        # 加上 alpha 权重
+        if self.alpha is not None:
+            alpha_t = self.alpha * targets + (1 - self.alpha) * (1 - targets)
+            focal_loss = alpha_t * focal_loss
+        return focal_loss.mean()
 
 if __name__ == '__main__':
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -382,7 +401,7 @@ if __name__ == '__main__':
                   commitment_cost, decay).to(device)
 
 
-    criterion = WeightedBinaryCrossEntropyLoss(weight_positive)
+    criterion =  FocalLoss()
     criterion.to(device)
     optimizer = optim.Adam(model.parameters(), lr=learning_rate, amsgrad=False)
     scheduler = ReduceLROnPlateau(optimizer, mode='min', factor=0.1, patience=2)
@@ -409,7 +428,7 @@ if __name__ == '__main__':
 
             data_variance = torch.var(data)
             recon_loss = F.mse_loss(data_recon, data) / data_variance
-            classifier_loss = criterion(targets, classifier_outputs)
+            classifier_loss = criterion(classifier_outputs, targets.view(-1, 1))
             total_loss = joint_loss_function(recon_loss,vq_loss,classifier_loss,lambda_recon,lambda_vq,lambda_classifier)
             total_loss.backward()
             optimizer.step()
@@ -433,7 +452,7 @@ if __name__ == '__main__':
                 vq_loss, data_recon, perplexity, classifier_outputs = model(data)
                 data_variance = torch.var(data)
                 recon_loss = F.mse_loss(data_recon, data) / data_variance
-                classifier_loss = criterion(targets, classifier_outputs)
+                classifier_loss = criterion(classifier_outputs, targets.view(-1, 1))
                 total_loss = joint_loss_function(recon_loss, vq_loss, classifier_loss, lambda_recon, lambda_vq,lambda_classifier)
 
                 predicted_labels = (classifier_outputs >= 0.5).int().squeeze()
@@ -444,7 +463,7 @@ if __name__ == '__main__':
                 total_val_loss +=total_loss.item()
         # 将测试步骤中的真实数据、重构数据和上述生成的新数据绘图
 
-        if ((epoch + 1) % 50 == 0):
+        if ((epoch + 1) % 1 == 0):
             torch.save(model, "../models/VQ_VAE_Join_Classifier/{}.pth".format(epoch + 1))
             # concat = torch.cat((data[0].view(128, 128),
             #                     data_recon[0].view(128, 128)), 1)
