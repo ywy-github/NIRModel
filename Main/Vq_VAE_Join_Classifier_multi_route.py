@@ -7,7 +7,7 @@ from six.moves import xrange
 
 import torch.nn as nn
 import torch.nn.functional as F
-from torch.optim.lr_scheduler import ReduceLROnPlateau, StepLR
+from torch.optim.lr_scheduler import ReduceLROnPlateau
 from torch.utils.data import DataLoader
 import torch.optim as optim
 from torchvision import transforms
@@ -248,10 +248,22 @@ class Decoder(nn.Module):
     def __init__(self, in_channels, num_hiddens, num_residual_layers, num_residual_hiddens):
         super(Decoder, self).__init__()
 
-        self._conv_1 = nn.Conv2d(in_channels=in_channels,
-                                 out_channels=num_hiddens,
-                                 kernel_size=3,
-                                 stride=1, padding=1)
+        self.path = nn.Sequential(
+            nn.ConvTranspose2d(in_channels=in_channels,
+                               out_channels=num_hiddens // 2,
+                               kernel_size=(3, 4),
+                               stride=(6,5), padding=1),
+            nn.ConvTranspose2d(in_channels=num_hiddens // 2,
+                               out_channels=num_hiddens // 2,
+                               kernel_size=(5, 4),
+                               stride=2, padding=1),
+            nn.ConvTranspose2d(in_channels=num_hiddens // 2,
+                               out_channels=1,
+                               kernel_size=4,
+                               stride=2, padding=1)
+
+        )
+
 
         self._residual_stack = ResidualStack(in_channels=num_hiddens,
                                              num_hiddens=num_hiddens,
@@ -269,27 +281,26 @@ class Decoder(nn.Module):
                                                 stride=2, padding=1)
 
     def forward(self, inputs):
-        x = self._conv_1(inputs)
+        x = self.path(inputs)
 
-        x = self._residual_stack(x)
-
-        x = self._conv_trans_1(x)
-        x = F.relu(x)
-
-        return self._conv_trans_2(x)
+        return x
 
 
 class Classifier(nn.Module):
     def __init__(self, input_dim, hidden_dim, num_classes):
         super(Classifier, self).__init__()
-        self.fc1 = nn.Linear(input_dim, hidden_dim)
-        self.fc2 = nn.Linear(hidden_dim, num_classes)
-        self.sigmoid = nn.Sigmoid()
-
+        self.path = nn.Sequential(
+            nn.Linear(input_dim, hidden_dim),
+            nn.ReLU(),
+            nn.Dropout(0.2),
+            nn.Linear(hidden_dim, hidden_dim // 2),
+            nn.ReLU(),
+            nn.Dropout(0.2),
+            nn.Linear(hidden_dim // 2, num_classes),
+            nn.Sigmoid()
+        )
     def forward(self, x):
-        x = torch.relu(self.fc1(x))
-        x = self.fc2(x)
-        x = self.sigmoid(x)  # 通过 sigmoid 函数将输出映射到 [0, 1] 的范围
+        x = self.path(x)
         return x
 
 class Model(nn.Module):
@@ -310,7 +321,7 @@ class Model(nn.Module):
         else:
             self._vq_vae = VectorQuantizer(num_embeddings, embedding_dim,
                                            commitment_cost)
-        self.classifier = Classifier(6400,256,1)
+        self.classifier = Classifier(192*5*7,256,1)
 
         self._decoder = Decoder(embedding_dim,
                                 num_hiddens,
@@ -373,7 +384,7 @@ if __name__ == '__main__':
     num_residual_hiddens = 32
     num_residual_layers = 2
 
-    embedding_dim = 128*3
+    embedding_dim = num_hiddens*3
     num_embeddings = 512
 
     commitment_cost = 0.25
@@ -382,7 +393,7 @@ if __name__ == '__main__':
 
     weight_positive = 2  # 调整这个权重以提高对灵敏度的重视
 
-    learning_rate = 1e-2
+    learning_rate = 1e-5
 
     lambda_recon = 0.3
     lambda_vq = 0.3
@@ -421,8 +432,7 @@ if __name__ == '__main__':
     criterion =  Focal_Loss()
     criterion.to(device)
     optimizer = optim.Adam(model.parameters(), lr=learning_rate, amsgrad=False)
-    scheduler = StepLR(optimizer,50,0.1)
-
+    scheduler = ReduceLROnPlateau(optimizer, mode='min', factor=0.1, patience=2)
     train_res_recon_error = []
     train_res_perplexity = []
 
@@ -451,7 +461,6 @@ if __name__ == '__main__':
             total_loss = joint_loss_function(recon_loss,vq_loss,classifier_loss,lambda_recon,lambda_vq,lambda_classifier)
             total_loss.backward()
             optimizer.step()
-            scheduler.step()
 
             predicted_labels = (classifier_outputs >= 0.5).int().squeeze()
             train_predictions.extend(predicted_labels.cpu().numpy())
@@ -483,8 +492,8 @@ if __name__ == '__main__':
                 total_val_loss.append(total_loss.item())
         # 将测试步骤中的真实数据、重构数据和上述生成的新数据绘图
 
-        if ((epoch + 1) % 50 == 0):
-            torch.save(model, "../models/VQ_VAE_Join_Classifier/{}.pth".format(epoch + 1))
+        if ((epoch + 1) % 10 == 0):
+            # torch.save(model, "../models/VQ_VAE_Join_Classifier/{}.pth".format(epoch + 1))
             # concat = torch.cat((data[0].view(128, 128),
             #                     data_recon[0].view(128, 128)), 1)
             # plt.matshow(concat.cpu().detach().numpy())

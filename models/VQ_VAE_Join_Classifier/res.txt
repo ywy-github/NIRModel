@@ -17,3 +17,10 @@ train_recon_error: 0.104
 train_perplexity: 25.227
 val_recon_error: 0.101
 val_perplexity: 25.289
+
+130 iterations
+训练集 acc: 0.6697sen: 0.4185spe: 0.7956loss: 0.1583
+验证集 acc: 0.6171sen: 0.4378spe: 0.7200loss: 0.1588
+train_recon_error: 0.384
+train_perplexity: 5.485
+val_recon_error: 0.381
