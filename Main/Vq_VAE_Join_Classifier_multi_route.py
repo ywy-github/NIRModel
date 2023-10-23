@@ -187,46 +187,46 @@ class Encoder(nn.Module):
         super(Encoder, self).__init__()
 
         self.path1 = nn.Sequential(
-            nn.Conv2d(in_channels=in_channels,out_channels=num_hiddens // 2,kernel_size=11,stride=1, padding=5),
+            nn.Conv2d(in_channels=in_channels,out_channels=8,kernel_size=11,stride=1, padding=5),
             nn.ReLU(),
             nn.MaxPool2d(kernel_size=3,stride=2),
-            nn.Conv2d(in_channels=num_hiddens // 2,out_channels=num_hiddens,kernel_size=11,stride=1, padding=5),
+            nn.Conv2d(in_channels=8,out_channels=16,kernel_size=11,stride=1, padding=5),
             nn.ReLU(),
             nn.MaxPool2d(kernel_size=3, stride=2),
-            nn.Conv2d(in_channels=num_hiddens,out_channels=num_hiddens * 2,kernel_size=11,stride=1, padding=5),
+            nn.Conv2d(in_channels=16,out_channels=32,kernel_size=11,stride=1, padding=5),
             nn.ReLU(),
             nn.MaxPool2d(kernel_size=3, stride=2),
-            nn.Conv2d(in_channels=num_hiddens * 2, out_channels=num_hiddens * 4, kernel_size=11, stride=1, padding=5),
+            nn.Conv2d(in_channels=32, out_channels=64, kernel_size=11, stride=1, padding=5),
             nn.ReLU(),
             nn.MaxPool2d(kernel_size=3, stride=2),
         )
 
         self.path2 = nn.Sequential(
-            nn.Conv2d(in_channels=in_channels, out_channels=num_hiddens // 2, kernel_size=7, stride=1, padding=3),
+            nn.Conv2d(in_channels=in_channels, out_channels=8, kernel_size=7, stride=1, padding=3),
             nn.ReLU(),
             nn.MaxPool2d(kernel_size=3, stride=2),
-            nn.Conv2d(in_channels=num_hiddens // 2, out_channels=num_hiddens, kernel_size=7, stride=1, padding=3),
+            nn.Conv2d(in_channels=8, out_channels=16, kernel_size=7, stride=1, padding=3),
             nn.ReLU(),
             nn.MaxPool2d(kernel_size=3, stride=2),
-            nn.Conv2d(in_channels=num_hiddens, out_channels=num_hiddens * 2, kernel_size=7, stride=1, padding=3),
+            nn.Conv2d(in_channels=16, out_channels=32, kernel_size=7, stride=1, padding=3),
             nn.ReLU(),
             nn.MaxPool2d(kernel_size=3, stride=2),
-            nn.Conv2d(in_channels=num_hiddens * 2, out_channels=num_hiddens * 4, kernel_size=7,stride=1, padding=3),
+            nn.Conv2d(in_channels=32, out_channels=64, kernel_size=7, stride=1, padding=3),
             nn.ReLU(),
             nn.MaxPool2d(kernel_size=3, stride=2),
         )
 
         self.path3 = nn.Sequential(
-            nn.Conv2d(in_channels=in_channels, out_channels=num_hiddens // 2, kernel_size=3, stride=1, padding=1),
+            nn.Conv2d(in_channels=in_channels, out_channels=8, kernel_size=3, stride=1, padding=1),
             nn.ReLU(),
             nn.MaxPool2d(kernel_size=3, stride=2),
-            nn.Conv2d(in_channels=num_hiddens // 2, out_channels=num_hiddens, kernel_size=3, stride=1, padding=1),
+            nn.Conv2d(in_channels=8, out_channels=16, kernel_size=3, stride=1, padding=1),
             nn.ReLU(),
             nn.MaxPool2d(kernel_size=3, stride=2),
-            nn.Conv2d(in_channels=num_hiddens, out_channels=num_hiddens * 2, kernel_size=3, stride=1, padding=1),
+            nn.Conv2d(in_channels=16, out_channels=32, kernel_size=3, stride=1, padding=1),
             nn.ReLU(),
             nn.MaxPool2d(kernel_size=3, stride=2),
-            nn.Conv2d(in_channels=num_hiddens * 2, out_channels=num_hiddens * 4, kernel_size=3,stride=1, padding=1),
+            nn.Conv2d(in_channels=32, out_channels=64, kernel_size=3, stride=1, padding=1),
             nn.ReLU(),
             nn.MaxPool2d(kernel_size=3, stride=2),
         )
@@ -319,7 +319,7 @@ class Model(nn.Module):
 
     def forward(self, x):
         z = self._encoder(x)
-        z = self._pre_vq_conv(z)
+        # z = self._pre_vq_conv(z)
         loss, quantized, perplexity, _ = self._vq_vae(z)
         classifier_outputs = self.classifier(quantized.view(quantized.size(0),-1))
         x_recon = self._decoder(quantized)
@@ -369,11 +369,11 @@ if __name__ == '__main__':
     batch_size = 64
     epochs = 500
 
-    num_hiddens = 128
+    num_hiddens = 64
     num_residual_hiddens = 32
     num_residual_layers = 2
 
-    embedding_dim = 8
+    embedding_dim = 128*3
     num_embeddings = 512
 
     commitment_cost = 0.25
