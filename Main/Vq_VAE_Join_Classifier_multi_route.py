@@ -7,7 +7,7 @@ from six.moves import xrange
 
 import torch.nn as nn
 import torch.nn.functional as F
-from torch.optim.lr_scheduler import ReduceLROnPlateau
+from torch.optim.lr_scheduler import ReduceLROnPlateau, StepLR
 from torch.utils.data import DataLoader
 import torch.optim as optim
 from torchvision import transforms
@@ -382,7 +382,7 @@ if __name__ == '__main__':
 
     weight_positive = 2  # 调整这个权重以提高对灵敏度的重视
 
-    learning_rate = 1e-5
+    learning_rate = 1e-2
 
     lambda_recon = 0.3
     lambda_vq = 0.3
@@ -421,7 +421,8 @@ if __name__ == '__main__':
     criterion =  Focal_Loss()
     criterion.to(device)
     optimizer = optim.Adam(model.parameters(), lr=learning_rate, amsgrad=False)
-    scheduler = ReduceLROnPlateau(optimizer, mode='min', factor=0.1, patience=2)
+    scheduler = StepLR(optimizer,50,0.1)
+
     train_res_recon_error = []
     train_res_perplexity = []
 
@@ -450,6 +451,7 @@ if __name__ == '__main__':
             total_loss = joint_loss_function(recon_loss,vq_loss,classifier_loss,lambda_recon,lambda_vq,lambda_classifier)
             total_loss.backward()
             optimizer.step()
+            scheduler.step()
 
             predicted_labels = (classifier_outputs >= 0.5).int().squeeze()
             train_predictions.extend(predicted_labels.cpu().numpy())
@@ -481,7 +483,7 @@ if __name__ == '__main__':
                 total_val_loss.append(total_loss.item())
         # 将测试步骤中的真实数据、重构数据和上述生成的新数据绘图
 
-        if ((epoch + 1) % 10 == 0):
+        if ((epoch + 1) % 50 == 0):
             torch.save(model, "../models/VQ_VAE_Join_Classifier/{}.pth".format(epoch + 1))
             # concat = torch.cat((data[0].view(128, 128),
             #                     data_recon[0].view(128, 128)), 1)
