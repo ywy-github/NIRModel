@@ -18,9 +18,29 @@ train_perplexity: 25.227
 val_recon_error: 0.101
 val_perplexity: 25.289
 
-130 iterations
-训练集 acc: 0.6697sen: 0.4185spe: 0.7956loss: 0.1583
-验证集 acc: 0.6171sen: 0.4378spe: 0.7200loss: 0.1588
-train_recon_error: 0.384
-train_perplexity: 5.485
-val_recon_error: 0.381
+test3:三路径 0.7 0.2 0.2 0.6
+350 iterations
+训练集 acc: 0.6128sen: 0.7047spe: 0.5668loss: 0.1268
+验证集 acc: 0.5408sen: 0.7562spe: 0.4171loss: 0.1309
+train_recon_error: 0.359
+train_perplexity: 4.670
+val_recon_error: 0.362
+val_perplexity: 4.492
+
+300 iterations
+训练集 acc: 0.5777sen: 0.7210spe: 0.5059loss: 0.1291
+验证集 acc: 0.5445sen: 0.7015spe: 0.4543loss: 0.1315
+train_recon_error: 0.363
+train_perplexity: 5.561
+val_recon_error: 0.362
+val_perplexity: 5.309
+
+
+150 iterations
+训练集 acc: 0.6564sen: 0.4728spe: 0.7484loss: 0.1339
+验证集 acc: 0.6407sen: 0.4428spe: 0.7543loss: 0.1364
+train_recon_error: 0.392
+train_perplexity: 5.253
+val_recon_error: 0.394
+val_perplexity: 4.928
+

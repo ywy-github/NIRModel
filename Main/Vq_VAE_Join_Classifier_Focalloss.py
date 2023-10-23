@@ -248,30 +248,22 @@ class Decoder(nn.Module):
 
         return self._conv_trans_2(x)
 
-def generate_and_save_images(predictions, epoch):
-  # predictions = model.sample(test_input)
-  predictions = predictions.permute(0,3,2,1)
-  predictions = predictions.data.cpu().numpy()
-  fig = plt.figure(figsize=(4,4))
-  for i in range(16):
-    plt.subplot(4,4,i+1)
-    plt.imshow(predictions[i,:,:,0],cmap='gray')
-    plt.axis('off')
-  plt.savefig('img_at_epoch_{:04d}.png'.format(epoch))
-  # plt.show()
-  plt.close()
 
 class Classifier(nn.Module):
     def __init__(self, input_dim, hidden_dim, num_classes):
         super(Classifier, self).__init__()
-        self.fc1 = nn.Linear(input_dim, hidden_dim)
-        self.fc2 = nn.Linear(hidden_dim, num_classes)
-        self.sigmoid = nn.Sigmoid()
-
+        self.path = nn.Sequential(
+            nn.Linear(input_dim, hidden_dim),
+            nn.ReLU(),
+            nn.Dropout(0.2),
+            nn.Linear(hidden_dim, hidden_dim // 2),
+            nn.ReLU(),
+            nn.Dropout(0.2),
+            nn.Linear(hidden_dim // 2, num_classes),
+            nn.Sigmoid()
+        )
     def forward(self, x):
-        x = torch.relu(self.fc1(x))
-        x = self.fc2(x)
-        x = self.sigmoid(x)  # 通过 sigmoid 函数将输出映射到 [0, 1] 的范围
+        x = self.path(x)
         return x
 
 class Model(nn.Module):
@@ -328,7 +320,7 @@ class WeightedBinaryCrossEntropyLoss(nn.Module):
 
 # 定义 Focal Loss
 class Focal_Loss(nn.Module):
-    def __init__(self, alpha=0.6, gamma=2.0):
+    def __init__(self, alpha=0.7, gamma=2.0):
         super(Focal_Loss, self).__init__()
         self.alpha = alpha
         self.gamma = gamma
@@ -366,9 +358,9 @@ if __name__ == '__main__':
 
     learning_rate = 1e-5
 
-    lambda_recon = 0.3
-    lambda_vq = 0.3
-    lambda_classifier = 0.4
+    lambda_recon = 0.2
+    lambda_vq = 0.2
+    lambda_classifier = 0.6
 
 
     # 读取数据集
@@ -463,7 +455,7 @@ if __name__ == '__main__':
                 total_val_loss.append(total_loss.item())
         # 将测试步骤中的真实数据、重构数据和上述生成的新数据绘图
 
-        if ((epoch + 1) % 10 == 0):
+        if ((epoch + 1) % 50 == 0):
             torch.save(model, "../models/VQ_VAE_Join_Classifier/{}.pth".format(epoch + 1))
             # concat = torch.cat((data[0].view(128, 128),
             #                     data_recon[0].view(128, 128)), 1)
