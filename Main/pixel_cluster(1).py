@@ -36,7 +36,7 @@ if __name__ == '__main__':
     net = Net().eval()
 
     # 样本地址，读取样本名、lable、实例
-    source_path = '../../../data/image_all/'
+    source_path = '../../../all_data/image_all/'
     image_path = []
     all_images = []
     data_dict = {}
@@ -160,7 +160,7 @@ if __name__ == '__main__':
 
 
     # for image_name in list(data_dict.keys()):
-    # with open(os.path.join(source_path, r'data/ori_enhanced/train.json')) as f:
+    # with open(os.path.join(source_path, r'all_data/ori_enhanced/train.json')) as f:
     #     train_dict = json.load(f)
 
     category_dict_train = {0: [], 1: [], 2: [], 3: []}

@@ -449,7 +449,7 @@ for i in xrange(num_training_updates):
     for index_num, data in enumerate(training_loader):
         data = data.to(device)
         optimizer.zero_grad()
-        # generate_and_save_images(data, i)
+        # generate_and_save_images(all_data, i)
 
         vq_loss, data_recon, perplexity = model(data)
         data_variance = torch.var(data)

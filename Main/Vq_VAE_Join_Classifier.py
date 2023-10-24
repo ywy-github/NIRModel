@@ -443,7 +443,7 @@ if __name__ == '__main__':
 
         if ((epoch + 1) % 50 == 0):
             torch.save(model, "../models/VQ_VAE_Join_Classifier/{}.pth".format(epoch + 1))
-            # concat = torch.cat((data[0].view(128, 128),
+            # concat = torch.cat((all_data[0].view(128, 128),
             #                     data_recon[0].view(128, 128)), 1)
             # plt.matshow(concat.cpu().detach().numpy())
             # plt.show()

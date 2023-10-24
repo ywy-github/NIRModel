@@ -2,10 +2,13 @@ import pandas as pd
 import numpy as np
 
 if __name__ == '__main__':
-    data_2202 = pd.read_excel("F:\\PyCharm 2022.2.1\\pythonProject\\nir\\2202+932.xlsx")
-    data_2204 = pd.read_excel("F:\\PyCharm 2022.2.1\\pythonProject\\nir\\2204+656.xlsx",sheet_name="2204例")
+    # data_2202 = pd.read_excel("F:\\PyCharm 2022.2.1\\pythonProject\\nir\\总体数据2202+932.xlsx")
+    data = pd.read_excel("F:\\PyCharm 2022.2.1\\pythonProject\\nir\\总体数据2202+932.xlsx",sheet_name="测试集932例")
 
-    dcm_name_2202=data_2202["dcm_name"]
-    dcm_name_2204=data_2204["dcm_name"]
-    difference = dcm_name_2204[~dcm_name_2204.isin(dcm_name_2202)]
-    print(difference)
+    # 创建一个布尔掩码以筛选包含特定关键词的行
+    keyword = "单波段"
+    mask = data['dcm_name'].str.contains(keyword)
+
+    # 使用掩码来提取符合条件的行
+    filtered_data = data[mask]
+    filtered_data.to_excel("../all_data/single.xlsx",index=False)
