@@ -1,0 +1,59 @@
+总体数据：
+all_test1 iterations
+训练集 acc: 0.5702sen: 0.7174spe: 0.4964loss: 0.1302
+验证集 acc: 0.5473sen: 0.7214spe: 0.4470loss: 0.1325
+测试集 acc: 0.5205sen: 0.6403spe: 0.4224loss: 0.1363
+
+all_test2 iterations
+训练集 acc: 0.5745sen: 0.7264spe: 0.4982loss: 0.1284
+验证集 acc: 0.5455sen: 0.6866spe: 0.4642loss: 0.1303
+测试集 acc: 0.5270sen: 0.6067spe: 0.4617loss: 0.1372
+
+
+上海数据：
+sh_test1  iterations
+训练集 acc: 0.6242sen: 0.5782spe: 0.6513loss: 0.1363
+验证集 acc: 0.6067sen: 0.5556spe: 0.6415loss: 0.1400
+测试集 acc: 0.5202sen: 0.3536spe: 0.6605loss: 0.1463
+train_recon_error: 0.409
+train_perplexity: 4.493
+val_recon_error: 0.404
+val_perplexity: 4.530
+
+sh_test2 iterations
+训练集 acc: 0.6267sen: 0.5884spe: 0.6493loss: 0.1344
+验证集 acc: 0.5918sen: 0.5648spe: 0.6101loss: 0.1382
+测试集 acc: 0.5328sen: 0.4199spe: 0.6279loss: 0.1460
+train_recon_error: 0.394
+train_perplexity: 4.599
+val_recon_error: 0.394
+val_perplexity: 4.627
+
+一期数据
+tiqi_test1 iterations
+训练集 acc: 0.6632sen: 0.4570spe: 0.7684loss: 0.1615
+验证集 acc: 0.6424sen: 0.4565spe: 0.7296loss: 0.1630
+测试集 acc: 0.6562sen: 0.4018spe: 0.7610loss: 0.1611
+train_recon_error: 0.544
+train_perplexity: 4.647
+val_recon_error: 0.552
+val_perplexity: 4.747
+
+tiqi_test2 iterations
+训练集 acc: 0.6411sen: 0.7251spe: 0.5982loss: 0.1256
+验证集 acc: 0.5938sen: 0.7174spe: 0.5357loss: 0.1289
+测试集 acc: 0.6042sen: 0.7500spe: 0.5441loss: 0.1304
+train_recon_error: 0.383
+train_perplexity: 6.397
+val_recon_error: 0.391
+val_perplexity: 6.222
+
+二期数据：
+240 iterations
+训练集 acc: 0.5906sen: 0.5831spe: 0.5958loss: 0.1473
+验证集 acc: 0.5367sen: 0.5865spe: 0.4970loss: 0.1511
+测试集 acc: 0.5544sen: 0.5543spe: 0.5545loss: 0.1456
+train_recon_error: 0.439
+train_perplexity: 4.105
+val_recon_error: 0.444
+val_perplexity: 4.100
