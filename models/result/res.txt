@@ -29,6 +29,16 @@ train_perplexity: 4.599
 val_recon_error: 0.394
 val_perplexity: 4.627
 
+sh_test3 iterations
+训练集 acc: 0.6028sen: 0.7789spe: 0.4990loss: 0.1277
+验证集 acc: 0.5506sen: 0.7037spe: 0.4465loss: 0.1315
+测试集 acc: 0.5303sen: 0.6519spe: 0.4279loss: 0.1383
+
+train_recon_error: 0.372
+train_perplexity: 5.143
+val_recon_error: 0.372
+val_perplexity: 5.203
+
 一期数据
 tiqi_test1 iterations
 训练集 acc: 0.6632sen: 0.4570spe: 0.7684loss: 0.1615
@@ -39,7 +49,7 @@ train_perplexity: 4.647
 val_recon_error: 0.552
 val_perplexity: 4.747
 
-tiqi_test2 iterations
+yiqi_test2 iterations
 训练集 acc: 0.6411sen: 0.7251spe: 0.5982loss: 0.1256
 验证集 acc: 0.5938sen: 0.7174spe: 0.5357loss: 0.1289
 测试集 acc: 0.6042sen: 0.7500spe: 0.5441loss: 0.1304

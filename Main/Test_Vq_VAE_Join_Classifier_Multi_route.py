@@ -406,8 +406,8 @@ if __name__ == '__main__':
     ])
 
 
-    test_benign_data = MyData("../data/二期数据/test/benign", "benign", transform=transform)
-    test_malignat_data = MyData("../data/二期数据/test/malignant", "malignant", transform=transform)
+    test_benign_data = MyData("../data/shanghai_data/test/benign", "benign", transform=transform)
+    test_malignat_data = MyData("../data/shanghai_data/test/malignant", "malignant", transform=transform)
     test_data = test_benign_data + test_malignat_data
 
 
@@ -416,7 +416,7 @@ if __name__ == '__main__':
                                  shuffle=True,
                                  pin_memory=True)
 
-    model = torch.load("../models/result/erqi_test1.pth", map_location=device)
+    model = torch.load("../models/result/sh_test3.pth", map_location=device)
 
     criterion = Focal_Loss()
     criterion.to(device)

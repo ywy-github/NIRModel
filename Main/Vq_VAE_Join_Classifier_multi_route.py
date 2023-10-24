@@ -357,7 +357,7 @@ class WeightedBinaryCrossEntropyLoss(nn.Module):
 
 # 定义 Focal Loss
 class Focal_Loss(nn.Module):
-    def __init__(self, alpha=0.6, gamma=2.0):
+    def __init__(self, alpha=0.7, gamma=2.0):
         super(Focal_Loss, self).__init__()
         self.alpha = alpha
         self.gamma = gamma
@@ -406,12 +406,12 @@ if __name__ == '__main__':
         transforms.Normalize((0.3281,), (0.2366,))  # 设置均值和标准差
     ])
 
-    train_benign_data = MyData("../data/二期数据/train/benign", "benign", transform=transform)
-    train_malignat_data = MyData("../data/二期数据/train/malignant", "malignant", transform=transform)
+    train_benign_data = MyData("../data/shanghai_data/train/benign", "benign", transform=transform)
+    train_malignat_data = MyData("../data/shanghai_data/train/malignant", "malignant", transform=transform)
     train_data = train_benign_data + train_malignat_data
 
-    val_benign_data = MyData("../data/二期数据/val/benign", "benign", transform=transform)
-    val_malignat_data = MyData("../data/二期数据/val/malignant", "malignant", transform=transform)
+    val_benign_data = MyData("../data/shanghai_data/val/benign", "benign", transform=transform)
+    val_malignat_data = MyData("../data/shanghai_data/val/malignant", "malignant", transform=transform)
     val_data = val_benign_data + val_malignat_data
 
     training_loader = DataLoader(train_data,
