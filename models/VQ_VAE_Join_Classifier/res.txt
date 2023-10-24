@@ -1,46 +1,10 @@
-test1:没有进行归一化
+test1 iterations
+训练集 acc: 0.5702sen: 0.7174spe: 0.4964loss: 0.1302
+验证集 acc: 0.5473sen: 0.7214spe: 0.4470loss: 0.1325
+测试集 acc: 0.5205sen: 0.6403spe: 0.4224loss: 0.1363
 
-350 iterations
-训练集 acc: 0.6473sen: 0.4964spe: 0.7230loss: 9.8574
-验证集 acc: 0.6171sen: 0.4677spe: 0.7029loss: 6.9500
-测试集 acc: 0.5507sen: 0.3912spe: 0.6635loss: 4.8730
-train_recon_error: 0.028
-train_perplexity: 102.446
-val_recon_error: 0.026
-val_perplexity: 102.726
-
-test2:进行了归一化，使用了Focal loss  0.75
-20 iterations
-训练集 acc: 0.5554sen: 0.8478spe: 0.4087loss: 0.0595
-验证集 acc: 0.5372sen: 0.8109spe: 0.3800loss: 0.0608
-train_recon_error: 0.104
-train_perplexity: 25.227
-val_recon_error: 0.101
-val_perplexity: 25.289
-
-test3:三路径 0.7 0.2 0.2 0.6
-350 iterations
-训练集 acc: 0.6128sen: 0.7047spe: 0.5668loss: 0.1268
-验证集 acc: 0.5408sen: 0.7562spe: 0.4171loss: 0.1309
-train_recon_error: 0.359
-train_perplexity: 4.670
-val_recon_error: 0.362
-val_perplexity: 4.492
-
-300 iterations
-训练集 acc: 0.5777sen: 0.7210spe: 0.5059loss: 0.1291
-验证集 acc: 0.5445sen: 0.7015spe: 0.4543loss: 0.1315
-train_recon_error: 0.363
-train_perplexity: 5.561
-val_recon_error: 0.362
-val_perplexity: 5.309
-
-
-150 iterations
-训练集 acc: 0.6564sen: 0.4728spe: 0.7484loss: 0.1339
-验证集 acc: 0.6407sen: 0.4428spe: 0.7543loss: 0.1364
-train_recon_error: 0.392
-train_perplexity: 5.253
-val_recon_error: 0.394
-val_perplexity: 4.928
+test2 iterations
+训练集 acc: 0.5745sen: 0.7264spe: 0.4982loss: 0.1284
+验证集 acc: 0.5455sen: 0.6866spe: 0.4642loss: 0.1303
+测试集 acc: 0.5270sen: 0.6067spe: 0.4617loss: 0.1372
 

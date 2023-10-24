@@ -493,7 +493,7 @@ if __name__ == '__main__':
                 total_val_loss.append(total_loss.item())
         # 将测试步骤中的真实数据、重构数据和上述生成的新数据绘图
 
-        if ((epoch + 1) % 50 == 0):
+        if ((epoch + 1) % 30 == 0):
             torch.save(model, "../models/VQ_VAE_Join_Classifier/{}.pth".format(epoch + 1))
             # concat = torch.cat((data[0].view(128, 128),
             #                     data_recon[0].view(128, 128)), 1)
