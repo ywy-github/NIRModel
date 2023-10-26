@@ -421,6 +421,8 @@ if __name__ == '__main__':
     criterion = Focal_Loss()
     criterion.to(device)
 
+    dcm_name = []
+    test_prob = []
     test_predictions = []
     test_targets = []
 
@@ -439,7 +441,8 @@ if __name__ == '__main__':
             classifier_loss = criterion(classifier_outputs, targets.view(-1, 1))
             total_loss = joint_loss_function(recon_loss, vq_loss, classifier_loss, lambda_recon, lambda_vq,
                                              lambda_classifier)
-
+            dcm_name.append(data["dcm_name"])
+            test_prob.append(classifier_outputs.cpu().numpy())
             predicted_labels = (classifier_outputs >= 0.5).int().squeeze()
             test_predictions.extend(predicted_labels.cpu().numpy())
             test_targets.extend(targets.cpu().numpy())
