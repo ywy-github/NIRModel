@@ -3,6 +3,7 @@ from __future__ import print_function
 import time
 
 import matplotlib.pyplot as plt
+import pandas as pd
 from six.moves import xrange
 
 import torch.nn as nn
@@ -421,8 +422,7 @@ if __name__ == '__main__':
     criterion = Focal_Loss()
     criterion.to(device)
 
-    dcm_name = []
-    test_prob = []
+
     test_predictions = []
     test_targets = []
     test_results = []
@@ -447,21 +447,22 @@ if __name__ == '__main__':
             predicted_labels = (classifier_outputs >= 0.5).int().squeeze()
             # 记录每个样本的dcm_name、预测概率值和标签
             for i in range(len(dcm_names)):
-                test_results.append({'dcm_name': dcm_names[i], 'prob': classifier_outputs[i].item(),
-                                     'probility': predicted_labels[i], 'label':targets[i].item()})
+                test_results.append({'dcm_name': dcm_names[i], 'prob': classifier_outputs[i].item(),'probility': predicted_labels[i].item(), 'label':targets[i].item()})
             test_predictions.extend(predicted_labels.cpu().numpy())
             test_targets.extend(targets.cpu().numpy())
             test_res_recon_error.append(recon_loss.item())
             test_res_perplexity.append(perplexity.item())
             total_test_loss.append(total_loss.item())
 
-            concat = torch.cat((data[0].view(128, 128),
-                                data_recon[0].view(128, 128)), 1)
-            plt.matshow(concat.cpu().detach().numpy())
-            plt.show()
+            # concat = torch.cat((data[0].view(128, 128),
+            #                     data_recon[0].view(128, 128)), 1)
+            # plt.matshow(concat.cpu().detach().numpy())
+            # plt.show()
 
     train_acc, train_sen, train_spe = all_metrics(test_targets, test_predictions)
 
     print("测试集 acc: {:.4f}".format(train_acc) + "sen: {:.4f}".format(train_sen) +
           "spe: {:.4f}".format(train_spe) + "loss: {:.4f}".format(np.mean(total_test_loss[-10:])))
 
+    df = pd.DataFrame(test_results)
+    df.to_excel("../models/result/yiqi_test1.xlsx",index=False)
