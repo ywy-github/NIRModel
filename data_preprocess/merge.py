@@ -1,34 +1,41 @@
 import os
+import shutil
 
+import pandas as pd
 from openpyxl.workbook import Workbook
 
 if __name__ == '__main__':
 
-    # 创建一个 Excel 工作簿
-    workbook = Workbook()
-    sheet = workbook.active
+    # 设置源文件夹和目标文件夹的路径
+    source_dir = "F:\\PyCharm 2022.2.1\\pythonProject\\nir\\NIR-wave"
+    target_wave1_dir = "../data/wave1"
+    target_wave2_dir = "../data/wave2"
 
-    # 设置标题行
-    sheet['A1'] = 'dcm_name'
+    # 创建目标文件夹（如果不存在）
+    if not os.path.exists(target_wave1_dir):
+        os.makedirs(target_wave1_dir)
+    if not os.path.exists(target_wave2_dir):
+        os.makedirs(target_wave2_dir)
 
-    # 定义要遍历的文件夹路径
-    folder_path = '../data/NIR_Wave2'  # 请将路径替换为实际文件夹的路径
+    # 定义源文件夹中包含图片的文件夹列表
+    source_folders = ["benign-0", "benign-1", "malignant-0", "malignant-1"]
 
-    # 递归遍历文件夹中的文件并将文件名写入 Excel
-    def write_file_names_to_excel(path, current_row):
-        for item in os.listdir(path):
-            item_path = os.path.join(path, item)
-            if os.path.isfile(item_path):
-                sheet.cell(row=current_row, column=1, value=item)
-                current_row += 1
-            elif os.path.isdir(item_path):
-                current_row = write_file_names_to_excel(item_path, current_row)
-        return current_row
+    # 遍历源文件夹和文件夹列表，然后将图片复制到目标文件夹
+    for folder in source_folders:
+        source_wave1_path = os.path.join(source_dir, "test", folder)
+        source_wave2_path = os.path.join(source_dir, "test", folder.replace('-0', '-1'))
 
-    current_row = 2  # 从第二行开始写入文件名
-    current_row = write_file_names_to_excel(folder_path, current_row)
+        if os.path.exists(source_wave1_path):
+            for filename in os.listdir(source_wave1_path):
+                source_image_path = os.path.join(source_wave1_path, filename)
+                target_image_path = os.path.join(target_wave1_dir, filename)
+                shutil.copy(source_image_path, target_image_path)
 
-    # 保存 Excel 文件为 .xlsx 格式
-    workbook.save('../data/wave2.xlsx')
+        if os.path.exists(source_wave2_path):
+            for filename in os.listdir(source_wave2_path):
+                source_image_path = os.path.join(source_wave2_path, filename)
+                target_image_path = os.path.join(target_wave2_dir, filename)
+                shutil.copy(source_image_path, target_image_path)
 
-    print('文件名已保存到 wave2.xlsx')
+
+
