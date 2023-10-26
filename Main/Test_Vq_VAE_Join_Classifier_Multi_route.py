@@ -447,6 +447,11 @@ if __name__ == '__main__':
             test_res_perplexity.append(perplexity.item())
             total_test_loss.append(total_loss.item())
 
+            concat = torch.cat((data[0].view(128, 128),
+                                data_recon[0].view(128, 128)), 1)
+            plt.matshow(concat.cpu().detach().numpy())
+            plt.show()
+
     train_acc, train_sen, train_spe = all_metrics(test_targets, test_predictions)
     print("测试集 acc: {:.4f}".format(train_acc) + "sen: {:.4f}".format(train_sen) +
           "spe: {:.4f}".format(train_spe) + "loss: {:.4f}".format(np.mean(total_test_loss[-10:])))
