@@ -425,6 +425,7 @@ if __name__ == '__main__':
     test_prob = []
     test_predictions = []
     test_targets = []
+    test_results = []
 
     test_res_recon_error = []
     test_res_perplexity = []
@@ -432,7 +433,7 @@ if __name__ == '__main__':
     model.eval()
     with torch.no_grad():
         for batch in test_loader:
-            data, targets = batch
+            data, targets, dcm_names = batch
             data = data.to(device)
             targets = targets.to(device)
             vq_loss, data_recon, perplexity, classifier_outputs = model(data)
@@ -441,9 +442,13 @@ if __name__ == '__main__':
             classifier_loss = criterion(classifier_outputs, targets.view(-1, 1))
             total_loss = joint_loss_function(recon_loss, vq_loss, classifier_loss, lambda_recon, lambda_vq,
                                              lambda_classifier)
-            dcm_name.append(data["dcm_name"])
-            test_prob.append(classifier_outputs.cpu().numpy())
+
+
             predicted_labels = (classifier_outputs >= 0.5).int().squeeze()
+            # 记录每个样本的dcm_name、预测概率值和标签
+            for i in range(len(dcm_names)):
+                test_results.append({'dcm_name': dcm_names[i], 'prob': classifier_outputs[i].item(),
+                                     'probility': predicted_labels[i], 'label':targets[i].item()})
             test_predictions.extend(predicted_labels.cpu().numpy())
             test_targets.extend(targets.cpu().numpy())
             test_res_recon_error.append(recon_loss.item())

@@ -18,7 +18,7 @@ class MyData(Dataset):
         if self.transform:
             img = self.transform(img)
         label = self.label_mapping[self.label]
-        return img, label
+        return img, label, name
 
     def __len__(self):
         return len(self.image_path_list)
