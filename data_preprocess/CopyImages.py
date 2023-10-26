@@ -4,12 +4,12 @@ import pandas as pd
 
 if __name__ == '__main__':
     # 读取Excel文件
-    excel_file = '../data/wave_data.xlsx'
-    df = pd.read_excel(excel_file,sheet_name="test")
+    excel_file = '../data/一期数据.xlsx'
+    df = pd.read_excel(excel_file,sheet_name="测试集275例")
 
     # 原始图片文件夹和目标文件夹路径
-    source_folder = '../data/wave2'
-    output_folder = '../data/NIR_Wave2/test'  # 存放所有数据的主文件夹
+    source_folder = 'F:\\PyCharm 2022.2.1\\pythonProject\\nir\\image_all_noclip'
+    output_folder = '../data/一期数据/test'  # 存放所有数据的主文件夹
 
     # 创建主文件夹
     os.makedirs(output_folder, exist_ok=True)
