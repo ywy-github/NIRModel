@@ -59,3 +59,15 @@ train_recon_error: 0.439
 train_perplexity: 4.105
 val_recon_error: 0.444
 val_perplexity: 4.100
+
+第一波段：
+test1
+训练集 acc: 0.5573sen: 0.6368spe: 0.4927loss: 0.1205
+验证集 acc: 0.5601sen: 0.6396spe: 0.5111loss: 0.1232
+测试集 acc: 0.5232sen: 0.5556spe: 0.5000loss: 0.1227
+train_recon_error: 0.309
+train_perplexity: 7.452
+val_recon_error: 0.308
+val_perplexity: 7.598
+
+
