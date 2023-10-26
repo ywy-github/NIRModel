@@ -406,8 +406,8 @@ if __name__ == '__main__':
     ])
 
 
-    test_benign_data = MyData("../data/shanghai_data/test/benign", "benign", transform=transform)
-    test_malignat_data = MyData("../data/shanghai_data/test/malignant", "malignant", transform=transform)
+    test_benign_data = MyData("../data/一期数据/test/benign", "benign", transform=transform)
+    test_malignat_data = MyData("../data/一期数据/test/malignant", "malignant", transform=transform)
     test_data = test_benign_data + test_malignat_data
 
 
@@ -416,7 +416,7 @@ if __name__ == '__main__':
                                  shuffle=True,
                                  pin_memory=True)
 
-    model = torch.load("../models/result/sh_test3.pth", map_location=device)
+    model = torch.load("../models/result/yiqi_test1.pth", map_location=device)
 
     criterion = Focal_Loss()
     criterion.to(device)
@@ -453,6 +453,7 @@ if __name__ == '__main__':
             plt.show()
 
     train_acc, train_sen, train_spe = all_metrics(test_targets, test_predictions)
+
     print("测试集 acc: {:.4f}".format(train_acc) + "sen: {:.4f}".format(train_sen) +
           "spe: {:.4f}".format(train_spe) + "loss: {:.4f}".format(np.mean(total_test_loss[-10:])))
 
