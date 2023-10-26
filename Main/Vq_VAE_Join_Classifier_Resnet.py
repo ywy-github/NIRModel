@@ -7,10 +7,10 @@ from six.moves import xrange
 
 import torch.nn as nn
 import torch.nn.functional as F
-from torch.optim.lr_scheduler import ReduceLROnPlateau
+from torch.optim.lr_scheduler import ReduceLROnPlateau, StepLR
 from torch.utils.data import DataLoader
 import torch.optim as optim
-from torchvision import transforms, models
+from torchvision import transforms
 import torch
 import torch.utils.data as data
 
@@ -134,7 +134,6 @@ class VectorQuantizerEMA(nn.Module):
         # convert quantized from BHWC -> BCHW
         return loss, quantized.permute(0, 3, 1, 2).contiguous(), perplexity, encodings
 
-
 class Residual(nn.Module):  #@save
     def __init__(self, input_channels, num_channels,
                  use_1x1conv=False, strides=1):
@@ -160,7 +159,6 @@ class Residual(nn.Module):  #@save
         return F.relu(Y)
 
 
-
 def resnet_block(input_channels, num_channels, num_residuals,
                  first_block=False):
     blk = []
@@ -172,73 +170,107 @@ def resnet_block(input_channels, num_channels, num_residuals,
             blk.append(Residual(num_channels, num_channels))
     return blk
 
+
 class Encoder(nn.Module):
-    def __init__(self,num_embedding):
+    def __init__(self):
         super(Encoder, self).__init__()
 
-        self.b1 = nn.Sequential(nn.Conv2d(1, 64, kernel_size=7, stride=2, padding=3),
-                                nn.BatchNorm2d(64), nn.ReLU(),
-                                nn.MaxPool2d(kernel_size=3, stride=2, padding=1)),
-        self.b2 = nn.Sequential(*resnet_block(64, 64, 2, first_block=True)),
-        self.b3 = nn.Sequential(*resnet_block(64, 128, 2)),
-        self.b4 = nn.Sequential(*resnet_block(128, 256, 2)),
-        self.b5 = nn.Sequential(*resnet_block(256, 512, 2)),
-        self.net = nn.Sequential(*self.b1, *self.b2, *self.b3, *self.b4, *self.b5)
+        self.b1 = nn.Sequential(
+            nn.Conv2d(1, 16, kernel_size=7, stride=2, padding=3),
+            nn.BatchNorm2d(16),
+            nn.ReLU(),
+            nn.MaxPool2d(kernel_size=3, stride=2, padding=1)
+        )
+        self.b2 = nn.Sequential(*resnet_block(16, 16, 2, first_block=True))
+        self.b3 = nn.Sequential(*resnet_block(16, 32, 2))
+        self.b4 = nn.Sequential(*resnet_block(32, 64, 2))
+        self.b5 = nn.Sequential(*resnet_block(64, 128, 2))
 
     def forward(self, inputs):
-        x = self.net(inputs)
+        x = self.b1(inputs)
+        x = self.b2(x)
+        x = self.b3(x)
+        x = self.b4(x)
+        x = self.b5(x)
         return x
 
 
 class Decoder(nn.Module):
-    def __init__(self,num_embedding):
+    def __init__(self):
         super(Decoder, self).__init__()
-        self.net = nn.Sequential(
-            nn.Conv2d(num_embedding, 512, kernel_size=1, stride=1, padding=0),
-            nn.ConvTranspose2d(512, 256, kernel_size=4, stride=2, padding=1),
-            nn.ConvTranspose2d(256, 128, kernel_size=4, stride=2, padding=1),
-            nn.ConvTranspose2d(128, 64, kernel_size=4, stride=2, padding=1),
-            nn.ConvTranspose2d(64, 32, kernel_size=4, stride=2, padding=1),
-            nn.ConvTranspose2d(32, 1, kernel_size=4, stride=2, padding=1)
+
+        self.deconv1 = nn.Sequential(
+            nn.ConvTranspose2d(128, 64, kernel_size=(2, 4), stride=(2, 2), padding=(1, 1)),
+            nn.ReLU(),
+            nn.MaxPool2d(kernel_size=3, stride=1, padding=1)
+        )
+        self.deconv2 = nn.Sequential(
+            nn.ConvTranspose2d(64, 32, kernel_size=(5, 4), stride=(2, 2), padding=(1, 1)),
+            nn.ReLU(),
+            nn.MaxPool2d(kernel_size=3, stride=1, padding=1)
+        )
+        self.deconv3 = nn.Sequential(
+            nn.ConvTranspose2d(32, 16, kernel_size=(3, 4), stride=(2, 2), padding=(1, 1)),
+            nn.ReLU(),
+            nn.MaxPool2d(kernel_size=3, stride=1, padding=1)
+        )
+        self.deconv4 = nn.Sequential(
+            nn.ConvTranspose2d(16, 8, kernel_size=(5, 4), stride=(2, 2), padding=(1, 1)),
+            nn.ReLU(),
+            nn.MaxPool2d(kernel_size=3, stride=1, padding=1)
+        )
+        self.deconv5 = nn.Sequential(
+            nn.ConvTranspose2d(8, 1, kernel_size=(4, 4), stride=(2, 2), padding=(1, 1)),
+            nn.ReLU()
         )
 
-    def forward(self, x):
-        x = self.net(x)
+    def forward(self, inputs):
+        x = self.deconv1(inputs)
+        x = self.deconv2(x)
+        x = self.deconv3(x)
+        x = self.deconv4(x)
+        x = self.deconv5(x)
         return x
-
-
-
 class Classifier(nn.Module):
     def __init__(self, input_dim, hidden_dim, num_classes):
         super(Classifier, self).__init__()
-        self.fc1 = nn.Linear(input_dim, hidden_dim)
-        self.fc2 = nn.Linear(hidden_dim, num_classes)
-        self.sigmoid = nn.Sigmoid()
-
+        self.path = nn.Sequential(
+            nn.Linear(input_dim, hidden_dim),
+            nn.ReLU(),
+            nn.Dropout(0.2),
+            nn.Linear(hidden_dim, hidden_dim // 2),
+            nn.ReLU(),
+            nn.Dropout(0.2),
+            nn.Linear(hidden_dim // 2, num_classes),
+            nn.Sigmoid()
+        )
     def forward(self, x):
-        x = torch.relu(self.fc1(x))
-        x = self.fc2(x)
-        x = self.sigmoid(x)  # 通过 sigmoid 函数将输出映射到 [0, 1] 的范围
+        x = self.path(x)
         return x
 
 class Model(nn.Module):
-    def __init__(self, num_embeddings, embedding_dim, commitment_cost, decay=0):
+    def __init__(self,num_embeddings, embedding_dim, commitment_cost, decay=0):
         super(Model, self).__init__()
 
-        self._encoder = Encoder(num_embeddings)
-
+        self._encoder = Encoder()
+        # self._pre_vq_conv = nn.Conv2d(in_channels=num_hiddens,
+        #                               out_channels=embedding_dim,
+        #                               kernel_size=1,
+        #                               stride=1)
         if decay > 0.0:
             self._vq_vae = VectorQuantizerEMA(num_embeddings, embedding_dim,
                                               commitment_cost, decay)
         else:
             self._vq_vae = VectorQuantizer(num_embeddings, embedding_dim,
                                            commitment_cost)
-        self.classifier = Classifier(512*4*4,256,1)
 
-        self._decoder = Decoder(num_embeddings)
+        self.classifier = Classifier(2048,256,1)
+
+        self._decoder = Decoder()
 
     def forward(self, x):
         z = self._encoder(x)
+        # z = self._pre_vq_conv(z)
         loss, quantized, perplexity, _ = self._vq_vae(z)
         classifier_outputs = self.classifier(quantized.view(quantized.size(0),-1))
         x_recon = self._decoder(quantized)
@@ -263,38 +295,58 @@ class WeightedBinaryCrossEntropyLoss(nn.Module):
         loss = - (self.weight_positive * y_true * torch.log(y_pred + 1e-7) + (1 - y_true) * torch.log(1 - y_pred + 1e-7))
         return torch.mean(loss)
 
+# 定义 Focal Loss
+class Focal_Loss(nn.Module):
+    def __init__(self, alpha=0.55, gamma=2.0):
+        super(Focal_Loss, self).__init__()
+        self.alpha = alpha
+        self.gamma = gamma
+
+    def forward(self, preds, labels):
+        """
+        preds:sigmoid的输出结果
+        labels：标签
+        """
+        labels = labels.to(dtype=torch.float32)
+        eps = 1e-7
+        loss_1 = -1 * self.alpha * torch.pow((1 - preds), self.gamma) * torch.log(preds + eps) * labels
+        loss_0 = -1 * (1 - self.alpha) * torch.pow(preds, self.gamma) * torch.log(1 - preds + eps) * (1 - labels)
+        loss = loss_0 + loss_1
+        return torch.mean(loss)
 
 if __name__ == '__main__':
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
     batch_size = 64
-    epochs = 1000
+    epochs = 500
 
-    embedding_dim = 8
-    num_embeddings = 512
+    embedding_dim = 64
+    num_embeddings = 126 #和encoder输出维度相同，和decoder输入维度相同
 
     commitment_cost = 0.25
 
     decay = 0.99
 
-    weight_positive = 2.0  # 调整这个权重以提高对灵敏度的重视
+    weight_positive = 2  # 调整这个权重以提高对灵敏度的重视
 
     learning_rate = 1e-5
 
-    lambda_recon = 0.3
-    lambda_vq = 0.3
-    lambda_classifier = 0.4
-
+    lambda_recon = 0.2
+    lambda_vq = 0.2
+    lambda_classifier = 0.6
 
     # 读取数据集
-    transform = transforms.Compose([transforms.Resize([128, 128]), transforms.ToTensor()])
+    transform = transforms.Compose([
+        transforms.ToTensor(),
+        transforms.Normalize((0.3281,), (0.2366,))  # 设置均值和标准差
+    ])
 
-    train_benign_data = MyData("../data/train/benign", "benign", transform=transform)
-    train_malignat_data = MyData("../../data/train/malignant", "malignant", transform=transform)
+    train_benign_data = MyData("../data/NIR_Wave2/train/benign", "benign", transform=transform)
+    train_malignat_data = MyData("../data/NIR_Wave2/train/malignant", "malignant", transform=transform)
     train_data = train_benign_data + train_malignat_data
 
-    val_benign_data = MyData("../data/val/benign", "benign", transform=transform)
-    val_malignat_data = MyData("../../data/val/malignant", "malignant", transform=transform)
+    val_benign_data = MyData("../data/NIR_Wave2/val/benign", "benign", transform=transform)
+    val_malignat_data = MyData("../data/NIR_Wave2/val/malignant", "malignant", transform=transform)
     val_data = val_benign_data + val_malignat_data
 
     training_loader = DataLoader(train_data,
@@ -309,40 +361,40 @@ if __name__ == '__main__':
 
     model = Model(num_embeddings, embedding_dim,commitment_cost, decay).to(device)
 
-    criterion = WeightedBinaryCrossEntropyLoss(weight_positive)
+    criterion = Focal_Loss()
     criterion.to(device)
     optimizer = optim.Adam(model.parameters(), lr=learning_rate, amsgrad=False)
-
-    # 创建 ReduceLROnPlateau 调度器
-    scheduler = ReduceLROnPlateau(optimizer, mode='min', factor=0.5, patience=20, verbose=False)
-
+    # scheduler = StepLR(optimizer,50,0.1)
     train_res_recon_error = []
     train_res_perplexity = []
 
     val_res_recon_error = []
     val_res_perplexity = []
-
+    total_train_loss = []
+    total_val_loss = []
     start_time = time.time()  # 记录训练开始时间
 
-    for epoch in xrange(epochs):
+    for epoch in range(epochs):
         model.train()
         train_predictions = []
         train_targets = []
-        total_train_loss = 0
+
         for batch in training_loader:
-            data, targets = batch
+            data, targets, dcm_names = batch
             data = data.to(device)
             targets = targets.to(device)
             optimizer.zero_grad()
 
-            vq_loss, data_recon, perplexity,classifier_outputs = model(data)
+            vq_loss, data_recon, perplexity, classifier_outputs = model(data)
 
             data_variance = torch.var(data)
             recon_loss = F.mse_loss(data_recon, data) / data_variance
-            classifier_loss = criterion(targets, classifier_outputs)
-            total_loss = joint_loss_function(recon_loss,vq_loss,classifier_loss,lambda_recon,lambda_vq,lambda_classifier)
+            classifier_loss = criterion(classifier_outputs, targets.view(-1, 1))
+            total_loss = joint_loss_function(recon_loss, vq_loss, classifier_loss, lambda_recon, lambda_vq,
+                                             lambda_classifier)
             total_loss.backward()
             optimizer.step()
+            # scheduler.step()
 
             predicted_labels = (classifier_outputs >= 0.5).int().squeeze()
             train_predictions.extend(predicted_labels.cpu().numpy())
@@ -350,34 +402,33 @@ if __name__ == '__main__':
 
             train_res_recon_error.append(recon_loss.item())
             train_res_perplexity.append(perplexity.item())
-            total_train_loss += total_loss.item()
+            total_train_loss.append(total_loss.item())
         val_predictions = []
         val_targets = []
-        total_val_loss = 0
+
         model.eval()
         with torch.no_grad():
             for batch in validation_loader:
-                data, targets = batch
+                data, targets, names = batch
                 data = data.to(device)
                 targets = targets.to(device)
                 vq_loss, data_recon, perplexity, classifier_outputs = model(data)
                 data_variance = torch.var(data)
                 recon_loss = F.mse_loss(data_recon, data) / data_variance
-                classifier_loss = criterion(targets, classifier_outputs)
-                total_loss = joint_loss_function(recon_loss, vq_loss, classifier_loss, lambda_recon, lambda_vq,lambda_classifier)
-
-                scheduler.step(total_loss)
+                classifier_loss = criterion(classifier_outputs, targets.view(-1, 1))
+                total_loss = joint_loss_function(recon_loss, vq_loss, classifier_loss, lambda_recon, lambda_vq,
+                                                 lambda_classifier)
 
                 predicted_labels = (classifier_outputs >= 0.5).int().squeeze()
                 val_predictions.extend(predicted_labels.cpu().numpy())
                 val_targets.extend(targets.cpu().numpy())
                 val_res_recon_error.append(recon_loss.item())
                 val_res_perplexity.append(perplexity.item())
-                total_val_loss +=total_loss.item()
+                total_val_loss.append(total_loss.item())
         # 将测试步骤中的真实数据、重构数据和上述生成的新数据绘图
 
-        if ((epoch + 1) % 100 == 0):
-            torch.save(model, "../models/VQ_VAE_Join_Classifier2/{}.pth".format(epoch + 1))
+        if ((epoch + 1) % 30 == 0):
+            torch.save(model, "../models/VQ_VAE_Join_Classifier/{}.pth".format(epoch + 1))
             # concat = torch.cat((all_data[0].view(128, 128),
             #                     data_recon[0].view(128, 128)), 1)
             # plt.matshow(concat.cpu().detach().numpy())
@@ -386,19 +437,20 @@ if __name__ == '__main__':
             print('%d iterations' % (epoch + 1))
             train_acc, train_sen, train_spe = all_metrics(train_targets, train_predictions)
             print("训练集 acc: {:.4f}".format(train_acc) + "sen: {:.4f}".format(train_sen) +
-                  "spe: {:.4f}".format(train_spe) + "loss: {:.4f}".format(total_train_loss))
+                  "spe: {:.4f}".format(train_spe) + "loss: {:.4f}".format(np.mean(total_train_loss[-10:])))
 
             val_acc, val_sen, val_spe = all_metrics(val_targets, val_predictions)
             print("验证集 acc: {:.4f}".format(val_acc) + "sen: {:.4f}".format(val_sen) +
-                  "spe: {:.4f}".format(val_spe) + "loss: {:.4f}".format(total_val_loss))
+                  "spe: {:.4f}".format(val_spe) + "loss: {:.4f}".format(np.mean(total_val_loss[-10:])))
 
-            print('train_recon_error: %.3f' % np.mean(train_res_recon_error[-100:]))
-            print('train_perplexity: %.3f' % np.mean(train_res_perplexity[-100:]))
-            print('val_recon_error: %.3f' % np.mean(val_res_recon_error[-100:]))
-            print('val_perplexity: %.3f' % np.mean(val_res_perplexity[-100:]))
+            print('train_recon_error: %.3f' % np.mean(train_res_recon_error[-10:]))
+            print('train_perplexity: %.3f' % np.mean(train_res_perplexity[-10:]))
+            print('val_recon_error: %.3f' % np.mean(val_res_recon_error[-10:]))
+            print('val_perplexity: %.3f' % np.mean(val_res_perplexity[-10:]))
 
     # 结束训练时间
     end_time = time.time()
     training_time = end_time - start_time
 
     print(f"Training time: {training_time} seconds")
+

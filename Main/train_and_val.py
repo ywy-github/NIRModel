@@ -8,7 +8,7 @@ from torchvision import transforms
 from torch import optim
 from torch.utils.data import DataLoader
 from Main.Metrics import all_metrics
-from Main.models.Vq_VAE_Join_Classifier_multi_route import Model, Focal_Loss, joint_loss_function
+from Main.Vq_VAE_Join_Classifier_multi_route import Model, Focal_Loss, joint_loss_function
 from Main.data_loader import MyData
 import torch.nn.functional as F
 

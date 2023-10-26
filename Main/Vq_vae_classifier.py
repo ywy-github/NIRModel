@@ -1,22 +1,13 @@
-from __future__ import print_function
-
 import time
-
-import matplotlib.pyplot as plt
-from six.moves import xrange
-
-import torch.nn as nn
-import torch.nn.functional as F
-from torch.utils.data import DataLoader
-import torch.optim as optim
-from torchvision import transforms
 import torch
-import torch.utils.data as data
+from matplotlib import pyplot as plt
+from torch import nn, optim
+from torch.utils.data import DataLoader
+import torch.nn.functional as F
+from torchvision import transforms
 
-import numpy as np
-from PIL import Image
-import glob
-import random
+from Main.Metrics import all_metrics
+from Main.Vq_VAE_Join_Classifier import Model
 from Main.data_loader import MyData
 
 class VectorQuantizer(nn.Module):
@@ -287,40 +278,48 @@ class Model(nn.Module):
         loss, quantized, perplexity, _ = self._vq_vae(z)
         x_recon = self._decoder(quantized)
 
-        return loss, x_recon, perplexity
+        return loss, x_recon, perplexity, quantized
+
+class Classifier(nn.Module):
+    def __init__(self, input_dim, hidden_dim, num_classes):
+        super(Classifier, self).__init__()
+        self.fc1 = nn.Linear(input_dim, hidden_dim)
+        self.fc2 = nn.Linear(hidden_dim, num_classes)
+
+    def forward(self, x):
+        x = torch.relu(self.fc1(x))
+        x = self.fc2(x)
+        return x
+
+
+def loss_function(output, target, model, lambda_reg):
+    loss_fn = nn.CrossEntropyLoss()
+    ce_loss = loss_fn(output, target)  # 计算交叉熵损失
+    l2_reg = 0  # 初始化正则化项
+
+    # 计算L2正则化项，遍历模型的参数
+    for param in model.parameters():
+        l2_reg += torch.norm(param, p=2)  # 这里假设使用L2正则化
+
+    total_loss = ce_loss + lambda_reg * l2_reg  # 总损失等于交叉熵损失加上L2正则化项
+    return total_loss
 
 if __name__ == '__main__':
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-
-    batch_size = 64
-    num_training_updates = 1000
-
-    num_hiddens = 128
-    num_residual_hiddens = 32
-    num_residual_layers = 2
-
-    embedding_dim = 8
-    num_embeddings = 512
-
-    commitment_cost = 0.25
-
-    decay = 0.99
-
-    learning_rate = 0.001
 
     # 读取数据集
     transform = transforms.Compose([transforms.Resize([128, 128]), transforms.ToTensor()])
 
     train_benign_data = MyData("../data/train/benign", "benign", transform=transform)
-    train_malignat_data = MyData("../../data/train/malignant", "malignant", transform=transform)
+    train_malignat_data = MyData("../data/train/malignant", "malignant", transform=transform)
     train_data = train_benign_data + train_malignat_data
 
     val_benign_data = MyData("../data/val/benign", "benign", transform=transform)
-    val_malignat_data = MyData("../../data/val/malignant", "malignant", transform=transform)
+    val_malignat_data = MyData("../data/val/malignant", "malignant", transform=transform)
     val_data = val_benign_data + val_malignat_data
 
     training_loader = DataLoader(train_data,
-                                 batch_size=batch_size,
+                                 batch_size=64,
                                  shuffle=True,
                                  pin_memory=True)
 
@@ -329,67 +328,71 @@ if __name__ == '__main__':
                                    shuffle=True,
                                    pin_memory=True)
 
-    model = Model(num_hiddens, num_residual_layers, num_residual_hiddens,
-                  num_embeddings, embedding_dim,
-                  commitment_cost, decay).to(device)
+    # 这里将在GPU上训练的模型，拿到CPU上进行测试，需要添加map_location
+    model = torch.load("VQ_VAE899.pth", map_location=device)
+    # 冻结参数
+    for param in model.parameters():
+        param.requires_grad = False
 
-    optimizer = optim.Adam(model.parameters(), lr=learning_rate, amsgrad=False)
+    classifier = Classifier(8*32*32,256,2).to(device)
 
-    train_res_recon_error = []
-    train_res_perplexity = []
+    epochs = 100
+    learning_rate = 0.01
+    lambda_reg = 0.2
+    optimizer = optim.Adam(classifier.parameters(), lr=learning_rate)
 
-    val_res_recon_error = []
-    val_res_perplexity = []
 
     start_time = time.time()  # 记录训练开始时间
-
-    for i in xrange(num_training_updates):
-        model.train()
+    for epoch in range(epochs):
+        classifier.train()
+        train_predictions = []
+        train_targets = []
         total_train_loss = 0
         for batch in training_loader:
-            data, _ = batch
+            data, target = batch
             data = data.to(device)
+            target = target.to(device)
             optimizer.zero_grad()
-
-            vq_loss, data_recon, perplexity = model(data)
-            data_variance = torch.var(data)
-            recon_error = F.mse_loss(data_recon, data) / data_variance
-            loss = recon_error + vq_loss
+            vq_loss, data_recon, perplexity ,quantized = model(data)
+            quantized = quantized.view(quantized.size(0), -1)
+            classifier_outputs = classifier(quantized)
+            loss = loss_function(classifier_outputs, target,classifier,lambda_reg)
             loss.backward()
             optimizer.step()
 
-            train_res_recon_error.append(recon_error.item())
-            train_res_perplexity.append(perplexity.item())
-        model.eval()
+            _, predicted = torch.max(classifier_outputs, 1)
+            train_predictions.extend(predicted.cpu().numpy())
+            train_targets.extend(target.cpu().numpy())
+            total_train_loss += loss.item()
+        if((epoch+1)%10==0):
+            train_acc, train_sen, train_spe = all_metrics(train_targets, train_predictions)
+            print("训练集 acc: {:.4f}".format(train_acc) + "sen: {:.4f}".format(train_sen) +
+                  "spe: {:.4f}".format(train_spe) + "loss: {:.4f}".format(total_train_loss))
+
+        val_predictions = []
+        val_targets = []
+        total_val_loss = 0.0
+        classifier.eval()
         with torch.no_grad():
             for batch in validation_loader:
-                data, _ = batch
+                data, target = batch
                 data = data.to(device)
-                vq_loss, data_recon, perplexity = model(data)
-                data_variance = torch.var(data)
-                recon_error = F.mse_loss(data_recon, data) / data_variance
-                loss = recon_error + vq_loss
+                target = target.to(device)
+                vq_loss, data_recon, perplexity, quantized = model(data)
+                quantized = quantized.view(quantized.size(0), -1)
+                classifier_outputs = classifier(quantized)
+                loss = loss_function(classifier_outputs, target,classifier,lambda_reg)
 
-                val_res_recon_error.append(recon_error.item())
-                val_res_perplexity.append(perplexity.item())
-
-        # 将测试步骤中的真实数据、重构数据绘图
-
-        if ((i + 1) % 100 == 0):
-            torch.save(model, "VQ_VAE{}.pth".format(i+1))
-            concat = torch.cat((data[0].view(128, 128),
-                                data_recon[0].view(128, 128)), 1)
-            plt.matshow(concat.cpu().detach().numpy())
-            plt.show()
-
-            print('%d epoch' % (i + 1))
-            print('train_recon_error: %.3f' % np.mean(train_res_recon_error[-100:]))
-            print('train_perplexity: %.3f' % np.mean(train_res_perplexity[-100:]))
-            print('val_recon_error: %.3f' % np.mean(val_res_recon_error[-100:]))
-            print('val_perplexity: %.3f' % np.mean(val_res_perplexity[-100:]))
-
+                _, predicted = torch.max(classifier_outputs, 1)
+                val_predictions.extend(predicted.cpu().numpy())
+                val_targets.extend(target.cpu().numpy())
+                total_val_loss += loss.item()
+        if ((epoch+1) % 10 == 0):
+            val_acc, val_sen, val_spe = all_metrics(val_targets, val_predictions)
+            print("验证集 acc: {:.4f}".format(val_acc) + "sen: {:.4f}".format(val_sen) +
+                  "spe: {:.4f}".format(val_spe) + "loss: {:.4f}".format(total_val_loss))
+            # torch.save(classifier, "classifier_model_{}.pth".format(epoch + 1))
     # 结束训练时间
     end_time = time.time()
     training_time = end_time - start_time
 
-    print(f"Training time: {training_time} seconds")

@@ -80,12 +80,12 @@ optimizer = optim.Adam(vae.parameters(), lr=0.001)
 
 #读取数据集
 train_benign_data = MyData("../data/train/benign","benign",transform=transform)
-train_malignat_data = MyData("../../data/train/malignant", "malignant", transform=transform)
+train_malignat_data = MyData("../data/train/malignant", "malignant", transform=transform)
 train_data = train_benign_data + train_malignat_data
 
 
 val_benign_data = MyData("../data/val/benign","benign",transform=transform)
-val_malignat_data = MyData("../../data/val/malignant", "malignant", transform=transform)
+val_malignat_data = MyData("../data/val/malignant", "malignant", transform=transform)
 val_data = val_benign_data + val_malignat_data
 
 # 创建数据加载器

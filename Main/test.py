@@ -5,7 +5,7 @@ from torchvision import transforms
 import torch.nn.functional as F
 from Main.Metrics import all_metrics
 from Main.data_loader import MyData
-from Main.models.Vq_VAE_Join_Classifier_multi_route import Focal_Loss, joint_loss_function
+from Main.Vq_VAE_Join_Classifier_multi_route import Focal_Loss, joint_loss_function
 
 if __name__ == '__main__':
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
