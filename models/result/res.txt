@@ -70,4 +70,14 @@ train_perplexity: 7.452
 val_recon_error: 0.308
 val_perplexity: 7.598
 
+第二波段：
+test1 iterations
+训练集 acc: 0.5677sen: 0.4910spe: 0.6299loss: 0.1244
+验证集 acc: 0.5567sen: 0.4505spe: 0.6222loss: 0.1259
+测试集 acc: 0.5515sen: 0.4259spe: 0.6416loss: 0.1288
+train_recon_error: 0.320
+train_perplexity: 4.543
+val_recon_error: 0.323
+val_perplexity: 4.464
+
 

@@ -176,22 +176,18 @@ class Encoder(nn.Module):
         super(Encoder, self).__init__()
 
         self.b1 = nn.Sequential(
-            nn.Conv2d(1, 16, kernel_size=7, stride=2, padding=3),
-            nn.BatchNorm2d(16),
+            nn.Conv2d(1, 64, kernel_size=7, stride=2, padding=3),
+            nn.BatchNorm2d(64),
             nn.ReLU(),
             nn.MaxPool2d(kernel_size=3, stride=2, padding=1)
         )
-        self.b2 = nn.Sequential(*resnet_block(16, 16, 2, first_block=True))
-        self.b3 = nn.Sequential(*resnet_block(16, 32, 2))
-        self.b4 = nn.Sequential(*resnet_block(32, 64, 2))
-        self.b5 = nn.Sequential(*resnet_block(64, 128, 2))
+        self.b2 = nn.Sequential(*resnet_block(64, 64, 2, first_block=True))
+        self.b3 = nn.Sequential(*resnet_block(64, 128, 2))
 
     def forward(self, inputs):
         x = self.b1(inputs)
         x = self.b2(x)
         x = self.b3(x)
-        x = self.b4(x)
-        x = self.b5(x)
         return x
 
 
@@ -199,37 +195,27 @@ class Decoder(nn.Module):
     def __init__(self):
         super(Decoder, self).__init__()
 
-        self.deconv1 = nn.Sequential(
-            nn.ConvTranspose2d(128, 64, kernel_size=(2, 4), stride=(2, 2), padding=(1, 1)),
-            nn.ReLU(),
-            nn.MaxPool2d(kernel_size=3, stride=1, padding=1)
-        )
         self.deconv2 = nn.Sequential(
-            nn.ConvTranspose2d(64, 32, kernel_size=(5, 4), stride=(2, 2), padding=(1, 1)),
+            nn.ConvTranspose2d(128, 64, kernel_size=(3, 4), stride=(2, 2), padding=(1, 1)),
             nn.ReLU(),
             nn.MaxPool2d(kernel_size=3, stride=1, padding=1)
         )
         self.deconv3 = nn.Sequential(
-            nn.ConvTranspose2d(32, 16, kernel_size=(3, 4), stride=(2, 2), padding=(1, 1)),
+            nn.ConvTranspose2d(64, 32, kernel_size=(5, 4), stride=(2, 2), padding=(1, 1)),
             nn.ReLU(),
             nn.MaxPool2d(kernel_size=3, stride=1, padding=1)
         )
         self.deconv4 = nn.Sequential(
-            nn.ConvTranspose2d(16, 8, kernel_size=(5, 4), stride=(2, 2), padding=(1, 1)),
+            nn.ConvTranspose2d(32, 1, kernel_size=(4, 4), stride=(2, 2), padding=(1, 1)),
             nn.ReLU(),
             nn.MaxPool2d(kernel_size=3, stride=1, padding=1)
         )
-        self.deconv5 = nn.Sequential(
-            nn.ConvTranspose2d(8, 1, kernel_size=(4, 4), stride=(2, 2), padding=(1, 1)),
-            nn.ReLU()
-        )
+
 
     def forward(self, inputs):
-        x = self.deconv1(inputs)
-        x = self.deconv2(x)
+        x = self.deconv2(inputs)
         x = self.deconv3(x)
         x = self.deconv4(x)
-        x = self.deconv5(x)
         return x
 class Classifier(nn.Module):
     def __init__(self, input_dim, hidden_dim, num_classes):
@@ -237,10 +223,10 @@ class Classifier(nn.Module):
         self.path = nn.Sequential(
             nn.Linear(input_dim, hidden_dim),
             nn.ReLU(),
-            nn.Dropout(0.2),
+            nn.Dropout(0.6),
             nn.Linear(hidden_dim, hidden_dim // 2),
             nn.ReLU(),
-            nn.Dropout(0.2),
+            nn.Dropout(0.6),
             nn.Linear(hidden_dim // 2, num_classes),
             nn.Sigmoid()
         )
@@ -264,7 +250,7 @@ class Model(nn.Module):
             self._vq_vae = VectorQuantizer(num_embeddings, embedding_dim,
                                            commitment_cost)
 
-        self.classifier = Classifier(2048,256,1)
+        self.classifier = Classifier(128*13*16,256,1)
 
         self._decoder = Decoder()
 
@@ -297,7 +283,7 @@ class WeightedBinaryCrossEntropyLoss(nn.Module):
 
 # 定义 Focal Loss
 class Focal_Loss(nn.Module):
-    def __init__(self, alpha=0.55, gamma=2.0):
+    def __init__(self, alpha=0.6, gamma=2.0):
         super(Focal_Loss, self).__init__()
         self.alpha = alpha
         self.gamma = gamma
@@ -329,7 +315,7 @@ if __name__ == '__main__':
 
     weight_positive = 2  # 调整这个权重以提高对灵敏度的重视
 
-    learning_rate = 1e-5
+    learning_rate = 1e-6
 
     lambda_recon = 0.2
     lambda_vq = 0.2
@@ -341,12 +327,12 @@ if __name__ == '__main__':
         transforms.Normalize((0.3281,), (0.2366,))  # 设置均值和标准差
     ])
 
-    train_benign_data = MyData("../data/NIR_Wave2/train/benign", "benign", transform=transform)
-    train_malignat_data = MyData("../data/NIR_Wave2/train/malignant", "malignant", transform=transform)
+    train_benign_data = MyData("../data/一期数据/train/benign", "benign", transform=transform)
+    train_malignat_data = MyData("../data/一期数据/train/malignant", "malignant", transform=transform)
     train_data = train_benign_data + train_malignat_data
 
-    val_benign_data = MyData("../data/NIR_Wave2/val/benign", "benign", transform=transform)
-    val_malignat_data = MyData("../data/NIR_Wave2/val/malignant", "malignant", transform=transform)
+    val_benign_data = MyData("../data/一期数据/val/benign", "benign", transform=transform)
+    val_malignat_data = MyData("../data/一期数据/val/malignant", "malignant", transform=transform)
     val_data = val_benign_data + val_malignat_data
 
     training_loader = DataLoader(train_data,
