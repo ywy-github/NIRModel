@@ -51,9 +51,11 @@ if __name__ == '__main__':
     model.fc = nn.Linear(model.fc.in_features, num_classes)
     model.add_module("sigmoid", nn.Sigmoid())
 
-    criterion = nn.CrossEntropyLoss()
-    criterion.to(device)
-    optimizer = optim.SGD(model.parameters(), lr=learning_rate, amsgrad=False)
+    model = model.to(device)
+
+    criterion = nn.CrossEntropyLoss().to(device)
+
+    optimizer = optim.SGD(model.parameters(), lr=learning_rate)
 
     start_time = time.time()  # 记录训练开始时间
     train_losses = []
@@ -70,14 +72,14 @@ if __name__ == '__main__':
             optimizer.zero_grad()
             output = model(images)
             loss = criterion(output,targets)
-            total_train_loss+=loss.item()
             loss.backward()
             optimizer.step()
 
+            total_train_loss += loss.item()
             predicted_labels = (output >= 0.5).int().squeeze()
             train_predictions.extend(predicted_labels.cpu().numpy())
             train_targets.extend(targets.cpu().numpy())
-            total_train_loss.append(total_train_loss.item())
+            train_losses.append(total_train_loss)
 
         model.eval()
         val_predictions = []
@@ -90,12 +92,12 @@ if __name__ == '__main__':
                 targets = targets.to(device)
                 output = model(images)
                 loss = criterion(output, targets)
-                total_val_loss += loss.item()
 
+                total_val_loss += loss.item()
                 predicted_labels = (output >= 0.5).int().squeeze()
                 val_predictions.extend(predicted_labels.cpu().numpy())
                 val_targets.extend(targets.cpu().numpy())
-                validation_losses.append(total_val_loss.item())
+                validation_losses.append(total_val_loss)
 
         if ((epoch + 1) % 1 == 0):
             # torch.save(models, "VQ_VAE{}.pth".format(i+1))
