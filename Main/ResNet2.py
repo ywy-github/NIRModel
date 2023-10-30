@@ -47,7 +47,7 @@ if __name__ == '__main__':
 
     #调整结构
     model.conv1 = nn.Conv2d(1, 64, kernel_size=7, stride=2, padding=3, bias=False)
-    num_classes = 1
+    num_classes = 2
     model.fc = nn.Linear(model.fc.in_features, num_classes)
     model.add_module("sigmoid", nn.Sigmoid())
 
@@ -76,8 +76,8 @@ if __name__ == '__main__':
             optimizer.step()
 
             total_train_loss += loss.item()
-            predicted_labels = (output >= 0.5).int().squeeze()
-            train_predictions.extend(predicted_labels.cpu().numpy())
+            _, predicted = torch.max(output, 1)
+            train_predictions.extend(predicted.cpu().numpy())
             train_targets.extend(targets.cpu().numpy())
             train_losses.append(total_train_loss)
 
@@ -94,8 +94,8 @@ if __name__ == '__main__':
                 loss = criterion(output, targets)
 
                 total_val_loss += loss.item()
-                predicted_labels = (output >= 0.5).int().squeeze()
-                val_predictions.extend(predicted_labels.cpu().numpy())
+                _, predicted = torch.max(output, 1)
+                val_predictions.extend(predicted.cpu().numpy())
                 val_targets.extend(targets.cpu().numpy())
                 validation_losses.append(total_val_loss)
 
