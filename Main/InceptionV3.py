@@ -12,7 +12,7 @@ from Main.Metrics import all_metrics
 from Main.data_loader import MyData
 
 class Focal_Loss(nn.Module):
-    def __init__(self, alpha=0.5, gamma=2.0):
+    def __init__(self, alpha=0.6, gamma=2.0):
         super(Focal_Loss, self).__init__()
         self.alpha = alpha
         self.gamma = gamma
@@ -23,6 +23,7 @@ class Focal_Loss(nn.Module):
         labels：标签
         """
         labels = labels.to(dtype=torch.float32)
+        preds = preds.to(dtype=torch.float32)
         eps = 1e-7
         loss_1 = -1 * self.alpha * torch.pow((1 - preds), self.gamma) * torch.log(preds + eps) * labels
         loss_0 = -1 * (1 - self.alpha) * torch.pow(preds, self.gamma) * torch.log(1 - preds + eps) * (1 - labels)
@@ -38,6 +39,7 @@ if __name__ == '__main__':
 
     # 读取数据集
     transform = transforms.Compose([
+        transforms.Resize((299, 299)),
         transforms.ToTensor(),
         transforms.Normalize((0.3281,), (0.2366,))  # 设置均值和标准差
     ])
@@ -62,11 +64,9 @@ if __name__ == '__main__':
 
 
 
-    model = models.resnet18(pretrained=True)
+    model = models.inception_v3(pretrained=True)
 
-    #调整结构
-    model.conv1 = nn.Conv2d(1, 64, kernel_size=7, stride=2, padding=3, bias=False)
-    num_hidden = 256
+    num_hidden = 1024
     model.fc = nn.Sequential(
         nn.Linear(model.fc.in_features, num_hidden),
         nn.ReLU(),
@@ -81,12 +81,12 @@ if __name__ == '__main__':
         param.requires_grad = False
 
     for name, param in model.named_parameters():
-        if "layer4" in name:
+        if "Mixed_7c" in name:
             param.requires_grad = True
         if "fc" in name:
             param.requires_grad = True
 
-    criterion = nn.BCELoss().to(device)
+    criterion = Focal_Loss().to(device)
 
     optimizer = optim.SGD(filter(lambda p: p.requires_grad, model.parameters()), lr=learning_rate)
 
@@ -99,12 +99,12 @@ if __name__ == '__main__':
         total_train_loss = 0.0
         for batch in training_loader:
             images, targets, names= batch
+            images = images.repeat(1, 3, 1, 1)  # 将单通道的图像复制到三个通道
             images = images.to(device)
-            targets = targets.to(torch.float32)
             targets = targets.to(device)
             optimizer.zero_grad()
             output = model(images)
-            loss = criterion(output,targets.view(-1, 1))
+            loss = criterion(output,targets.view(-1,1))
             loss.backward()
             optimizer.step()
 
@@ -121,11 +121,11 @@ if __name__ == '__main__':
         with torch.no_grad():
             for batch in validation_loader:
                 images, targets, names = batch
-                targets = targets.to(torch.float32)
+                images = images.repeat(1, 3, 1, 1)  # 将单通道的图像复制到三个通道
                 images = images.to(device)
                 targets = targets.to(device)
                 output = model(images)
-                loss = criterion(output,targets.view(-1, 1))
+                loss = criterion(output, targets)
 
                 total_val_loss += loss.item()
                 predicted_labels = (output >= 0.5).int().squeeze()
