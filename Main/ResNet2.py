@@ -5,10 +5,29 @@ from matplotlib import pyplot as plt
 from tensorboard import summary
 from torch import nn, optim
 from torch.utils.data import DataLoader
+from torch.utils.tensorboard import SummaryWriter
 from torchvision import models
 from torchvision import transforms
 from Main.Metrics import all_metrics
 from Main.data_loader import MyData
+
+class Focal_Loss(nn.Module):
+    def __init__(self, alpha=0.5, gamma=2.0):
+        super(Focal_Loss, self).__init__()
+        self.alpha = alpha
+        self.gamma = gamma
+
+    def forward(self, preds, labels):
+        """
+        preds:sigmoid的输出结果
+        labels：标签
+        """
+        labels = labels.to(dtype=torch.float32)
+        eps = 1e-7
+        loss_1 = -1 * self.alpha * torch.pow((1 - preds), self.gamma) * torch.log(preds + eps) * labels
+        loss_0 = -1 * (1 - self.alpha) * torch.pow(preds, self.gamma) * torch.log(1 - preds + eps) * (1 - labels)
+        loss = loss_0 + loss_1
+        return torch.mean(loss)
 
 if __name__ == '__main__':
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -43,48 +62,61 @@ if __name__ == '__main__':
 
 
 
-    model = models.resnet18(pretrained=False)
+    model = models.resnet18(pretrained=True)
 
     #调整结构
     model.conv1 = nn.Conv2d(1, 64, kernel_size=7, stride=2, padding=3, bias=False)
-    num_classes = 2
-    model.fc = nn.Linear(model.fc.in_features, num_classes)
-    model.add_module("sigmoid", nn.Sigmoid())
+    num_hidden = 256
+    model.fc = nn.Sequential(
+        nn.Linear(model.fc.in_features, num_hidden),
+        nn.ReLU(),
+        nn.Dropout(0.2),
+        nn.Linear(num_hidden, 1),
+        nn.Sigmoid()
+    )
 
     model = model.to(device)
 
-    criterion = nn.CrossEntropyLoss().to(device)
+    for param in model.parameters():
+        param.requires_grad = False
 
-    optimizer = optim.SGD(model.parameters(), lr=learning_rate)
+    for name, param in model.named_parameters():
+        if "layer4" in name:
+            param.requires_grad = True
+        if "fc" in name:
+            param.requires_grad = True
+
+    criterion = Focal_Loss().to(device)
+
+    optimizer = optim.SGD(filter(lambda p: p.requires_grad, model.parameters()), lr=learning_rate)
 
     start_time = time.time()  # 记录训练开始时间
-    train_losses = []
-    validation_losses = []
+    writer = SummaryWriter("../Logs")
     for epoch in range(epochs):
         model.train()
         train_predictions = []
         train_targets = []
-        total_train_loss = 0
+        total_train_loss = 0.0
         for batch in training_loader:
             images, targets, names= batch
             images = images.to(device)
             targets = targets.to(device)
             optimizer.zero_grad()
             output = model(images)
-            loss = criterion(output,targets)
+            loss = criterion(output,targets.view(-1,1))
             loss.backward()
             optimizer.step()
 
             total_train_loss += loss.item()
-            _, predicted = torch.max(output, 1)
-            train_predictions.extend(predicted.cpu().numpy())
+            predicted_labels = (output >= 0.5).int().squeeze()
+            train_predictions.extend(predicted_labels.cpu().numpy())
             train_targets.extend(targets.cpu().numpy())
-            train_losses.append(total_train_loss)
+        writer.add_scalar('Loss/Train', total_train_loss, epoch)
 
         model.eval()
         val_predictions = []
         val_targets = []
-        total_val_loss = 0
+        total_val_loss = 0.0
         with torch.no_grad():
             for batch in validation_loader:
                 images, targets, names = batch
@@ -94,10 +126,10 @@ if __name__ == '__main__':
                 loss = criterion(output, targets)
 
                 total_val_loss += loss.item()
-                _, predicted = torch.max(output, 1)
-                val_predictions.extend(predicted.cpu().numpy())
+                predicted_labels = (output >= 0.5).int().squeeze()
+                val_predictions.extend(predicted_labels.cpu().numpy())
                 val_targets.extend(targets.cpu().numpy())
-                validation_losses.append(total_val_loss)
+        writer.add_scalar('Loss/Val', total_val_loss, epoch)
 
         if ((epoch + 1) % 1 == 0):
             # torch.save(models, "VQ_VAE{}.pth".format(i+1))
@@ -111,17 +143,8 @@ if __name__ == '__main__':
             print("验证集 acc: {:.4f}".format(val_acc) + "sen: {:.4f}".format(val_sen) +
                   "spe: {:.4f}".format(val_spe) + "loss: {:.4f}".format(total_val_loss))
 
-    # 结束训练时间
+    writer.close()
     end_time = time.time()
     training_time = end_time - start_time
 
     print(f"Training time: {training_time} seconds")
-
-    plt.figure(figsize=(10, 5))
-    plt.plot(range(10, epochs + 1, 10), train_losses, label='Train Loss')
-    plt.plot(range(10, epochs + 1, 10), validation_losses, label='Validation Loss')
-    plt.xlabel('Epoch')
-    plt.ylabel('Loss')
-    plt.legend()
-    plt.title('Training and Validation Loss Over Time')
-    plt.show()
