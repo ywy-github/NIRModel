@@ -40,7 +40,6 @@ val_recon_error: 0.372
 val_perplexity: 5.203
 
 一期数据
-
 yiqi_test1 iterations
 训练集 acc: 0.6356sen: 0.7796spe: 0.5642loss: 0.1297
 验证集 acc: 0.5714sen: 0.7579spe: 0.4909loss: 0.1322
