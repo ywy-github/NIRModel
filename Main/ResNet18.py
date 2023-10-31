@@ -35,7 +35,7 @@ if __name__ == '__main__':
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
     batch_size = 64
-    epochs = 100
+    epochs = 1000
     learning_rate = 1e-4
 
     # 读取数据集
@@ -142,7 +142,7 @@ if __name__ == '__main__':
                 val_targets.extend(targets.cpu().numpy())
         writer.add_scalar('Loss/Val', total_val_loss, epoch)
 
-        if ((epoch + 1) % 1 == 0):
+        if ((epoch + 1) % 50 == 0):
             # torch.save(models, "VQ_VAE{}.pth".format(i+1))
             print('%d epoch' % (epoch + 1))
 

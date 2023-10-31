@@ -12,7 +12,7 @@ from Main.Metrics import all_metrics
 from Main.data_loader import MyData
 
 class Focal_Loss(nn.Module):
-    def __init__(self, alpha=0.6, gamma=2.0):
+    def __init__(self, alpha=0.7, gamma=2.0):
         super(Focal_Loss, self).__init__()
         self.alpha = alpha
         self.gamma = gamma
@@ -33,8 +33,8 @@ if __name__ == '__main__':
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
     batch_size = 64
-    epochs = 100
-    learning_rate = 1e-5
+    epochs = 1000
+    learning_rate = 1e-4
 
     # 读取数据集
     transform = transforms.Compose([
@@ -131,7 +131,7 @@ if __name__ == '__main__':
                 val_targets.extend(targets.cpu().numpy())
         writer.add_scalar('Loss/Val', total_val_loss, epoch)
 
-        if ((epoch + 1) % 1 == 0):
+        if ((epoch + 1) % 50 == 0):
             # torch.save(models, "VQ_VAE{}.pth".format(i+1))
             print('%d epoch' % (epoch + 1))
 
