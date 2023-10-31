@@ -13,22 +13,15 @@ from torchvision import transforms
 from Main.Metrics import all_metrics
 from Main.data_loader import MyData
 
-class Focal_Loss(nn.Module):
-    def __init__(self, alpha=0.5, gamma=2.0):
-        super(Focal_Loss, self).__init__()
-        self.alpha = alpha
-        self.gamma = gamma
+# 定义自定义损失函数，加权二进制交叉熵
+class WeightedBinaryCrossEntropyLoss(nn.Module):
+    def __init__(self, weight_positive):
+        super(WeightedBinaryCrossEntropyLoss, self).__init__()
+        self.weight_positive = weight_positive
 
-    def forward(self, preds, labels):
-        """
-        preds:sigmoid的输出结果
-        labels：标签
-        """
-        labels = labels.to(dtype=torch.float32)
-        eps = 1e-7
-        loss_1 = -1 * self.alpha * torch.pow((1 - preds), self.gamma) * torch.log(preds + eps) * labels
-        loss_0 = -1 * (1 - self.alpha) * torch.pow(preds, self.gamma) * torch.log(1 - preds + eps) * (1 - labels)
-        loss = loss_0 + loss_1
+    def forward(self, y_true, y_pred):
+        y_true = y_true.to(dtype=torch.float32)
+        loss = - (self.weight_positive * y_true * torch.log(y_pred + 1e-7) + (1 - y_true) * torch.log(1 - y_pred + 1e-7))
         return torch.mean(loss)
 
 if __name__ == '__main__':
@@ -68,7 +61,6 @@ if __name__ == '__main__':
 
     #调整结构
     model.conv1 = nn.Conv2d(1, 64, kernel_size=7, stride=2, padding=3, bias=False)
-    model = nn.Sequential(*list(model.children())[:-1])
     num_hidden = 256
     model.fc = nn.Sequential(
         nn.Linear(model.fc.in_features, num_hidden),
@@ -84,12 +76,14 @@ if __name__ == '__main__':
         param.requires_grad = False
 
     for name, param in model.named_parameters():
+        if "layer3" in name:
+            param.requires_grad = True
         if "layer4" in name:
             param.requires_grad = True
         if "fc" in name:
             param.requires_grad = True
 
-    criterion = nn.BCELoss().to(device)
+    criterion = WeightedBinaryCrossEntropyLoss(2)
 
     optimizer = optim.SGD(filter(lambda p: p.requires_grad, model.parameters()), lr=learning_rate)
 
@@ -104,7 +98,7 @@ if __name__ == '__main__':
         for batch in training_loader:
             images, targets, names= batch
             images = images.to(device)
-            targets = targets.to(torch.float32)
+            # targets = targets.to(torch.float32)
             targets = targets.to(device)
             optimizer.zero_grad()
             output = model(images)
@@ -128,11 +122,11 @@ if __name__ == '__main__':
         with torch.no_grad():
             for batch in validation_loader:
                 images, targets, names = batch
-                targets = targets.to(torch.float32)
+                # targets = targets.to(torch.float32)
                 images = images.to(device)
                 targets = targets.to(device)
                 output = model(images)
-                loss = criterion(output,targets.view(-1, 1))
+                loss = criterion(targets.view(-1, 1), output)
 
                 total_val_loss += loss.item()
                 predicted_labels = (output >= 0.5).int().squeeze()
@@ -143,7 +137,7 @@ if __name__ == '__main__':
         writer.add_scalar('Loss/Val', total_val_loss, epoch)
 
         if ((epoch + 1) % 50 == 0):
-            # torch.save(models, "VQ_VAE{}.pth".format(i+1))
+            torch.save(model, "../models/resnet/resnet18{}.pth".format(epoch+1))
             print('%d epoch' % (epoch + 1))
 
             train_acc, train_sen, train_spe = all_metrics(train_targets, train_pred)
@@ -163,7 +157,7 @@ if __name__ == '__main__':
             val_auc = roc_auc_score(val_targets, val_score)
 
             print("验证集 acc: {:.4f}".format(val_acc) + " sen: {:.4f}".format(val_sen) +
-                  " spe: {:.4f}".format(val_spe) +" sen: {:.4f}".format(val_auc)+
+                  " spe: {:.4f}".format(val_spe) +" auc: {:.4f}".format(val_auc)+
                   " loss: {:.4f}".format(total_val_loss))
 
 

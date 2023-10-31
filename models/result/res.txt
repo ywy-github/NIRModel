@@ -1,82 +1,18 @@
-总体数据：
-all_test1 iterations
-训练集 acc: 0.5702sen: 0.7174spe: 0.4964loss: 0.1302
-验证集 acc: 0.5473sen: 0.7214spe: 0.4470loss: 0.1325
-测试集 acc: 0.5205sen: 0.6403spe: 0.4224loss: 0.1363
+resnet18
 
-all_test2 iterations
-训练集 acc: 0.5745sen: 0.7264spe: 0.4982loss: 0.1284
-验证集 acc: 0.5455sen: 0.6866spe: 0.4642loss: 0.1303
-测试集 acc: 0.5270sen: 0.6067spe: 0.4617loss: 0.1372
+权重BCEloss
+test1  更新layer3 layer4 和 fc   2
+训练集 acc: 0.9682 sen: 0.9042 spe: 1.0000 auc: 0.9447 loss: 8.0212
+验证集 acc: 0.7111 sen: 0.4947 spe: 0.8045 auc: 0.7079 loss: 70.8911
+测试集 acc: 0.6691sen: 0.4943  spe: 0.7500loss: 2.3248
+
+test2   更新layer3 layer4 和 fc   2
+训练集 acc: 0.9682 sen: 0.9744 spe: 0.9651 auc: 0.9953 loss: 4.3285
+验证集 acc: 0.6825 sen: 0.4632 spe: 0.7773 auc: 0.6742 loss: 9.2073
+测试集 acc: 0.6836sen: 0.5862spe: 0.7287loss: 0.8251
 
 
-上海数据：
-sh_test1  iterations
-训练集 acc: 0.6242sen: 0.5782spe: 0.6513loss: 0.1363
-验证集 acc: 0.6067sen: 0.5556spe: 0.6415loss: 0.1400
-测试集 acc: 0.5202sen: 0.3536spe: 0.6605loss: 0.1463
-train_recon_error: 0.409
-train_perplexity: 4.493
-val_recon_error: 0.404
-val_perplexity: 4.530
-
-sh_test2 iterations
-训练集 acc: 0.6267sen: 0.5884spe: 0.6493loss: 0.1344
-验证集 acc: 0.5918sen: 0.5648spe: 0.6101loss: 0.1382
-测试集 acc: 0.5328sen: 0.4199spe: 0.6279loss: 0.1460
-train_recon_error: 0.394
-train_perplexity: 4.599
-val_recon_error: 0.394
-val_perplexity: 4.627
-
-sh_test3 iterations
-训练集 acc: 0.6028sen: 0.7789spe: 0.4990loss: 0.1277
-验证集 acc: 0.5506sen: 0.7037spe: 0.4465loss: 0.1315
-测试集 acc: 0.5303sen: 0.6519spe: 0.4279loss: 0.1383
-
-train_recon_error: 0.372
-train_perplexity: 5.143
-val_recon_error: 0.372
-val_perplexity: 5.203
-
-一期数据
-yiqi_test1 iterations
-训练集 acc: 0.6356sen: 0.7796spe: 0.5642loss: 0.1297
-验证集 acc: 0.5714sen: 0.7579spe: 0.4909loss: 0.1322
-测试集 acc: 0.5418sen: 0.7126spe: 0.4628loss: 0.1345
-train_recon_error: 0.407
-train_perplexity: 5.164
-val_recon_error: 0.408
-val_perplexity: 5.110
-
-二期数据：
-240 iterations
-训练集 acc: 0.5906sen: 0.5831spe: 0.5958loss: 0.1473
-验证集 acc: 0.5367sen: 0.5865spe: 0.4970loss: 0.1511
-测试集 acc: 0.5544sen: 0.5543spe: 0.5545loss: 0.1456
-train_recon_error: 0.439
-train_perplexity: 4.105
-val_recon_error: 0.444
-val_perplexity: 4.100
-
-第一波段：
-test1
-训练集 acc: 0.5573sen: 0.6368spe: 0.4927loss: 0.1205
-验证集 acc: 0.5601sen: 0.6396spe: 0.5111loss: 0.1232
-测试集 acc: 0.5232sen: 0.5556spe: 0.5000loss: 0.1227
-train_recon_error: 0.309
-train_perplexity: 7.452
-val_recon_error: 0.308
-val_perplexity: 7.598
-
-第二波段：
-test1 iterations
-训练集 acc: 0.5677sen: 0.4910spe: 0.6299loss: 0.1244
-验证集 acc: 0.5567sen: 0.4505spe: 0.6222loss: 0.1259
-测试集 acc: 0.5515sen: 0.4259spe: 0.6416loss: 0.1288
-train_recon_error: 0.320
-train_perplexity: 4.543
-val_recon_error: 0.323
-val_perplexity: 4.464
-
+VQ-VAE-resnet18   VQ-VAE-resnet18  2  0.2 0.2 0.6
+训练集 acc: 1.0000 sen: 1.0000 spe: 1.0000 auc: 1.0000 loss: 6.1266
+验证集 acc: 0.7143 sen: 0.4105 spe: 0.8455 sen: 0.7117 loss: 41.9433
 
