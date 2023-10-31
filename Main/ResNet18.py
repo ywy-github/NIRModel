@@ -165,6 +165,7 @@ if __name__ == '__main__':
                   " spe: {:.4f}".format(val_spe) +" sen: {:.4f}".format(val_auc)+
                   " loss: {:.4f}".format(total_val_loss))
 
+
     writer.close()
     end_time = time.time()
     training_time = end_time - start_time
