@@ -137,13 +137,15 @@ if __name__ == '__main__':
             # torch.save(models, "VQ_VAE{}.pth".format(i+1))
             print('%d epoch' % (epoch + 1))
 
-            train_acc, train_sen, train_spe = all_metrics(train_targets, train_predictions)
-            print("训练集 acc: {:.4f}".format(train_acc) + "sen: {:.4f}".format(train_sen) +
-                  "spe: {:.4f}".format(train_spe) + "loss: {:.4f}".format(total_train_loss))
+            train_acc, train_sen, train_spe, train_auc = all_metrics(train_targets, train_predictions)
+            print("训练集 acc: {:.4f}".format(train_acc) + " sen: {:.4f}".format(train_sen) +
+                  " spe: {:.4f}".format(train_spe) + " auc: {:.4f}".format(train_auc) +
+                  " loss: {:.4f}".format(total_train_loss))
 
-            val_acc, val_sen, val_spe = all_metrics(val_targets, val_predictions)
-            print("验证集 acc: {:.4f}".format(val_acc) + "sen: {:.4f}".format(val_sen) +
-                  "spe: {:.4f}".format(val_spe) + "loss: {:.4f}".format(total_val_loss))
+            val_acc, val_sen, val_spe, val_auc = all_metrics(val_targets, val_predictions)
+            print("验证集 acc: {:.4f}".format(val_acc) + " sen: {:.4f}".format(val_sen) +
+                  " spe: {:.4f}".format(val_spe) +" sen: {:.4f}".format(val_sen)+
+                  " loss: {:.4f}".format(total_val_loss))
 
     writer.close()
     end_time = time.time()
