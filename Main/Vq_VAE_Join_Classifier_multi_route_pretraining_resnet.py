@@ -15,7 +15,7 @@ from torch.utils.tensorboard import SummaryWriter
 from torchvision import transforms
 import torch
 import torch.utils.data as data
-
+from torchvision import models
 import numpy as np
 from PIL import Image
 import glob
@@ -136,157 +136,95 @@ class VectorQuantizerEMA(nn.Module):
         # convert quantized from BHWC -> BCHW
         return loss, quantized.permute(0, 3, 1, 2).contiguous(), perplexity, encodings
 
-
-class Residual(nn.Module):
-    def __init__(self, in_channels, num_hiddens, num_residual_hiddens,strides=1):
-        super(Residual, self).__init__()
-        self.relu1 = nn.LeakyReLU(inplace=True)
-        self. conv1 = nn.Conv2d(in_channels=in_channels,
-                      out_channels=num_residual_hiddens,
-                      kernel_size=3, stride=strides, padding=1, bias=False)
-        self.bn1 = nn.BatchNorm2d(num_residual_hiddens)
-        self.relu2 = nn.LeakyReLU(inplace=True)
-        self.conv2 = nn.Conv2d(in_channels=num_residual_hiddens,
-                      out_channels=num_hiddens,
-                      kernel_size=1, stride=1, bias=False)
-        self.bn2 = nn.BatchNorm2d(num_hiddens)
-        if strides != 1:
-            self.downsample = nn.Conv2d(in_channels=in_channels, out_channels=num_hiddens, kernel_size=1,
-                                        stride=strides, bias=False)
+class Residual(nn.Module):  #@save
+    def __init__(self, input_channels, num_channels,
+                 use_1x1conv=False, strides=1):
+        super().__init__()
+        self.conv1 = nn.Conv2d(input_channels, num_channels,
+                               kernel_size=3, padding=1, stride=strides)
+        self.conv2 = nn.Conv2d(num_channels, num_channels,
+                               kernel_size=3, padding=1)
+        if use_1x1conv:
+            self.conv3 = nn.Conv2d(input_channels, num_channels,
+                                   kernel_size=1, stride=strides)
         else:
-            self.downsample = None  # Set to None when strides == 1
+            self.conv3 = None
+        self.bn1 = nn.BatchNorm2d(num_channels)
+        self.bn2 = nn.BatchNorm2d(num_channels)
 
-    def forward(self, x):
-        out = self.conv1(self.relu1(x))
-        out = self.bn1(out)
+    def forward(self, X):
+        Y = F.relu(self.bn1(self.conv1(X)))
+        Y = self.bn2(self.conv2(Y))
+        if self.conv3:
+            X = self.conv3(X)
+        Y += X
+        return F.relu(Y)
 
-        out = self.conv2(self.relu2(out))
-        out = self.bn2(out)
 
-        if self.downsample is not None:
-            identity = self.downsample(x)
+def resnet_block(input_channels, num_channels, num_residuals,
+                 first_block=False):
+    blk = []
+    for i in range(num_residuals):
+        if i == 0 and not first_block:
+            blk.append(Residual(input_channels, num_channels,
+                                use_1x1conv=True, strides=2))
         else:
-            identity = x
-
-        return out + identity
-
-
-class ResidualStack(nn.Module):
-    def __init__(self, in_channels, num_hiddens, num_residual_layers, num_residual_hiddens):
-        super(ResidualStack, self).__init__()
-        self._num_residual_layers = num_residual_layers
-        self._layers = nn.ModuleList([Residual(in_channels, num_hiddens, num_residual_hiddens)
-                                      for _ in range(self._num_residual_layers)])
-
-    def forward(self, x):
-        for i in range(self._num_residual_layers):
-            x = self._layers[i](x)
-        return F.relu(x)
+            blk.append(Residual(num_channels, num_channels))
+    return blk
 
 
 class Encoder(nn.Module):
-    def __init__(self, in_channels, num_hiddens, num_residual_layers, num_residual_hiddens):
+    def __init__(self):
         super(Encoder, self).__init__()
 
-        self.path1 = nn.Sequential(
-            nn.Conv2d(in_channels=in_channels,out_channels=8,kernel_size=11,stride=1, padding=5),
+        self.b1 = nn.Sequential(
+            nn.Conv2d(1, 64, kernel_size=7, stride=2, padding=3),
+            nn.BatchNorm2d(64),
             nn.ReLU(),
-            nn.MaxPool2d(kernel_size=3,stride=2),
-            nn.Conv2d(in_channels=8,out_channels=16,kernel_size=11,stride=1, padding=5),
-            nn.ReLU(),
-            nn.MaxPool2d(kernel_size=3, stride=2),
-            nn.Conv2d(in_channels=16,out_channels=32,kernel_size=11,stride=1, padding=5),
-            nn.ReLU(),
-            nn.MaxPool2d(kernel_size=3, stride=2),
-            nn.Conv2d(in_channels=32, out_channels=64, kernel_size=11, stride=1, padding=5),
-            nn.ReLU(),
-            nn.MaxPool2d(kernel_size=3, stride=2),
+            nn.MaxPool2d(kernel_size=3, stride=2, padding=1)
         )
-
-        self.path2 = nn.Sequential(
-            nn.Conv2d(in_channels=in_channels, out_channels=8, kernel_size=7, stride=1, padding=3),
-            nn.ReLU(),
-            nn.MaxPool2d(kernel_size=3, stride=2),
-            nn.Conv2d(in_channels=8, out_channels=16, kernel_size=7, stride=1, padding=3),
-            nn.ReLU(),
-            nn.MaxPool2d(kernel_size=3, stride=2),
-            nn.Conv2d(in_channels=16, out_channels=32, kernel_size=7, stride=1, padding=3),
-            nn.ReLU(),
-            nn.MaxPool2d(kernel_size=3, stride=2),
-            nn.Conv2d(in_channels=32, out_channels=64, kernel_size=7, stride=1, padding=3),
-            nn.ReLU(),
-            nn.MaxPool2d(kernel_size=3, stride=2),
-        )
-
-        self.path3 = nn.Sequential(
-            nn.Conv2d(in_channels=in_channels, out_channels=8, kernel_size=3, stride=1, padding=1),
-            nn.ReLU(),
-            nn.MaxPool2d(kernel_size=3, stride=2),
-            nn.Conv2d(in_channels=8, out_channels=16, kernel_size=3, stride=1, padding=1),
-            nn.ReLU(),
-            nn.MaxPool2d(kernel_size=3, stride=2),
-            nn.Conv2d(in_channels=16, out_channels=32, kernel_size=3, stride=1, padding=1),
-            nn.ReLU(),
-            nn.MaxPool2d(kernel_size=3, stride=2),
-            nn.Conv2d(in_channels=32, out_channels=64, kernel_size=3, stride=1, padding=1),
-            nn.ReLU(),
-            nn.MaxPool2d(kernel_size=3, stride=2),
-        )
-
-        self._residual_stack = ResidualStack(in_channels=num_hiddens,
-                                             num_hiddens=num_hiddens,
-                                             num_residual_layers=num_residual_layers,
-                                             num_residual_hiddens=num_residual_hiddens)
+        self.b2 = nn.Sequential(*resnet_block(64, 64, 2, first_block=True))
+        self.b3 = nn.Sequential(*resnet_block(64, 128, 2))
 
     def forward(self, inputs):
-        x1 = self.path1(inputs)
-        x2 = self.path2(inputs)
-        x3 = self.path3(inputs)
-        x = torch.cat((x1, x2, x3), dim=1)
+        x = self.b1(inputs)
+        x = self.b2(x)
+        x = self.b3(x)
         return x
 
 
 class Decoder(nn.Module):
-    def __init__(self, in_channels, num_hiddens, num_residual_layers, num_residual_hiddens):
+    def __init__(self):
         super(Decoder, self).__init__()
 
-        self.path = nn.Sequential(
-            nn.ConvTranspose2d(in_channels=in_channels,
-                               out_channels=num_hiddens // 2,
-                               kernel_size=(3, 4),
-                               stride=(6,5), padding=1),
-            nn.ConvTranspose2d(in_channels=num_hiddens // 2,
-                               out_channels=num_hiddens // 2,
-                               kernel_size=(5, 4),
-                               stride=2, padding=1),
-            nn.ConvTranspose2d(in_channels=num_hiddens // 2,
-                               out_channels=1,
-                               kernel_size=4,
-                               stride=2, padding=1)
-
+        self.deconv2 = nn.Sequential(
+            nn.ConvTranspose2d(512, 256, kernel_size=(5, 4), stride=(2, 2), padding=(1, 1)),
+            nn.ReLU(),
+            nn.MaxPool2d(kernel_size=3, stride=1, padding=1)
+        )
+        self.deconv3 = nn.Sequential(
+            nn.ConvTranspose2d(256, 128, kernel_size=(3, 4), stride=(2, 2), padding=(1, 1)),
+            nn.ReLU(),
+            nn.MaxPool2d(kernel_size=3, stride=1, padding=1),
+        )
+        self.deconv4 = nn.Sequential(
+            nn.ConvTranspose2d(128, 64, kernel_size=(5, 4), stride=(2, 2), padding=(1, 1)),
+            nn.ReLU(),
+            nn.MaxPool2d(kernel_size=3, stride=1, padding=1)
+        )
+        self.deconv5 = nn.Sequential(
+            nn.ConvTranspose2d(64, 1, kernel_size=(4, 4), stride=(2, 2), padding=(1, 1)),
+            nn.ReLU(),
+            nn.MaxPool2d(kernel_size=3, stride=1, padding=1)
         )
 
 
-        self._residual_stack = ResidualStack(in_channels=num_hiddens,
-                                             num_hiddens=num_hiddens,
-                                             num_residual_layers=num_residual_layers,
-                                             num_residual_hiddens=num_residual_hiddens)
-
-        self._conv_trans_1 = nn.ConvTranspose2d(in_channels=num_hiddens,
-                                                out_channels=num_hiddens // 2,
-                                                kernel_size=(5,4),
-                                                stride=2, padding=1)
-
-        self._conv_trans_2 = nn.ConvTranspose2d(in_channels=num_hiddens // 2,
-                                                out_channels=1,
-                                                kernel_size=4,
-                                                stride=2, padding=1)
-
     def forward(self, inputs):
-        x = self.path(inputs)
-
+        x = self.deconv2(inputs)
+        x = self.deconv3(x)
+        x = self.deconv4(x)
+        x = self.deconv5(x)
         return x
-
 
 class Classifier(nn.Module):
     def __init__(self, input_dim, hidden_dim, num_classes):
@@ -294,10 +232,10 @@ class Classifier(nn.Module):
         self.path = nn.Sequential(
             nn.Linear(input_dim, hidden_dim),
             nn.ReLU(),
-            nn.Dropout(0.2),
+            nn.Dropout(0.6),
             nn.Linear(hidden_dim, hidden_dim // 2),
             nn.ReLU(),
-            nn.Dropout(0.2),
+            nn.Dropout(0.6),
             nn.Linear(hidden_dim // 2, num_classes),
             nn.Sigmoid()
         )
@@ -306,29 +244,24 @@ class Classifier(nn.Module):
         return x
 
 class Model(nn.Module):
-    def __init__(self, num_hiddens, num_residual_layers, num_residual_hiddens,
-                 num_embeddings, embedding_dim, commitment_cost, decay=0):
+    def __init__(self,encoder,num_embeddings, embedding_dim, commitment_cost, decay=0):
         super(Model, self).__init__()
 
-        self._encoder = Encoder(1, num_hiddens,
-                                num_residual_layers,
-                                num_residual_hiddens)
-        self._pre_vq_conv = nn.Conv2d(in_channels=num_hiddens,
-                                      out_channels=embedding_dim,
-                                      kernel_size=1,
-                                      stride=1)
+        self._encoder = encoder
+        # self._pre_vq_conv = nn.Conv2d(in_channels=num_hiddens,
+        #                               out_channels=embedding_dim,
+        #                               kernel_size=1,
+        #                               stride=1)
         if decay > 0.0:
             self._vq_vae = VectorQuantizerEMA(num_embeddings, embedding_dim,
                                               commitment_cost, decay)
         else:
             self._vq_vae = VectorQuantizer(num_embeddings, embedding_dim,
                                            commitment_cost)
-        self.classifier = Classifier(192*5*7,256,1)
 
-        self._decoder = Decoder(embedding_dim,
-                                num_hiddens,
-                                num_residual_layers,
-                                num_residual_hiddens)
+        self.classifier = Classifier(512*6*8,256,1)
+
+        self._decoder = Decoder()
 
     def forward(self, x):
         z = self._encoder(x)
@@ -359,7 +292,7 @@ class WeightedBinaryCrossEntropyLoss(nn.Module):
 
 # 定义 Focal Loss
 class Focal_Loss(nn.Module):
-    def __init__(self, alpha=0.55, gamma=2.0):
+    def __init__(self, alpha=0.6, gamma=2.0):
         super(Focal_Loss, self).__init__()
         self.alpha = alpha
         self.gamma = gamma
@@ -375,19 +308,14 @@ class Focal_Loss(nn.Module):
         loss_0 = -1 * (1 - self.alpha) * torch.pow(preds, self.gamma) * torch.log(1 - preds + eps) * (1 - labels)
         loss = loss_0 + loss_1
         return torch.mean(loss)
-
 if __name__ == '__main__':
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
     batch_size = 64
     epochs = 500
 
-    num_hiddens = 64
-    num_residual_hiddens = 32
-    num_residual_layers = 2
-
-    embedding_dim = num_hiddens * 3
-    num_embeddings = 512
+    embedding_dim = 64
+    num_embeddings = 126  # 和encoder输出维度相同，和decoder输入维度相同
 
     commitment_cost = 0.25
 
@@ -407,12 +335,12 @@ if __name__ == '__main__':
         transforms.Normalize((0.3281,), (0.2366,))  # 设置均值和标准差
     ])
 
-    train_benign_data = MyData("../data/NIR_Wave2/train/benign", "benign", transform=transform)
-    train_malignat_data = MyData("../data/NIR_Wave2/train/malignant", "malignant", transform=transform)
+    train_benign_data = MyData("../data/一期数据/train/benign", "benign", transform=transform)
+    train_malignat_data = MyData("../data/一期数据/train/malignant", "malignant", transform=transform)
     train_data = train_benign_data + train_malignat_data
 
-    val_benign_data = MyData("../data/NIR_Wave2/val/benign", "benign", transform=transform)
-    val_malignat_data = MyData("../data/NIR_Wave2/val/malignant", "malignant", transform=transform)
+    val_benign_data = MyData("../data/一期数据/val/benign", "benign", transform=transform)
+    val_malignat_data = MyData("../data/一期数据/val/malignant", "malignant", transform=transform)
     val_data = val_benign_data + val_malignat_data
 
     training_loader = DataLoader(train_data,
@@ -425,13 +353,26 @@ if __name__ == '__main__':
                                    shuffle=True,
                                    pin_memory=True)
 
-    model = Model(num_hiddens, num_residual_layers, num_residual_hiddens,
-                  num_embeddings, embedding_dim,
-                  commitment_cost, decay).to(device)
+    #设置encoder
+    encoder = models.resnet18(pretrained=True)
+    encoder.conv1 = nn.Conv2d(1, 64, kernel_size=7, stride=2, padding=3, bias=False)
+    encoder.avgpool = nn.AdaptiveAvgPool2d(output_size=(6, 8))
+    for param in encoder.parameters():
+        param.requires_grad = False
 
-    criterion = WeightedBinaryCrossEntropyLoss()
+    for name, param in encoder.named_parameters():
+        if "layer4" in name:
+            param.requires_grad = True
+        if "fc" in name:
+            param.requires_grad = True
+
+    encoder = nn.Sequential(*list(encoder.children())[:-1])
+
+    model = Model(encoder,num_embeddings, embedding_dim, commitment_cost, decay).to(device)
+
+    criterion = WeightedBinaryCrossEntropyLoss(2)
     criterion.to(device)
-    optimizer = optim.Adam(model.parameters(), lr=learning_rate, amsgrad=False)
+    optimizer = optim.Adam(filter(lambda p: p.requires_grad, model.parameters()), lr=learning_rate, amsgrad=False)
     # scheduler = StepLR(optimizer,50,0.1)
     train_res_recon_error = []
     train_res_perplexity = []
@@ -457,7 +398,7 @@ if __name__ == '__main__':
 
             data_variance = torch.var(data)
             recon_loss = F.mse_loss(data_recon, data) / data_variance
-            classifier_loss = criterion(classifier_outputs, targets.view(-1, 1))
+            classifier_loss = criterion(targets.view(-1, 1), classifier_outputs)
             total_loss = joint_loss_function(recon_loss, vq_loss, classifier_loss, lambda_recon, lambda_vq,
                                              lambda_classifier)
             total_loss.backward()

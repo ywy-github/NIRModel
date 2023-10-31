@@ -68,6 +68,7 @@ if __name__ == '__main__':
 
     #调整结构
     model.conv1 = nn.Conv2d(1, 64, kernel_size=7, stride=2, padding=3, bias=False)
+    model = nn.Sequential(*list(model.children())[:-1])
     num_hidden = 256
     model.fc = nn.Sequential(
         nn.Linear(model.fc.in_features, num_hidden),
@@ -107,7 +108,7 @@ if __name__ == '__main__':
             targets = targets.to(device)
             optimizer.zero_grad()
             output = model(images)
-            loss = criterion(output,targets.view(-1, 1))
+            loss = criterion(targets.view(-1, 1),output)
             loss.backward()
             optimizer.step()
 
