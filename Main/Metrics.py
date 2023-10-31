@@ -8,10 +8,9 @@ def all_metrics(y_true, y_pred):
     sen = np.round(sensitivity_score(y_true, y_pred), 4)
     spe = np.round(specificity_score(y_true, y_pred), 4)
     acc = np.round(accuracy_score(y_true, y_pred), 4)
-    auc = np.round(roc_auc_score(y_true, y_pred),4)
     TP = cm[1][1]
     FP = cm[0][1]
     FN = cm[1][0]
     TN = cm[0][0]
 
-    return acc,sen,spe,auc
+    return acc,sen,spe

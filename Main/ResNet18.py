@@ -1,7 +1,9 @@
 import time
 
+import numpy as np
 import torch
 from matplotlib import pyplot as plt
+from sklearn.metrics import roc_auc_score
 from tensorboard import summary
 from torch import nn, optim
 from torch.utils.data import DataLoader
@@ -94,7 +96,8 @@ if __name__ == '__main__':
     writer = SummaryWriter("../Logs")
     for epoch in range(epochs):
         model.train()
-        train_predictions = []
+        train_score = []
+        train_pred = []
         train_targets = []
         total_train_loss = 0.0
         for batch in training_loader:
@@ -109,13 +112,16 @@ if __name__ == '__main__':
             optimizer.step()
 
             total_train_loss += loss.item()
-            predicted_labels = (output >= 0.5).int().squeeze()
-            train_predictions.extend(predicted_labels.cpu().numpy())
+            pred = (output >= 0.5).int().squeeze()
+
+            train_score.append(output.cpu().detach().numpy())
+            train_pred.extend(pred.cpu().numpy())
             train_targets.extend(targets.cpu().numpy())
         writer.add_scalar('Loss/Train', total_train_loss, epoch)
 
         model.eval()
-        val_predictions = []
+        val_score = []
+        val_pred = []
         val_targets = []
         total_val_loss = 0.0
         with torch.no_grad():
@@ -129,7 +135,9 @@ if __name__ == '__main__':
 
                 total_val_loss += loss.item()
                 predicted_labels = (output >= 0.5).int().squeeze()
-                val_predictions.extend(predicted_labels.cpu().numpy())
+
+                val_score.append(output.flatten().cpu().numpy())
+                val_pred.extend(predicted_labels.cpu().numpy())
                 val_targets.extend(targets.cpu().numpy())
         writer.add_scalar('Loss/Val', total_val_loss, epoch)
 
@@ -137,14 +145,24 @@ if __name__ == '__main__':
             # torch.save(models, "VQ_VAE{}.pth".format(i+1))
             print('%d epoch' % (epoch + 1))
 
-            train_acc, train_sen, train_spe, train_auc = all_metrics(train_targets, train_predictions)
+            train_acc, train_sen, train_spe = all_metrics(train_targets, train_pred)
+
+            train_score = np.concatenate(train_score)  # 将列表转换为NumPy数组
+            train_targets = np.array(train_targets)
+            train_auc = roc_auc_score(train_targets, train_score)
+
             print("训练集 acc: {:.4f}".format(train_acc) + " sen: {:.4f}".format(train_sen) +
                   " spe: {:.4f}".format(train_spe) + " auc: {:.4f}".format(train_auc) +
                   " loss: {:.4f}".format(total_train_loss))
 
-            val_acc, val_sen, val_spe, val_auc = all_metrics(val_targets, val_predictions)
+            val_acc, val_sen, val_spe = all_metrics(val_targets, val_pred)
+
+            val_score = np.concatenate(val_score)  # 将列表转换为NumPy数组
+            val_targets = np.array(val_targets)
+            val_auc = roc_auc_score(val_targets, val_score)
+
             print("验证集 acc: {:.4f}".format(val_acc) + " sen: {:.4f}".format(val_sen) +
-                  " spe: {:.4f}".format(val_spe) +" sen: {:.4f}".format(val_sen)+
+                  " spe: {:.4f}".format(val_spe) +" sen: {:.4f}".format(val_auc)+
                   " loss: {:.4f}".format(total_val_loss))
 
     writer.close()

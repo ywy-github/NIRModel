@@ -427,7 +427,7 @@ if __name__ == '__main__':
                   num_embeddings, embedding_dim,
                   commitment_cost, decay).to(device)
 
-    criterion = Focal_Loss()
+    criterion = nn.BCELoss()
     criterion.to(device)
     optimizer = optim.Adam(model.parameters(), lr=learning_rate, amsgrad=False)
     # scheduler = StepLR(optimizer,50,0.1)
@@ -436,18 +436,18 @@ if __name__ == '__main__':
 
     val_res_recon_error = []
     val_res_perplexity = []
-    total_train_loss = []
-    total_val_loss = []
+
     start_time = time.time()  # 记录训练开始时间
 
     for epoch in range(epochs):
         model.train()
         train_predictions = []
         train_targets = []
-
+        total_train_loss = 0.0
         for batch in training_loader:
             data, targets, dcm_names = batch
             data = data.to(device)
+            targets = targets.to(torch.float32)
             targets = targets.to(device)
             optimizer.zero_grad()
 
@@ -466,12 +466,13 @@ if __name__ == '__main__':
             train_predictions.extend(predicted_labels.cpu().numpy())
             train_targets.extend(targets.cpu().numpy())
 
+            total_train_loss +=total_loss
             train_res_recon_error.append(recon_loss.item())
             train_res_perplexity.append(perplexity.item())
-            total_train_loss.append(total_loss.item())
+
         val_predictions = []
         val_targets = []
-
+        total_val_loss = 0.0
         model.eval()
         with torch.no_grad():
             for batch in validation_loader:
@@ -488,26 +489,30 @@ if __name__ == '__main__':
                 predicted_labels = (classifier_outputs >= 0.5).int().squeeze()
                 val_predictions.extend(predicted_labels.cpu().numpy())
                 val_targets.extend(targets.cpu().numpy())
+
+                total_val_loss += total_loss
                 val_res_recon_error.append(recon_loss.item())
                 val_res_perplexity.append(perplexity.item())
-                total_val_loss.append(total_loss.item())
+
         # 将测试步骤中的真实数据、重构数据和上述生成的新数据绘图
 
         if ((epoch + 1) % 30 == 0):
-            torch.save(model, "../models/VQ_VAE_Join_Classifier/{}.pth".format(epoch + 1))
+            # torch.save(model, "../models/VQ_VAE_Join_Classifier/{}.pth".format(epoch + 1))
             # concat = torch.cat((all_data[0].view(128, 128),
             #                     data_recon[0].view(128, 128)), 1)
             # plt.matshow(concat.cpu().detach().numpy())
             # plt.show()
 
             print('%d iterations' % (epoch + 1))
-            train_acc, train_sen, train_spe = all_metrics(train_targets, train_predictions)
-            print("训练集 acc: {:.4f}".format(train_acc) + "sen: {:.4f}".format(train_sen) +
-                  "spe: {:.4f}".format(train_spe) + "loss: {:.4f}".format(np.mean(total_train_loss[-10:])))
+            train_acc, train_sen, train_spe, train_auc = all_metrics(train_targets, train_predictions)
+            print("训练集 acc: {:.4f}".format(train_acc) + " sen: {:.4f}".format(train_sen) +
+                  " spe: {:.4f}".format(train_spe) + " auc: {:.4f}".format(train_auc) +
+                  " loss: {:.4f}".format(total_train_loss))
 
-            val_acc, val_sen, val_spe = all_metrics(val_targets, val_predictions)
-            print("验证集 acc: {:.4f}".format(val_acc) + "sen: {:.4f}".format(val_sen) +
-                  "spe: {:.4f}".format(val_spe) + "loss: {:.4f}".format(np.mean(total_val_loss[-10:])))
+            val_acc, val_sen, val_spe, val_auc = all_metrics(val_targets, val_predictions)
+            print("验证集 acc: {:.4f}".format(val_acc) + " sen: {:.4f}".format(val_sen) +
+                  " spe: {:.4f}".format(val_spe) + " sen: {:.4f}".format(val_sen) +
+                  " loss: {:.4f}".format(total_val_loss))
 
             print('train_recon_error: %.3f' % np.mean(train_res_recon_error[-10:]))
             print('train_perplexity: %.3f' % np.mean(train_res_perplexity[-10:]))
