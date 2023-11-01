@@ -2,11 +2,20 @@ resnet18
 
 
 
-resnet18-test2   更新layer3 layer4 和 fc   2
+resnet18-test1   更新一层
+训练集 acc: 0.9269 sen: 0.9425 spe: 0.9192 auc: 0.9798 loss: 5.7682
+验证集 acc: 0.6825 sen: 0.5368 spe: 0.7455 auc: 0.6901 loss: 8.9092
+测试集 acc: 0.6655sen: 0.5862spe: 0.7021  loss: 0.8585
+
+resnet18-test2   更新两层
 训练集 acc: 0.9682 sen: 0.9744 spe: 0.9651 auc: 0.9953 loss: 4.3285
 验证集 acc: 0.6825 sen: 0.4632 spe: 0.7773 auc: 0.6742 loss: 9.2073
 测试集 acc: 0.6836sen: 0.5862spe: 0.7287loss: 0.8251
 
+resnet18-test3   全更新
+训练集 acc: 0.8824 sen: 0.9297 spe: 0.8590 auc: 0.9592 loss: 7.4648
+验证集 acc: 0.6730 sen: 0.5053 spe: 0.7455 auc: 0.6553 loss: 8.9902
+测试集 acc: 0.6655sen: 0.5862spe: 0.7021loss: 0.8650
 
 VQ-VAE-resnet18-test1   2  0.2 0.2 0.6  更新一层
 训练集 acc: 1.0000 sen: 1.0000 spe: 1.0000 auc: 1.0000 loss: 6.1266
@@ -17,3 +26,8 @@ VQ-VAE-resnet18-test2    2  0.2 0.2 0.6  更新两层
 训练集 acc: 1.0000 sen: 1.0000 spe: 1.0000 auc: 1.0000 loss: 6.6772
 验证集 acc: 0.7333 sen: 0.4211 spe: 0.8682 sen: 0.7103 loss: 40.4618
 测试集 acc: 0.7091sen: 0.4713spe: 0.8191loss: 5.8090
+
+VQ-VAE-resnet18-test3    全更新
+训练集 acc: 1.0000 sen: 1.0000 spe: 1.0000 auc: 1.0000 loss: 6.6521
+验证集 acc: 0.7111 sen: 0.4947 spe: 0.8045 sen: 0.7028 loss: 46.5118
+测试集 acc: 0.7200sen: 0.5632spe: 0.7926loss: 5.3186

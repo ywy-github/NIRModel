@@ -358,15 +358,15 @@ if __name__ == '__main__':
     encoder.conv1 = nn.Conv2d(1, 64, kernel_size=7, stride=2, padding=3, bias=False)
     encoder.avgpool = nn.AdaptiveAvgPool2d(output_size=(6, 8))
     for param in encoder.parameters():
-        param.requires_grad = False
+        param.requires_grad = True
 
-    for name, param in encoder.named_parameters():
-        if "layer3" in name:
-            param.requires_grad = True
-        if "layer4" in name:
-            param.requires_grad = True
-        if "fc" in name:
-            param.requires_grad = True
+    # for name, param in encoder.named_parameters():
+    #     if "layer3" in name:
+    #         param.requires_grad = True
+    #     if "layer4" in name:
+    #         param.requires_grad = True
+    #     if "fc" in name:
+    #         param.requires_grad = True
 
     encoder = nn.Sequential(*list(encoder.children())[:-1])
 
@@ -468,7 +468,7 @@ if __name__ == '__main__':
             val_auc = roc_auc_score(val_targets, val_score)
 
             print("验证集 acc: {:.4f}".format(val_acc) + " sen: {:.4f}".format(val_sen) +
-                  " spe: {:.4f}".format(val_spe) +" sen: {:.4f}".format(val_auc)+
+                  " spe: {:.4f}".format(val_spe) +" auc: {:.4f}".format(val_auc)+
                   " loss: {:.4f}".format(total_val_loss))
 
 

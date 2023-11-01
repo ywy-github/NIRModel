@@ -73,13 +73,13 @@ if __name__ == '__main__':
     model = model.to(device)
 
     for param in model.parameters():
-        param.requires_grad = False
+        param.requires_grad = True
 
-    for name, param in model.named_parameters():
-        if "layer4" in name:
-            param.requires_grad = True
-        if "fc" in name:
-            param.requires_grad = True
+    # for name, param in model.named_parameters():
+    #     if "layer4" in name:
+    #         param.requires_grad = True
+    #     if "fc" in name:
+    #         param.requires_grad = True
 
     criterion = WeightedBinaryCrossEntropyLoss(2)
 
