@@ -1,18 +1,19 @@
 resnet18
 
-权重BCEloss
-test1  更新layer3 layer4 和 fc   2
-训练集 acc: 0.9682 sen: 0.9042 spe: 1.0000 auc: 0.9447 loss: 8.0212
-验证集 acc: 0.7111 sen: 0.4947 spe: 0.8045 auc: 0.7079 loss: 70.8911
-测试集 acc: 0.6691sen: 0.4943  spe: 0.7500loss: 2.3248
 
-test2   更新layer3 layer4 和 fc   2
+
+resnet18-test2   更新layer3 layer4 和 fc   2
 训练集 acc: 0.9682 sen: 0.9744 spe: 0.9651 auc: 0.9953 loss: 4.3285
 验证集 acc: 0.6825 sen: 0.4632 spe: 0.7773 auc: 0.6742 loss: 9.2073
 测试集 acc: 0.6836sen: 0.5862spe: 0.7287loss: 0.8251
 
 
-VQ-VAE-resnet18   VQ-VAE-resnet18  2  0.2 0.2 0.6
+VQ-VAE-resnet18-test1   2  0.2 0.2 0.6  更新一层
 训练集 acc: 1.0000 sen: 1.0000 spe: 1.0000 auc: 1.0000 loss: 6.1266
 验证集 acc: 0.7143 sen: 0.4105 spe: 0.8455 sen: 0.7117 loss: 41.9433
+测试集 acc: 0.6473sen: 0.3563spe: 0.7819loss: 5.4399
 
+VQ-VAE-resnet18-test2    2  0.2 0.2 0.6  更新两层
+训练集 acc: 1.0000 sen: 1.0000 spe: 1.0000 auc: 1.0000 loss: 6.6772
+验证集 acc: 0.7333 sen: 0.4211 spe: 0.8682 sen: 0.7103 loss: 40.4618
+测试集 acc: 0.7091sen: 0.4713spe: 0.8191loss: 5.8090

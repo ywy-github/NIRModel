@@ -76,8 +76,6 @@ if __name__ == '__main__':
         param.requires_grad = False
 
     for name, param in model.named_parameters():
-        if "layer3" in name:
-            param.requires_grad = True
         if "layer4" in name:
             param.requires_grad = True
         if "fc" in name:
