@@ -1,7 +1,5 @@
 resnet18
 
-
-
 resnet18-test1   更新一层
 训练集 acc: 0.9269 sen: 0.9425 spe: 0.9192 auc: 0.9798 loss: 5.7682
 验证集 acc: 0.6825 sen: 0.5368 spe: 0.7455 auc: 0.6901 loss: 8.9092
