@@ -335,12 +335,12 @@ if __name__ == '__main__':
         transforms.Normalize((0.3281,), (0.2366,))  # 设置均值和标准差
     ])
 
-    train_benign_data = MyData("../data/一期数据/train/benign", "benign", transform=transform)
-    train_malignat_data = MyData("../data/一期数据/train/malignant", "malignant", transform=transform)
+    train_benign_data = MyData("../data/二期数据/train/benign", "benign", transform=transform)
+    train_malignat_data = MyData("../data/二期数据/train/malignant", "malignant", transform=transform)
     train_data = train_benign_data + train_malignat_data
 
-    val_benign_data = MyData("../data/一期数据/val/benign", "benign", transform=transform)
-    val_malignat_data = MyData("../data/一期数据/val/malignant", "malignant", transform=transform)
+    val_benign_data = MyData("../data/二期数据/val/benign", "benign", transform=transform)
+    val_malignat_data = MyData("../data/二期数据/val/malignant", "malignant", transform=transform)
     val_data = val_benign_data + val_malignat_data
 
     training_loader = DataLoader(train_data,
@@ -360,13 +360,13 @@ if __name__ == '__main__':
     for param in encoder.parameters():
         param.requires_grad = True
 
-    # for name, param in encoder.named_parameters():
-    #     if "layer3" in name:
-    #         param.requires_grad = True
-    #     if "layer4" in name:
-    #         param.requires_grad = True
-    #     if "fc" in name:
-    #         param.requires_grad = True
+    for name, param in encoder.named_parameters():
+        if "layer3" in name:
+            param.requires_grad = True
+        if "layer4" in name:
+            param.requires_grad = True
+        if "fc" in name:
+            param.requires_grad = True
 
     encoder = nn.Sequential(*list(encoder.children())[:-1])
 
