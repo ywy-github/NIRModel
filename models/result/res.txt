@@ -27,7 +27,7 @@ VQ-VAE-resnet18-test2    2  0.2 0.2 0.6  更新两层
 测试集 acc: 0.7018sen: 0.4483spe: 0.8191loss: 5.7890
 
 VQ-VAE-resnet18-test3    全更新
-训练集 acc: 1.0000 sen: 1.0000 spe: 1.0000 auc: 1.0000 loss: 6.6521
+测试集 acc: 0.9905sen: 0.9776spe: 0.9968loss: 0.2188
 验证集 acc: 0.6921sen: 0.4632spe: 0.7909loss: 5.2464
 测试集 acc: 0.7127sen: 0.5517spe: 0.7872loss: 5.0815
 

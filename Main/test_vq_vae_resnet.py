@@ -306,8 +306,8 @@ if __name__ == '__main__':
         transforms.Normalize((0.3281,), (0.2366,))  # 设置均值和标准差
     ])
 
-    test_benign_data = MyData("../data/一期数据/test/benign", "benign", transform=transform)
-    test_malignat_data = MyData("../data/一期数据/test/malignant", "malignant", transform=transform)
+    test_benign_data = MyData("../data/一期数据/train/benign", "benign", transform=transform)
+    test_malignat_data = MyData("../data/一期数据/train/malignant", "malignant", transform=transform)
     test_data = test_benign_data + test_malignat_data
 
     test_loader = DataLoader(test_data,
@@ -355,4 +355,4 @@ if __name__ == '__main__':
           "spe: {:.4f}".format(train_spe) + "loss: {:.4f}".format(np.mean(total_test_loss[-10:])))
 
     df = pd.DataFrame(test_results)
-    df.to_excel("../models/result/VQ-VAE-resnet18-test3.xlsx", index=False)
+    df.to_excel("../models/result/VQ-VAE-resnet18-test3_train.xlsx", index=False)
