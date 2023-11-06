@@ -79,6 +79,8 @@ if __name__ == '__main__':
         param.requires_grad = False
 
     for name, param in model.named_parameters():
+        if "layer3" in name:
+            param.requires_grad = True
         if "layer4" in name:
             param.requires_grad = True
         if "fc" in name:
@@ -97,13 +99,13 @@ if __name__ == '__main__':
         train_targets = []
         total_train_loss = 0.0
         for batch in training_loader:
-            images, targets, names= batch
+            images, targets, names = batch
             images = images.to(device)
             # targets = targets.to(torch.float32)
             targets = targets.to(device)
             optimizer.zero_grad()
             output = model(images)
-            loss = criterion(output,targets.view(-1, 1))
+            loss = criterion(targets.view(-1, 1), output)
             loss.backward()
             optimizer.step()
 
@@ -127,7 +129,7 @@ if __name__ == '__main__':
                 images = images.to(device)
                 targets = targets.to(device)
                 output = model(images)
-                loss = criterion(output,targets.view(-1, 1))
+                loss = criterion(targets.view(-1, 1), output)
 
                 total_val_loss += loss.item()
                 predicted_labels = (output >= 0.5).int().squeeze()
@@ -138,7 +140,7 @@ if __name__ == '__main__':
         writer.add_scalar('Loss/Val', total_val_loss, epoch)
 
         if ((epoch + 1) % 50 == 0):
-            torch.save(model, "../models/resnet/resnet18{}.pth".format(epoch+1))
+            torch.save(model, "../models/resnet/resnet50{}.pth".format(epoch + 1))
             print('%d epoch' % (epoch + 1))
 
             train_acc, train_sen, train_spe = all_metrics(train_targets, train_pred)
@@ -158,9 +160,8 @@ if __name__ == '__main__':
             val_auc = roc_auc_score(val_targets, val_score)
 
             print("验证集 acc: {:.4f}".format(val_acc) + " sen: {:.4f}".format(val_sen) +
-                  " spe: {:.4f}".format(val_spe) +" auc: {:.4f}".format(val_auc)+
+                  " spe: {:.4f}".format(val_spe) + " auc: {:.4f}".format(val_auc) +
                   " loss: {:.4f}".format(total_val_loss))
-
 
     writer.close()
     end_time = time.time()

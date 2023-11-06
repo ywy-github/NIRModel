@@ -39,5 +39,5 @@ resnet18-data2-test1
 
 VQ-VAE-resnet18_data2_test1
 训练集 acc: 0.9688 sen: 0.9973 spe: 0.9492 auc: 0.9958 loss: 10.5869
-验证集 acc: 0.5867 sen: 0.6917 spe: 0.5030 auc: 0.6437 loss: 70.8539
-测试集 acc: 0.5867sen: 0.6917spe: 0.5030loss: 2.7315
+测试集 acc: 0.5700sen: 0.6992spe: 0.4671loss: 0.9770
+测试集 acc: 0.5575sen: 0.7200spe: 0.4311loss: 0.9561
