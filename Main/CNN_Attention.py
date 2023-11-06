@@ -65,13 +65,13 @@ if __name__ == '__main__':
 
     #调整结构
     model.conv1 = nn.Conv2d(1, 64, kernel_size=7, stride=2, padding=3, bias=False)
-    CBAM = CBAM(model.fc.in_features)
-    model.layer4.add_module('CBAM', CBAM)
+    CBAM = CBAM(128)
+    model.layer2.add_module('CBAM', CBAM)
     num_hidden = 256
     model.fc = nn.Sequential(
         nn.Linear(model.fc.in_features, num_hidden),
         nn.ReLU(),
-        nn.Dropout(0.2),
+        nn.Dropout(0.5),
         nn.Linear(num_hidden, 1),
         nn.Sigmoid()
     )
@@ -82,6 +82,8 @@ if __name__ == '__main__':
         param.requires_grad = False
 
     for name, param in model.named_parameters():
+        if "layer2" in name:
+            param.requires_grad = True
         if "layer3" in name:
             param.requires_grad = True
         if "layer4" in name:

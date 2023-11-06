@@ -1,25 +1,39 @@
 一期数据
 
-resnet18-test2   更新两层
-训练集 acc: 0.9682 sen: 0.9744 spe: 0.9651 auc: 0.9953 loss: 4.3285
-验证集 acc: 0.6825 sen: 0.4632 spe: 0.7773 auc: 0.6742 loss: 9.2073
-测试集 acc: 0.6836sen: 0.5862spe: 0.7287loss: 0.8251
+resnet18-model
+训练集 acc: 0.8888 sen: 0.9010 spe: 0.8827 auc: 0.9666 loss: 6.9609
+验证集 acc: 0.6762 sen: 0.5579 spe: 0.7273 auc: 0.6927 loss: 8.5593
+测试集 acc: 0.7055sen: 0.6092spe: 0.7500loss: 0.8673
+
+VQ-VAE-resnet18
+训练集 acc: 1.0000 sen: 1.0000 spe: 1.0000 auc: 1.0000 loss: 6.7153
+验证集 acc: 0.7111 sen: 0.4105 spe: 0.8409 auc: 0.6671 loss: 43.8988
+测试集 acc: 0.6982sen: 0.4138spe: 0.8298loss: 4.2576
 
 
-VQ-VAE-resnet18-test2    2  0.2 0.2 0.6  更新两层
-训练集 acc: 1.0000 sen: 1.0000 spe: 1.0000 auc: 1.0000 loss: 6.6772
-测试集 acc: 0.7270sen: 0.3895spe: 0.8727loss: 5.2344
-测试集 acc: 0.7018sen: 0.4483spe: 0.8191loss: 5.7890
+Attention_resnet18_3_v1: 在layer3后添加
+训练集 acc: 0.8951 sen: 0.9042 spe: 0.8906 auc: 0.9692 loss: 6.0409
+验证集 acc: 0.6857 sen: 0.5158 spe: 0.7591 auc: 0.6747 loss: 8.7615
+测试集 acc: 0.6800sen: 0.5632spe: 0.7340loss: 0.8636
 
+Attention_resnet18_4_v1: 在layer4后添加
+验证集 acc: 0.5937sen: 0.5474spe: 0.6136loss: 0.8667
+测试集 acc: 0.6327sen: 0.6322spe: 0.6330loss: 0.8756
+
+Attention_resnet18_4_v2: 在layer4后添加
+训练集 acc: 0.9417 sen: 0.9585 spe: 0.9334 auc: 0.9892 loss: 4.9753
+验证集 acc: 0.6825 sen: 0.4842 spe: 0.7682 auc: 0.6848 loss: 9.0676
+测试集 acc: 0.6476sen: 0.5053spe: 0.7091loss: 0.8812
 
 
 二期数据：
-resnet18-data2-test1
-训练集 acc: 0.8096 sen: 0.9590 spe: 0.7068 auc: 0.9449 loss: 9.7394
-验证集 acc: 0.5700 sen: 0.6992 spe: 0.4671 auc: 0.5878 loss: 9.8277
-测试集 acc: 0.5575sen: 0.7200spe: 0.4311loss: 0.9825
+resnet18-data2
+训练集 acc: 0.9599 sen: 0.9672 spe: 0.9549 auc: 0.9945 loss: 5.2889
+验证集 acc: 0.5800 sen: 0.5714 spe: 0.5868 auc: 0.6116 loss: 10.7480
+测试集 acc: 0.6250sen: 0.6286spe: 0.6222loss: 1.0302
 
-VQ-VAE-resnet18_data2_test1
-训练集 acc: 0.9688 sen: 0.9973 spe: 0.9492 auc: 0.9958 loss: 10.5869
-测试集 acc: 0.4730sen: 0.6211spe: 0.4091loss: 3.1996
-测试集 acc: 0.5636sen: 0.6897spe: 0.5053loss: 2.4859
+
+VQ-VAE-resnet18_data2
+训练集 acc: 1.0000 sen: 1.0000 spe: 1.0000 auc: 1.0000 loss: 8.9508
+验证集 acc: 0.6233 sen: 0.5414 spe: 0.6886 auc: 0.6539 loss: 60.0689
+测试集 acc: 0.5564sen: 0.4828spe: 0.5904   loss: 3.5644

@@ -315,7 +315,7 @@ if __name__ == '__main__':
                              shuffle=True,
                              pin_memory=True)
 
-    model = torch.load("../models/result/VQ-VAE-resnet18_data2_test1.pth", map_location=device)
+    model = torch.load("../models/result/VQ-VAE-resnet18_data2.pth", map_location=device)
 
     criterion = WeightedBinaryCrossEntropyLoss(2)
     criterion.to(device)
@@ -355,4 +355,4 @@ if __name__ == '__main__':
           "spe: {:.4f}".format(train_spe) + "loss: {:.4f}".format(np.mean(total_test_loss[-10:])))
 
     df = pd.DataFrame(test_results)
-    df.to_excel("../models/result/VQ-VAE-resnet18_data2_test1.xlsx", index=False)
+    df.to_excel("../models/result/VQ-VAE-resnet18_data2.xlsx", index=False)
