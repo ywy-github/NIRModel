@@ -358,7 +358,7 @@ if __name__ == '__main__':
     encoder.conv1 = nn.Conv2d(1, 64, kernel_size=7, stride=2, padding=3, bias=False)
     encoder.avgpool = nn.AdaptiveAvgPool2d(output_size=(6, 8))
     for param in encoder.parameters():
-        param.requires_grad = True
+        param.requires_grad = False
 
     for name, param in encoder.named_parameters():
         if "layer3" in name:
