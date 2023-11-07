@@ -58,7 +58,6 @@ if __name__ == '__main__':
 
 
     model = models.resnet18(pretrained=True)
-
     #调整结构
     model.conv1 = nn.Conv2d(1, 64, kernel_size=7, stride=2, padding=3, bias=False)
     num_hidden = 256

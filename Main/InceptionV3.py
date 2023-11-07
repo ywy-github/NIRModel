@@ -11,25 +11,15 @@ from torchvision import transforms
 from Main.Metrics import all_metrics
 from Main.data_loader import MyData
 
-class Focal_Loss(nn.Module):
-    def __init__(self, alpha=0.6, gamma=2.0):
-        super(Focal_Loss, self).__init__()
-        self.alpha = alpha
-        self.gamma = gamma
+class WeightedBinaryCrossEntropyLoss(nn.Module):
+    def __init__(self, weight_positive):
+        super(WeightedBinaryCrossEntropyLoss, self).__init__()
+        self.weight_positive = weight_positive
 
-    def forward(self, preds, labels):
-        """
-        preds:sigmoid的输出结果
-        labels：标签
-        """
-        labels = labels.to(dtype=torch.float32)
-        preds = preds.to(dtype=torch.float32)
-        eps = 1e-7
-        loss_1 = -1 * self.alpha * torch.pow((1 - preds), self.gamma) * torch.log(preds + eps) * labels
-        loss_0 = -1 * (1 - self.alpha) * torch.pow(preds, self.gamma) * torch.log(1 - preds + eps) * (1 - labels)
-        loss = loss_0 + loss_1
+    def forward(self, y_true, y_pred):
+        y_true = y_true.to(dtype=torch.float32)
+        loss = - (self.weight_positive * y_true * torch.log(y_pred + 1e-7) + (1 - y_true) * torch.log(1 - y_pred + 1e-7))
         return torch.mean(loss)
-
 if __name__ == '__main__':
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
@@ -70,7 +60,7 @@ if __name__ == '__main__':
     model.fc = nn.Sequential(
         nn.Linear(model.fc.in_features, num_hidden),
         nn.ReLU(),
-        nn.Dropout(0.2),
+        nn.Dropout(0.5),
         nn.Linear(num_hidden, 1),
         nn.Sigmoid()
     )
@@ -80,13 +70,7 @@ if __name__ == '__main__':
     for param in model.parameters():
         param.requires_grad = False
 
-    for name, param in model.named_parameters():
-        if "Mixed_7c" in name:
-            param.requires_grad = True
-        if "fc" in name:
-            param.requires_grad = True
-
-    criterion = Focal_Loss().to(device)
+    criterion = WeightedBinaryCrossEntropyLoss(2).to(device)
 
     optimizer = optim.SGD(filter(lambda p: p.requires_grad, model.parameters()), lr=learning_rate)
 
