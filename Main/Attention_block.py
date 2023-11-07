@@ -48,4 +48,4 @@ class CBAM(nn.Module):
     def forward(self, x):
         out = x*self.ca(x)
         result = out*self.sa(out)
-        return result
+        return x+result

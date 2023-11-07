@@ -10,15 +10,24 @@ VQ-VAE-resnet18
 验证集 acc: 0.7111 sen: 0.4105 spe: 0.8409 auc: 0.6671 loss: 43.8988
 测试集 acc: 0.6982sen: 0.4138spe: 0.8298loss: 4.2576
 
+Attention_resnet18_1_v1
+训练集 acc: 0.9492 sen: 0.9265 spe: 0.9604 auc: 0.9896 loss: 4.3708
+验证集 acc: 0.6857 sen: 0.5053 spe: 0.7636 auc: 0.6827 loss: 9.2272
+测试集 acc: 0.6800sen: 0.5172spe: 0.7553loss: 0.9618
 
 Attention_resnet18_3_v1: 在layer3后添加
-训练集 acc: 0.8951 sen: 0.9042 spe: 0.8906 auc: 0.9692 loss: 6.0409
+训练集 acc: 0.8951 sen: 0.9042 spe: 0.8906 auc: 0.9692 los--s: 6.0409
 验证集 acc: 0.6857 sen: 0.5158 spe: 0.7591 auc: 0.6747 loss: 8.7615
 测试集 acc: 0.6800sen: 0.5632spe: 0.7340loss: 0.8636
 
 Attention_resnet18_4_v1: 在layer4后添加
 验证集 acc: 0.5937sen: 0.5474spe: 0.6136loss: 0.8667
 测试集 acc: 0.6327sen: 0.6322spe: 0.6330loss: 0.8756
+
+Attention_resnet18_1_v2: 在layer1后添加
+训练集 acc: 0.9417 sen: 0.9329 spe: 0.9461 auc: 0.9870 loss: 5.2118
+验证集 acc: 0.7048 sen: 0.5474 spe: 0.7727 auc: 0.6931 loss: 8.5890
+测试集 acc: 0.6364sen: 0.5517spe: 0.6755loss: 0.9756
 
 Attention_resnet18_4_v2: 在layer4后添加
 训练集 acc: 0.9417 sen: 0.9585 spe: 0.9334 auc: 0.9892 loss: 4.9753
@@ -28,7 +37,7 @@ Attention_resnet18_4_v2: 在layer4后添加
 
 二期数据：
 resnet18-data2
-训练集 acc: 0.9599 sen: 0.9672 spe: 0.9549 auc: 0.9945 loss: 5.2889
+验证集 acc: 0.9733sen: 0.9590spe: 0.9831loss: 0.2951
 验证集 acc: 0.5800 sen: 0.5714 spe: 0.5868 auc: 0.6116 loss: 10.7480
 测试集 acc: 0.6250sen: 0.6286spe: 0.6222loss: 1.0302
 

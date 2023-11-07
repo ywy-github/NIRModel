@@ -65,8 +65,8 @@ if __name__ == '__main__':
 
     #调整结构
     model.conv1 = nn.Conv2d(1, 64, kernel_size=7, stride=2, padding=3, bias=False)
-    CBAM = CBAM(128)
-    model.layer2.add_module('CBAM', CBAM)
+    CBAM = CBAM(64)
+    model.layer1.add_module('CBAM', CBAM)
     num_hidden = 256
     model.fc = nn.Sequential(
         nn.Linear(model.fc.in_features, num_hidden),
@@ -82,6 +82,8 @@ if __name__ == '__main__':
         param.requires_grad = False
 
     for name, param in model.named_parameters():
+        if "layer1" in name:
+            param.requires_grad = True
         if "layer2" in name:
             param.requires_grad = True
         if "layer3" in name:
@@ -96,7 +98,7 @@ if __name__ == '__main__':
     optimizer = optim.SGD(filter(lambda p: p.requires_grad, model.parameters()), lr=learning_rate)
 
     start_time = time.time()  # 记录训练开始时间
-    writer = SummaryWriter("../Logs")
+    # writer = SummaryWriter("../Logs")
     for epoch in range(epochs):
         model.train()
         train_score = []
@@ -120,7 +122,7 @@ if __name__ == '__main__':
             train_score.append(output.cpu().detach().numpy())
             train_pred.extend(pred.cpu().numpy())
             train_targets.extend(targets.cpu().numpy())
-        writer.add_scalar('Loss/Train', total_train_loss, epoch)
+        # writer.add_scalar('Loss/Train', total_train_loss, epoch)
 
         model.eval()
         val_score = []
@@ -142,7 +144,7 @@ if __name__ == '__main__':
                 val_score.append(output.flatten().cpu().numpy())
                 val_pred.extend(predicted_labels.cpu().numpy())
                 val_targets.extend(targets.cpu().numpy())
-        writer.add_scalar('Loss/Val', total_val_loss, epoch)
+        # writer.add_scalar('Loss/Val', total_val_loss, epoch)
 
         if ((epoch + 1) % 50 == 0):
             torch.save(model, "../models/Attention/attention{}.pth".format(epoch+1))
@@ -169,7 +171,7 @@ if __name__ == '__main__':
                   " loss: {:.4f}".format(total_val_loss))
 
 
-    writer.close()
+    # writer.close()
     end_time = time.time()
     training_time = end_time - start_time
 
