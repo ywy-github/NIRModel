@@ -1,3 +1,4 @@
+import random
 import time
 
 import numpy as np
@@ -28,6 +29,20 @@ class WeightedBinaryCrossEntropyLoss(nn.Module):
 if __name__ == '__main__':
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
+    seed = 42
+
+    # 设置 Python 的随机种子
+    random.seed(seed)
+
+    # 设置 NumPy 的随机种子
+    np.random.seed(seed)
+
+    # 设置 PyTorch 的随机种子
+    torch.manual_seed(seed)
+    torch.cuda.manual_seed(seed)
+    torch.backends.cudnn.deterministic = True
+    torch.backends.cudnn.benchmark = False
+
     batch_size = 64
     epochs = 1000
     learning_rate = 1e-4
@@ -46,12 +61,21 @@ if __name__ == '__main__':
     val_malignat_data = MyData("../data/一期数据/val/malignant", "malignant", transform=transform)
     val_data = val_benign_data + val_malignat_data
 
+    test_benign_data = MyData("../data/一期数据/test/benign", "benign", transform=transform)
+    test_malignat_data = MyData("../data/一期数据/test/malignant", "malignant", transform=transform)
+    test_data = test_benign_data + test_malignat_data
+
     training_loader = DataLoader(train_data,
                                  batch_size=batch_size,
                                  shuffle=True,
                                  pin_memory=True)
 
     validation_loader = DataLoader(val_data,
+                                   batch_size=32,
+                                   shuffle=True,
+                                   pin_memory=True)
+
+    test_loader = DataLoader(test_data,
                                    batch_size=32,
                                    shuffle=True,
                                    pin_memory=True)
@@ -136,8 +160,29 @@ if __name__ == '__main__':
                 val_targets.extend(targets.cpu().numpy())
         writer.add_scalar('Loss/Val', total_val_loss, epoch)
 
-        if ((epoch + 1) % 50 == 0):
-            torch.save(model, "../models/resnet/resnet18{}.pth".format(epoch + 1))
+        test_score = []
+        test_pred = []
+        test_targets = []
+        total_test_loss = 0.0
+        with torch.no_grad():
+            for batch in test_loader:
+                images, targets, names = batch
+                # targets = targets.to(torch.float32)
+                images = images.to(device)
+                targets = targets.to(device)
+                output = model(images)
+                loss = criterion(targets.view(-1, 1), output)
+
+                total_test_loss += loss.item()
+                predicted_labels = (output >= 0.5).int().squeeze()
+
+                test_score.append(output.flatten().cpu().numpy())
+                test_pred.extend(predicted_labels.cpu().numpy())
+                test_targets.extend(targets.cpu().numpy())
+        writer.add_scalar('Loss/Test', total_test_loss, epoch)
+
+        if ((epoch + 1) % 1 == 0):
+            # torch.save(model, "../models/resnet/resnet18{}.pth".format(epoch + 1))
             print('%d epoch' % (epoch + 1))
 
             train_acc, train_sen, train_spe = all_metrics(train_targets, train_pred)
@@ -159,6 +204,16 @@ if __name__ == '__main__':
             print("验证集 acc: {:.4f}".format(val_acc) + " sen: {:.4f}".format(val_sen) +
                   " spe: {:.4f}".format(val_spe) + " auc: {:.4f}".format(val_auc) +
                   " loss: {:.4f}".format(total_val_loss))
+
+            test_acc, test_sen, test_spe = all_metrics(test_targets, test_pred)
+
+            test_score = np.concatenate(test_score)  # 将列表转换为NumPy数组
+            test_targets = np.array(test_targets)
+            test_auc = roc_auc_score(test_targets, test_score)
+
+            print("验证集 acc: {:.4f}".format(test_acc) + " sen: {:.4f}".format(test_sen) +
+                  " spe: {:.4f}".format(test_spe) + " auc: {:.4f}".format(test_auc) +
+                  " loss: {:.4f}".format(total_test_loss))
 
     writer.close()
     end_time = time.time()
