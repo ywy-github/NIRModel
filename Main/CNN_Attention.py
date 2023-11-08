@@ -12,7 +12,7 @@ from torchvision import models
 from torchvision import transforms
 from Main.Metrics import all_metrics
 from Main.data_loader import MyData
-from Attention_block import CBAM
+from Attention_block import *
 
 
 # 定义自定义损失函数，加权二进制交叉熵
@@ -65,8 +65,8 @@ if __name__ == '__main__':
 
     #调整结构
     model.conv1 = nn.Conv2d(1, 64, kernel_size=7, stride=2, padding=3, bias=False)
-    CBAM = CBAM(64)
-    model.layer1.add_module('CBAM', CBAM)
+    SKConv = SKConv(64)
+    model.layer1.add_module('SKConv', SKConv)
     num_hidden = 256
     model.fc = nn.Sequential(
         nn.Linear(model.fc.in_features, num_hidden),
