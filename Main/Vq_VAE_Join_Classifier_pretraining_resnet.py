@@ -311,6 +311,20 @@ class Focal_Loss(nn.Module):
 if __name__ == '__main__':
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
+    seed = 42
+
+    # 设置 Python 的随机种子
+    random.seed(seed)
+
+    # 设置 NumPy 的随机种子
+    np.random.seed(seed)
+
+    # 设置 PyTorch 的随机种子
+    torch.manual_seed(seed)
+    torch.cuda.manual_seed(seed)
+    torch.backends.cudnn.deterministic = True
+    torch.backends.cudnn.benchmark = False
+
     batch_size = 64
     epochs = 1000
 
@@ -335,13 +349,17 @@ if __name__ == '__main__':
         transforms.Normalize((0.3281,), (0.2366,))  # 设置均值和标准差
     ])
 
-    train_benign_data = MyData("../data/二期数据/train/benign", "benign", transform=transform)
-    train_malignat_data = MyData("../data/二期数据/train/malignant", "malignant", transform=transform)
+    train_benign_data = MyData("../data/一期数据/train/benign", "benign", transform=transform)
+    train_malignat_data = MyData("../data/一期数据/train/malignant", "malignant", transform=transform)
     train_data = train_benign_data + train_malignat_data
 
-    val_benign_data = MyData("../data/二期数据/val/benign", "benign", transform=transform)
-    val_malignat_data = MyData("../data/二期数据/val/malignant", "malignant", transform=transform)
+    val_benign_data = MyData("../data/一期数据/val/benign", "benign", transform=transform)
+    val_malignat_data = MyData("../data/一期数据/val/malignant", "malignant", transform=transform)
     val_data = val_benign_data + val_malignat_data
+
+    test_benign_data = MyData("../data/一期数据/test/benign", "benign", transform=transform)
+    test_malignat_data = MyData("../data/一期数据/test/malignant", "malignant", transform=transform)
+    test_data = test_benign_data + test_malignat_data
 
     training_loader = DataLoader(train_data,
                                  batch_size=batch_size,
@@ -352,6 +370,11 @@ if __name__ == '__main__':
                                    batch_size=32,
                                    shuffle=True,
                                    pin_memory=True)
+
+    test_loader = DataLoader(test_data,
+                             batch_size=32,
+                             shuffle=True,
+                             pin_memory=True)
 
     #设置encoder
     encoder = models.resnet18(pretrained=True)
@@ -442,40 +465,65 @@ if __name__ == '__main__':
                 val_res_recon_error.append(recon_loss.item())
                 val_res_perplexity.append(perplexity.item())
 
-        # 将测试步骤中的真实数据、重构数据和上述生成的新数据绘图
+        test_score = []
+        test_pred = []
+        test_targets = []
+        total_test_loss = 0.0
+        with torch.no_grad():
+            for batch in test_loader:
+                images, targets, names = batch
+                # targets = targets.to(torch.float32)
+                images = images.to(device)
+                targets = targets.to(device)
+                output = model(images)
+                loss = criterion(targets.view(-1, 1), output)
 
-        if ((epoch + 1) % 50 == 0):
-            torch.save(model, "../models/VQ_VAE_Join_Classifier/{}.pth".format(epoch + 1))
-            # concat = torch.cat((all_data[0].view(128, 128),
-            #                     data_recon[0].view(128, 128)), 1)
-            # plt.matshow(concat.cpu().detach().numpy())
-            # plt.show()
+                total_test_loss += loss.item()
+                predicted_labels = (output >= 0.5).int().squeeze()
 
-            print('%d iterations' % (epoch + 1))
-            train_acc, train_sen, train_spe = all_metrics(train_targets, train_pred)
+                test_score.append(output.flatten().cpu().numpy())
+                test_pred.extend(predicted_labels.cpu().numpy())
+                test_targets.extend(targets.cpu().numpy())
+        writer.add_scalar('Loss/Test', total_test_loss, epoch)
 
-            train_score = np.concatenate(train_score)  # 将列表转换为NumPy数组
-            train_targets = np.array(train_targets)
-            train_auc = roc_auc_score(train_targets, train_score)
-            print("训练集 acc: {:.4f}".format(train_acc) + " sen: {:.4f}".format(train_sen) +
-                  " spe: {:.4f}".format(train_spe) + " auc: {:.4f}".format(train_auc) +
-                  " loss: {:.4f}".format(total_train_loss))
+        # if ((epoch + 1) % 50 == 0):
+        #     torch.save(model, "../models/resnet/resnet18{}.pth".format(epoch + 1))
+        print('%d epoch' % (epoch + 1))
 
-            val_acc, val_sen, val_spe = all_metrics(val_targets, val_pred)
+        train_acc, train_sen, train_spe = all_metrics(train_targets, train_pred)
 
-            val_score = np.concatenate(val_score)  # 将列表转换为NumPy数组
-            val_targets = np.array(val_targets)
-            val_auc = roc_auc_score(val_targets, val_score)
+        train_score = np.concatenate(train_score)  # 将列表转换为NumPy数组
+        train_targets = np.array(train_targets)
+        train_auc = roc_auc_score(train_targets, train_score)
 
-            print("验证集 acc: {:.4f}".format(val_acc) + " sen: {:.4f}".format(val_sen) +
-                  " spe: {:.4f}".format(val_spe) +" auc: {:.4f}".format(val_auc)+
-                  " loss: {:.4f}".format(total_val_loss))
+        print("训练集 acc: {:.4f}".format(train_acc) + " sen: {:.4f}".format(train_sen) +
+              " spe: {:.4f}".format(train_spe) + " auc: {:.4f}".format(train_auc) +
+              " loss: {:.4f}".format(total_train_loss))
 
+        val_acc, val_sen, val_spe = all_metrics(val_targets, val_pred)
 
-            print('train_recon_error: %.3f' % np.mean(train_res_recon_error[-10:]))
-            print('train_perplexity: %.3f' % np.mean(train_res_perplexity[-10:]))
-            print('val_recon_error: %.3f' % np.mean(val_res_recon_error[-10:]))
-            print('val_perplexity: %.3f' % np.mean(val_res_perplexity[-10:]))
+        val_score = np.concatenate(val_score)  # 将列表转换为NumPy数组
+        val_targets = np.array(val_targets)
+        val_auc = roc_auc_score(val_targets, val_score)
+
+        print("验证集 acc: {:.4f}".format(val_acc) + " sen: {:.4f}".format(val_sen) +
+              " spe: {:.4f}".format(val_spe) + " auc: {:.4f}".format(val_auc) +
+              " loss: {:.4f}".format(total_val_loss))
+
+        test_acc, test_sen, test_spe = all_metrics(test_targets, test_pred)
+
+        test_score = np.concatenate(test_score)  # 将列表转换为NumPy数组
+        test_targets = np.array(test_targets)
+        test_auc = roc_auc_score(test_targets, test_score)
+
+        print("验证集 acc: {:.4f}".format(test_acc) + " sen: {:.4f}".format(test_sen) +
+              " spe: {:.4f}".format(test_spe) + " auc: {:.4f}".format(test_auc) +
+              " loss: {:.4f}".format(total_test_loss))
+
+        print('train_recon_error: %.3f' % np.mean(train_res_recon_error[-10:]))
+        print('train_perplexity: %.3f' % np.mean(train_res_perplexity[-10:]))
+        print('val_recon_error: %.3f' % np.mean(val_res_recon_error[-10:]))
+        print('val_perplexity: %.3f' % np.mean(val_res_perplexity[-10:]))
     writer.close()
     # 结束训练时间
     end_time = time.time()
