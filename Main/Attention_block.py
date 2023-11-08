@@ -79,11 +79,10 @@ class SKConv(nn.Module):
             )
         self.softmax = nn.Softmax(dim=1)
 
-    def forward(self, x):
+    def forward(self, x, y):
         batch_size = x.shape[0]
         # 1.split
-        feats = [conv(x) for conv in self.convs]
-        feats = torch.cat(feats, dim=1)
+        feats = torch.cat((x, y), dim=1)
         feats = feats.view(batch_size, self.M, self.features, feats.shape[2], feats.shape[3])
         print('feats.shape', feats.shape)
         # 2.fuse
@@ -104,3 +103,21 @@ class SKConv(nn.Module):
         print('feats_V.shape', feats_V.shape)
         return feats_V
 
+class DS(nn.Module):
+    def __init__(self, input_channels):
+        super().__init__()
+        self.avg_pool = nn.AvgPool2d(kernel_size=3, stride=2, padding=1)
+        self.point_conv = nn.Conv2d(input_channels,2*input_channels,1,1)
+        self.Bn = nn.BatchNorm2d(2*input_channels)
+        self.relu = nn.ReLU()
+    def forward(self, x):
+        x = self.avg_pool(x)
+        x = self.point_conv(x)
+        x = self.Bn(x)
+        x = self.relu(x)
+        return x
+
+if __name__ == '__main__':
+    X = torch.randn(4, 64, 512, 512)
+    model = DS(input_channels=64)  # 创建DS模块的实例，需要指定输入通道数
+    outputs = model(X)  # 使用模块进行前向传播

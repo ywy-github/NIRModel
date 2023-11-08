@@ -8,7 +8,7 @@ resnet18-model
 VQ-VAE-resnet18
 训练集 acc: 1.0000 sen: 1.0000 spe: 1.0000 auc: 1.0000 loss: 6.7153
 验证集 acc: 0.7111 sen: 0.4105 spe: 0.8409 auc: 0.6671 loss: 43.8988
-测试集 acc: 0.6982sen: 0.4138spe: 0.8298loss: 4.2576
+测试集 acc: 0.6982sen: 0.4138  spe: 0.8298loss: 4.2576
 
 Attention_resnet18_1_v1
 训练集 acc: 0.9492 sen: 0.9265 spe: 0.9604 auc: 0.9896 loss: 4.3708
