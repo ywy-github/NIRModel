@@ -84,23 +84,19 @@ class SKConv(nn.Module):
         # 1.split
         feats = torch.cat((x, y), dim=1)
         feats = feats.view(batch_size, self.M, self.features, feats.shape[2], feats.shape[3])
-        print('feats.shape', feats.shape)
         # 2.fuse
         feats_U = torch.sum(feats, dim=1)
         feats_S = self.gap(feats_U)
         feats_Z = self.fc(feats_S)
-        print('feats_U.shape', feats_U.shape)
-        print('feats_S.shape', feats_S.shape)
-        print('feats_Z.shape', feats_Z.shape)
         # 3.select
         attention_vectors = [fc(feats_Z) for fc in self.fcs]
         attention_vectors = torch.cat(attention_vectors, dim=1)
-        print('attention_vectors.shape', attention_vectors.shape)
+
         attention_vectors = attention_vectors.view(batch_size, self.M, self.features, 1, 1)
-        print('attention_vectors.shape', attention_vectors.shape)
+
         attention_vectors = self.softmax(attention_vectors)
         feats_V = torch.sum(feats * attention_vectors, dim=1)
-        print('feats_V.shape', feats_V.shape)
+
         return feats_V
 
 class DS(nn.Module):

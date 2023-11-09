@@ -34,6 +34,25 @@ Attention_resnet18_4_v2: 在layer4后添加
 验证集 acc: 0.6825 sen: 0.4842 spe: 0.7682 auc: 0.6848 loss: 9.0676
 测试集 acc: 0.6476sen: 0.5053spe: 0.7091loss: 0.8812
 
+resnet18_data1
+训练集 acc: 0.8814 sen: 0.8632 spe: 0.8901 auc: 0.9549 loss: 7.1128
+验证集 acc: 0.6603 sen: 0.5050 spe: 0.7336 auc: 0.6668 loss: 8.8909
+验证集 acc: 0.6836 sen: 0.6092 spe: 0.7181 auc: 0.6809 loss: 7.8899
+
+VQ-VAE-resnet18_data1
+训练集 acc: 1.0000 sen: 1.0000 spe: 1.0000 auc: 1.0000 loss: 6.7810
+验证集 acc: 0.6889 sen: 0.5149 spe: 0.7710 auc: 0.6958 loss: 25.3131
+验证集 acc: 0.7127 sen: 0.5977 spe: 0.7660 auc: 0.7250 loss: 21.6003
+train_recon_error: 2.185
+train_perplexity: 104.183
+val_recon_error: 2.026
+val_perplexity: 99.521
+
+Resnet_SCFF
+训练集 acc: 0.9269 sen: 0.9218 spe: 0.9294 auc: 0.9725 loss: 6.2579
+验证集 acc: 0.6984 sen: 0.4950 spe: 0.7944 auc: 0.7108 loss: 8.4364
+验证集 acc: 0.6982 sen: 0.5402 spe: 0.7713 auc: 0.7022 loss: 7.7147
+
 
 二期数据：
 resnet18-data2

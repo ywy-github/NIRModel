@@ -181,39 +181,40 @@ if __name__ == '__main__':
                 test_targets.extend(targets.cpu().numpy())
         writer.add_scalar('Loss/Test', total_test_loss, epoch)
 
-        if ((epoch + 1) % 1 == 0):
-            # torch.save(model, "../models/resnet/resnet18{}.pth".format(epoch + 1))
-            print('%d epoch' % (epoch + 1))
+        if ((epoch + 1) == 520):
+            torch.save(model, "../models/resnet/resnet18{}.pth".format(epoch + 1))
 
-            train_acc, train_sen, train_spe = all_metrics(train_targets, train_pred)
+        print('%d epoch' % (epoch + 1))
 
-            train_score = np.concatenate(train_score)  # 将列表转换为NumPy数组
-            train_targets = np.array(train_targets)
-            train_auc = roc_auc_score(train_targets, train_score)
+        train_acc, train_sen, train_spe = all_metrics(train_targets, train_pred)
 
-            print("训练集 acc: {:.4f}".format(train_acc) + " sen: {:.4f}".format(train_sen) +
-                  " spe: {:.4f}".format(train_spe) + " auc: {:.4f}".format(train_auc) +
-                  " loss: {:.4f}".format(total_train_loss))
+        train_score = np.concatenate(train_score)  # 将列表转换为NumPy数组
+        train_targets = np.array(train_targets)
+        train_auc = roc_auc_score(train_targets, train_score)
 
-            val_acc, val_sen, val_spe = all_metrics(val_targets, val_pred)
+        print("训练集 acc: {:.4f}".format(train_acc) + " sen: {:.4f}".format(train_sen) +
+              " spe: {:.4f}".format(train_spe) + " auc: {:.4f}".format(train_auc) +
+              " loss: {:.4f}".format(total_train_loss))
 
-            val_score = np.concatenate(val_score)  # 将列表转换为NumPy数组
-            val_targets = np.array(val_targets)
-            val_auc = roc_auc_score(val_targets, val_score)
+        val_acc, val_sen, val_spe = all_metrics(val_targets, val_pred)
 
-            print("验证集 acc: {:.4f}".format(val_acc) + " sen: {:.4f}".format(val_sen) +
-                  " spe: {:.4f}".format(val_spe) + " auc: {:.4f}".format(val_auc) +
-                  " loss: {:.4f}".format(total_val_loss))
+        val_score = np.concatenate(val_score)  # 将列表转换为NumPy数组
+        val_targets = np.array(val_targets)
+        val_auc = roc_auc_score(val_targets, val_score)
 
-            test_acc, test_sen, test_spe = all_metrics(test_targets, test_pred)
+        print("验证集 acc: {:.4f}".format(val_acc) + " sen: {:.4f}".format(val_sen) +
+              " spe: {:.4f}".format(val_spe) + " auc: {:.4f}".format(val_auc) +
+              " loss: {:.4f}".format(total_val_loss))
 
-            test_score = np.concatenate(test_score)  # 将列表转换为NumPy数组
-            test_targets = np.array(test_targets)
-            test_auc = roc_auc_score(test_targets, test_score)
+        test_acc, test_sen, test_spe = all_metrics(test_targets, test_pred)
 
-            print("验证集 acc: {:.4f}".format(test_acc) + " sen: {:.4f}".format(test_sen) +
-                  " spe: {:.4f}".format(test_spe) + " auc: {:.4f}".format(test_auc) +
-                  " loss: {:.4f}".format(total_test_loss))
+        test_score = np.concatenate(test_score)  # 将列表转换为NumPy数组
+        test_targets = np.array(test_targets)
+        test_auc = roc_auc_score(test_targets, test_score)
+
+        print("验证集 acc: {:.4f}".format(test_acc) + " sen: {:.4f}".format(test_sen) +
+              " spe: {:.4f}".format(test_spe) + " auc: {:.4f}".format(test_auc) +
+              " loss: {:.4f}".format(total_test_loss))
 
     writer.close()
     end_time = time.time()

@@ -24,12 +24,11 @@ if __name__ == '__main__':
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
     batch_size = 64
-    epochs = 100
+    epochs = 1000
     learning_rate = 1e-4
 
     # 读取数据集
     transform = transforms.Compose([
-        transforms.Resize((299, 299)),
         transforms.ToTensor(),
         transforms.Normalize((0.3281,), (0.2366,))  # 设置均值和标准差
     ])
@@ -68,7 +67,7 @@ if __name__ == '__main__':
     model = model.to(device)
 
     for param in model.parameters():
-        param.requires_grad = False
+        param.requires_grad = True
 
     criterion = WeightedBinaryCrossEntropyLoss(2).to(device)
 
@@ -88,7 +87,7 @@ if __name__ == '__main__':
             targets = targets.to(device)
             optimizer.zero_grad()
             output = model(images)
-            loss = criterion(output,targets.view(-1,1))
+            loss = criterion(targets.view(-1,1),output)
             loss.backward()
             optimizer.step()
 
@@ -109,7 +108,7 @@ if __name__ == '__main__':
                 images = images.to(device)
                 targets = targets.to(device)
                 output = model(images)
-                loss = criterion(output, targets)
+                loss = criterion(targets.view(-1,1),output)
 
                 total_val_loss += loss.item()
                 predicted_labels = (output >= 0.5).int().squeeze()

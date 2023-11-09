@@ -213,7 +213,7 @@ class ResNet(nn.Module):
                              "or a 3-element tuple, got {}".format(replace_stride_with_dilation))
         self.groups = groups
         self.base_width = width_per_group
-        self.conv1 = nn.Conv2d(1, self.inplanes, kernel_size=7, stride=2, padding=3,
+        self.conv1 = nn.Conv2d(3, self.inplanes, kernel_size=7, stride=2, padding=3,
                                bias=False)
         self.bn1 = norm_layer(self.inplanes)
         self.relu = nn.ReLU(inplace=True)
@@ -276,26 +276,29 @@ class ResNet(nn.Module):
         x = self.maxpool(x)
 
         x = self.layer1(x)
-        ds = DS(x.shape[1])
+        ds = DS(x.shape[1]).to(device)
         x1 = ds(x)
 
         x = self.layer2(x)
-        sk = SKConv(x.shape[1])
+        sk = SKConv(x.shape[1]).to(device)
         x2 = sk(x1,x)
-        ds = DS(x2.shape[1])
+        ds = DS(x2.shape[1]).to(device)
         x2 = ds(x2)
 
         x = self.layer3(x)
-        sk = SKConv(x.shape[1])
+        sk = SKConv(x.shape[1]).to(device)
         x3 = sk(x2, x)
-        ds = DS(x3.shape[1])
+        ds = DS(x3.shape[1]).to(device)
         x3 = ds(x3)
 
         x = self.layer4(x)
-        sk = SKConv(x.shape[1])
+        sk = SKConv(x.shape[1]).to(device)
         x4 = sk(x3, x)
 
-        return x4
+        x = self.avgpool(x4)
+        x = torch.flatten(x, 1)
+        x = self.fc(x)
+        return x
 
 def resnet18():
     return ResNet(BasicBlock, [2, 2, 2, 2])
@@ -357,19 +360,11 @@ if __name__ == '__main__':
                              pin_memory=True)
 
     model = resnet18()
-    # 调整结构
-    num_hidden = 256
-    model.fc = nn.Sequential(
-        nn.Linear(model.fc.in_features, num_hidden),
-        nn.ReLU(),
-        nn.Dropout(0.2),
-        nn.Linear(num_hidden, 1),
-        nn.Sigmoid()
-    )
-    pretrained_weights_path = 'C:\\Users\\17588\\.cache\\torch\\hub\\checkpoints\\resnet18-f37072fd.pth'
+
+    pretrained_weights_path = 'C:\\Users\\win10\\.cache\\torch\\hub\\checkpoints\\resnet18-f37072fd.pth'
 
     # 加载预训练参数
-    pretrained_dict = torch.jit.load(pretrained_weights_path)
+    pretrained_dict = torch.load(pretrained_weights_path)
 
     # 获取自定义模型的参数字典
     model_dict = model.state_dict()
@@ -383,13 +378,25 @@ if __name__ == '__main__':
     # 3. 将新的参数字典加载到自定义模型中
     model.load_state_dict(model_dict)
 
-    model = model.to(device)
+    # 调整结构
+    model.conv1 = nn.Conv2d(1, 64, kernel_size=7, stride=2, padding=3, bias=False)
+    num_hidden = 256
+    model.fc = nn.Sequential(
+        nn.Linear(model.fc.in_features, num_hidden),
+        nn.ReLU(),
+        nn.Dropout(0.2),
+        nn.Linear(num_hidden, 1),
+        nn.Sigmoid()
+    )
 
+
+    model = model.to(device)
+    # 将模型的参数移到GPU
     for param in model.parameters():
         param.requires_grad = True
+        param = param.to(device)
 
-
-    criterion = WeightedBinaryCrossEntropyLoss(2)
+    criterion = WeightedBinaryCrossEntropyLoss(2).to(device)
 
     optimizer = optim.SGD(filter(lambda p: p.requires_grad, model.parameters()), lr=learning_rate)
 
@@ -463,8 +470,8 @@ if __name__ == '__main__':
                 test_targets.extend(targets.cpu().numpy())
         writer.add_scalar('Loss/Test', total_test_loss, epoch)
 
-        # if ((epoch + 1) == 0):
-        #     torch.save(model, "../models/resnet/resnet18{}.pth".format(epoch + 1))
+        if ((epoch + 1) == 662):
+            torch.save(model, "../models/resnet/resnet18{}.pth".format(epoch + 1))
         print('%d epoch' % (epoch + 1))
 
         train_acc, train_sen, train_spe = all_metrics(train_targets, train_pred)
@@ -493,7 +500,7 @@ if __name__ == '__main__':
         test_targets = np.array(test_targets)
         test_auc = roc_auc_score(test_targets, test_score)
 
-        print("验证集 acc: {:.4f}".format(test_acc) + " sen: {:.4f}".format(test_sen) +
+        print("测试集 acc: {:.4f}".format(test_acc) + " sen: {:.4f}".format(test_sen) +
               " spe: {:.4f}".format(test_spe) + " auc: {:.4f}".format(test_auc) +
               " loss: {:.4f}".format(total_test_loss))
 

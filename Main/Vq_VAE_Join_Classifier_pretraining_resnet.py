@@ -405,6 +405,9 @@ if __name__ == '__main__':
     val_res_recon_error = []
     val_res_perplexity = []
 
+    test_res_recon_error = []
+    test_res_perplexity = []
+
     start_time = time.time()  # 记录训练开始时间
     writer = SummaryWriter("../Logs")
     for epoch in range(epochs):
@@ -452,7 +455,7 @@ if __name__ == '__main__':
                 vq_loss, data_recon, perplexity, classifier_outputs = model(data)
                 data_variance = torch.var(data)
                 recon_loss = F.mse_loss(data_recon, data) / data_variance
-                classifier_loss = criterion(classifier_outputs, targets.view(-1, 1))
+                classifier_loss = criterion(targets.view(-1, 1), classifier_outputs)
                 total_loss = joint_loss_function(recon_loss, vq_loss, classifier_loss, lambda_recon, lambda_vq,
                                                  lambda_classifier)
 
@@ -471,23 +474,29 @@ if __name__ == '__main__':
         total_test_loss = 0.0
         with torch.no_grad():
             for batch in test_loader:
-                images, targets, names = batch
-                # targets = targets.to(torch.float32)
-                images = images.to(device)
+                data, targets, names = batch
+                data = data.to(device)
                 targets = targets.to(device)
-                output = model(images)
-                loss = criterion(targets.view(-1, 1), output)
+                vq_loss, data_recon, perplexity, classifier_outputs = model(data)
+                data_variance = torch.var(data)
+                recon_loss = F.mse_loss(data_recon, data) / data_variance
+                classifier_loss = criterion(targets.view(-1, 1), classifier_outputs)
+                total_loss = joint_loss_function(recon_loss, vq_loss, classifier_loss, lambda_recon, lambda_vq,
+                                                 lambda_classifier)
 
-                total_test_loss += loss.item()
-                predicted_labels = (output >= 0.5).int().squeeze()
-
-                test_score.append(output.flatten().cpu().numpy())
+                predicted_labels = (classifier_outputs >= 0.5).int().squeeze()
+                test_score.append(classifier_outputs.flatten().cpu().numpy())
                 test_pred.extend(predicted_labels.cpu().numpy())
                 test_targets.extend(targets.cpu().numpy())
+
+                total_test_loss += total_loss
+                test_res_recon_error.append(recon_loss.item())
+                test_res_perplexity.append(perplexity.item())
+
         writer.add_scalar('Loss/Test', total_test_loss, epoch)
 
-        # if ((epoch + 1) % 50 == 0):
-        #     torch.save(model, "../models/resnet/resnet18{}.pth".format(epoch + 1))
+        if ((epoch + 1) == 119):
+            torch.save(model, "../models/resnet/VQ-VAE-resnet18{}.pth".format(epoch + 1))
         print('%d epoch' % (epoch + 1))
 
         train_acc, train_sen, train_spe = all_metrics(train_targets, train_pred)
