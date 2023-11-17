@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="PublishConfigData" serverName="root@connect.westb.seetacloud.com:15564 password" remoteFilesAllowedToDisappearOnAutoupload="false" showNewOnSourceInSync="false">
+    <serverData>
+      <paths name="root@connect.southb.gpuhub.com:52253 password">
+        <serverdata>
+          <mappings>
+            <mapping deploy="/root/autodl-tmp/NIR-Model" local="$PROJECT_DIR$" />
+          </mappings>
+        </serverdata>
+      </paths>
+      <paths name="root@connect.westb.seetacloud.com:15564 password">
+        <serverdata>
+          <mappings>
+            <mapping deploy="/root/autodl-tmp/NIR" local="$PROJECT_DIR$" />
+          </mappings>
+        </serverdata>
+      </paths>
+    </serverData>
+  </component>
+</project>

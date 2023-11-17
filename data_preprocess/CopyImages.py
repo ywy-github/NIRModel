@@ -4,12 +4,12 @@ import pandas as pd
 
 if __name__ == '__main__':
     # 读取Excel文件
-    excel_file = '../data/一期数据.xlsx'
-    df = pd.read_excel(excel_file,sheet_name="val")
+    excel_file = '../data/二期双十.xlsx'
+    df = pd.read_excel(excel_file,sheet_name="test")
 
     # 原始图片文件夹和目标文件夹路径
-    source_folder = '../nir3134'
-    output_folder = '../data/一期数据/val'  # 存放所有数据的主文件夹
+    source_folder = '../NIR'
+    output_folder = '../data/二期双十/test'  # 存放所有数据的主文件夹
 
     # 创建主文件夹
     os.makedirs(output_folder, exist_ok=True)

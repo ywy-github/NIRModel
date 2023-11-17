@@ -1,78 +1,71 @@
-from __future__ import print_function
-
+import random
 import time
 
-import matplotlib.pyplot as plt
-from six.moves import xrange
-
-import torch.nn as nn
-import torch.nn.functional as F
-from tensorboard import summary
-from torch.utils.data import DataLoader
-import torch.optim as optim
-from torchvision import transforms
-import torch
-import torch.utils.data as data
-
 import numpy as np
-from PIL import Image
-import glob
-import random
+import torch
+from matplotlib import pyplot as plt
+from sklearn.metrics import roc_auc_score
+from tensorboard import summary
+from torch import nn, optim
+from torch.utils.data import DataLoader
+from torch.utils.tensorboard import SummaryWriter
+from torchvision import models
+from torchvision import transforms
+from Metrics import all_metrics
+from data_loader import MyData
 
-from Main.Metrics import all_metrics
-from Main.data_loader import MyData
+# 定义自定义损失函数，加权二进制交叉熵
+class WeightedBinaryCrossEntropyLoss(nn.Module):
+    def __init__(self, weight_positive):
+        super(WeightedBinaryCrossEntropyLoss, self).__init__()
+        self.weight_positive = weight_positive
 
+    def forward(self, y_true, y_pred):
+        y_true = y_true.to(dtype=torch.float32)
+        loss = - (self.weight_positive * y_true * torch.log(y_pred + 1e-7) + (1 - y_true) * torch.log(1 - y_pred + 1e-7))
+        return torch.mean(loss)
 
-class Model(nn.Module):
-    def __init__(self):
-        super(Model, self).__init__()
-        self.net = nn.Sequential(
-            # 这里使用一个11*11的更大窗口来捕捉对象。
-            # 同时，步幅为4，以减少输出的高度和宽度。
-            # 另外，输出通道的数目远大于LeNet
-            nn.Conv2d(1, 96, kernel_size=4, stride=2, padding=1), nn.ReLU(),
-            nn.MaxPool2d(kernel_size=2, stride=2),
-            # 减小卷积窗口，使用填充为2来使得输入与输出的高和宽一致，且增大输出通道数
-            nn.Conv2d(96, 256, kernel_size=4, padding=2), nn.ReLU(),
-            nn.MaxPool2d(kernel_size=3, stride=2),
-            # 使用三个连续的卷积层和较小的卷积窗口。
-            # 除了最后的卷积层，输出通道的数量进一步增加。
-            # 在前两个卷积层之后，汇聚层不用于减少输入的高度和宽度
-            nn.Conv2d(256, 384, kernel_size=3, padding=1), nn.ReLU(),
-            nn.Conv2d(384, 384, kernel_size=3, padding=1), nn.ReLU(),
-            nn.Conv2d(384, 256, kernel_size=3, padding=1), nn.ReLU(),
-            nn.MaxPool2d(kernel_size=3, stride=2),
-            nn.Flatten(),
-            # 这里，全连接层的输出数量是LeNet中的好几倍。使用dropout层来减轻过拟合
-            nn.Linear(12544, 4096), nn.ReLU(),
-            nn.Dropout(p=0.5),
-            nn.Linear(4096, 1024), nn.ReLU(),
-            nn.Dropout(p=0.5),
-            # 最后是输出层。由于这里使用Fashion-MNIST，所以用类别数为10，而非论文中的1000
-            nn.Linear(1024, 2),
-        )
-
-    def forward(self, x):
-        output = self.net(x)
-        return output
 
 if __name__ == '__main__':
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    #测试
+
+    seed = 42
+
+    # 设置 Python 的随机种子
+    random.seed(seed)
+
+    # 设置 NumPy 的随机种子
+    np.random.seed(seed)
+
+    # 设置 PyTorch 的随机种子
+    torch.manual_seed(seed)
+    torch.cuda.manual_seed(seed)
+    torch.backends.cudnn.deterministic = True
+    torch.backends.cudnn.benchmark = False
 
     batch_size = 64
-    epochs = 100
-    learning_rate = 0.001
+    epochs = 1000
+    learning_rate = 1e-4
 
     # 读取数据集
-    transform = transforms.Compose([transforms.Resize([128, 128]), transforms.ToTensor()])
+    transform = transforms.Compose([
+        transforms.Resize([512, 512]),
+        transforms.ToTensor(),
+        transforms.Normalize((0.3281,), (0.2366,))  # 设置均值和标准差
+    ])
 
-    train_benign_data = MyData("../data/train/benign", "benign", transform=transform)
-    train_malignat_data = MyData("../data/train/malignant", "malignant", transform=transform)
+    train_benign_data = MyData("../data/一期数据/train/benign", "benign", transform=transform)
+    train_malignat_data = MyData("../data/一期数据/train/malignant", "malignant", transform=transform)
     train_data = train_benign_data + train_malignat_data
 
-    val_benign_data = MyData("../data/val/benign", "benign", transform=transform)
-    val_malignat_data = MyData("../data/val/malignant", "malignant", transform=transform)
+    val_benign_data = MyData("../data/一期数据/val/benign", "benign", transform=transform)
+    val_malignat_data = MyData("../data/一期数据/val/malignant", "malignant", transform=transform)
     val_data = val_benign_data + val_malignat_data
+
+    test_benign_data = MyData("../data/一期数据/test/benign", "benign", transform=transform)
+    test_malignat_data = MyData("../data/一期数据/test/malignant", "malignant", transform=transform)
+    test_data = test_benign_data + test_malignat_data
 
     training_loader = DataLoader(train_data,
                                  batch_size=batch_size,
@@ -84,75 +77,145 @@ if __name__ == '__main__':
                                    shuffle=True,
                                    pin_memory=True)
 
-    model = Model().to(device)
+    test_loader = DataLoader(test_data,
+                                   batch_size=32,
+                                   shuffle=True,
+                                   pin_memory=True)
 
-    criterion = nn.CrossEntropyLoss()
-    criterion.to(device)
-    optimizer = optim.Adam(model.parameters(), lr=learning_rate, amsgrad=False)
+
+
+    model = models.alexnet(pretrained=True)
+    #调整结构
+    model.classifier = nn.Sequential(
+        nn.Dropout(p=0.5, inplace=False),
+        nn.Linear(in_features=9216, out_features=4096, bias=True),
+        nn.ReLU(inplace=True),
+        nn.Dropout(p=0.5, inplace=False),
+        nn.Linear(in_features=4096, out_features=4096, bias=True),
+        nn.ReLU(inplace=True),
+        nn.Linear(in_features=4096, out_features=1, bias=True),
+        nn.Sigmoid()
+  )
+
+    model = model.to(device)
+
+    for param in model.parameters():
+        param.requires_grad = True
+
+    criterion = WeightedBinaryCrossEntropyLoss(2)
+
+    optimizer = optim.SGD(filter(lambda p: p.requires_grad, model.parameters()), lr=learning_rate)
 
     start_time = time.time()  # 记录训练开始时间
-    train_losses = []
-    validation_losses = []
+    writer = SummaryWriter("../Logs")
     for epoch in range(epochs):
         model.train()
-        train_predictions = []
+        train_score = []
+        train_pred = []
         train_targets = []
-        total_train_loss = 0
+        total_train_loss = 0.0
         for batch in training_loader:
-            images, targets = batch
+            images, targets, names = batch
+            images = torch.cat([images] * 3, dim=1)
             images = images.to(device)
+            # targets = targets.to(torch.float32)
             targets = targets.to(device)
             optimizer.zero_grad()
             output = model(images)
-            loss = criterion(output,targets)
+            loss = criterion(targets.view(-1, 1), output)
             loss.backward()
             optimizer.step()
 
             total_train_loss += loss.item()
-            _, predicted = torch.max(output, 1)
-            train_predictions.extend(predicted.cpu().numpy())
+            pred = (output >= 0.5).int().squeeze()
+
+            train_score.append(output.cpu().detach().numpy())
+            train_pred.extend(pred.cpu().numpy())
             train_targets.extend(targets.cpu().numpy())
-        if((epoch+1)%10==0):
-            train_losses.append(loss.item())
+        writer.add_scalar('Loss/Train', total_train_loss, epoch)
 
         model.eval()
-        val_predictions = []
+        val_score = []
+        val_pred = []
         val_targets = []
-        total_val_loss = 0
+        total_val_loss = 0.0
         with torch.no_grad():
             for batch in validation_loader:
-                images, targets = batch
+                images, targets, names = batch
+                # targets = targets.to(torch.float32)
+                images = torch.cat([images] * 3, dim=1)
                 images = images.to(device)
                 targets = targets.to(device)
                 output = model(images)
-                loss = criterion(output, targets)
+                loss = criterion(targets.view(-1, 1), output)
+
                 total_val_loss += loss.item()
-                _, predicted = torch.max(output, 1)
-                val_predictions.extend(predicted.cpu().numpy())
+                predicted_labels = (output >= 0.5).int().squeeze()
+
+                val_score.append(output.flatten().cpu().numpy())
+                val_pred.extend(predicted_labels.cpu().numpy())
                 val_targets.extend(targets.cpu().numpy())
-        if ((epoch + 1) % 10 == 0):
-            # torch.save(models, "VQ_VAE{}.pth".format(i+1))
-            print('%d epoch' % (epoch + 1))
+        writer.add_scalar('Loss/Val', total_val_loss, epoch)
 
-            train_acc, train_sen, train_spe = all_metrics(train_targets, train_predictions)
-            print("训练集 acc: {:.4f}".format(train_acc) + "sen: {:.4f}".format(train_sen) +
-                  "spe: {:.4f}".format(train_spe) + "loss: {:.4f}".format(total_train_loss))
+        test_score = []
+        test_pred = []
+        test_targets = []
+        total_test_loss = 0.0
+        with torch.no_grad():
+            for batch in test_loader:
+                images, targets, names = batch
+                # targets = targets.to(torch.float32)
+                images = torch.cat([images] * 3, dim=1)
+                images = images.to(device)
+                targets = targets.to(device)
+                output = model(images)
+                loss = criterion(targets.view(-1, 1), output)
 
-            val_acc, val_sen, val_spe = all_metrics(val_targets, val_predictions)
-            print("验证集 acc: {:.4f}".format(val_acc) + "sen: {:.4f}".format(val_sen) +
-                  "spe: {:.4f}".format(val_spe) + "loss: {:.4f}".format(total_val_loss))
+                total_test_loss += loss.item()
+                predicted_labels = (output >= 0.5).int().squeeze()
 
-    # 结束训练时间
+                test_score.append(output.flatten().cpu().numpy())
+                test_pred.extend(predicted_labels.cpu().numpy())
+                test_targets.extend(targets.cpu().numpy())
+        writer.add_scalar('Loss/Test', total_test_loss, epoch)
+
+        # if ((epoch + 1) == 798):
+        #     torch.save(model, "../models/VQ-Resnet/resnet18{}.pth".format(epoch + 1))
+
+        print('%d epoch' % (epoch + 1))
+
+        train_acc, train_sen, train_spe = all_metrics(train_targets, train_pred)
+
+        train_score = np.concatenate(train_score)  # 将列表转换为NumPy数组
+        train_targets = np.array(train_targets)
+        train_auc = roc_auc_score(train_targets, train_score)
+
+        print("训练集 acc: {:.4f}".format(train_acc) + " sen: {:.4f}".format(train_sen) +
+              " spe: {:.4f}".format(train_spe) + " auc: {:.4f}".format(train_auc) +
+              " loss: {:.4f}".format(total_train_loss))
+
+        val_acc, val_sen, val_spe = all_metrics(val_targets, val_pred)
+
+        val_score = np.concatenate(val_score)  # 将列表转换为NumPy数组
+        val_targets = np.array(val_targets)
+        val_auc = roc_auc_score(val_targets, val_score)
+
+        print("验证集 acc: {:.4f}".format(val_acc) + " sen: {:.4f}".format(val_sen) +
+              " spe: {:.4f}".format(val_spe) + " auc: {:.4f}".format(val_auc) +
+              " loss: {:.4f}".format(total_val_loss))
+
+        test_acc, test_sen, test_spe = all_metrics(test_targets, test_pred)
+
+        test_score = np.concatenate(test_score)  # 将列表转换为NumPy数组
+        test_targets = np.array(test_targets)
+        test_auc = roc_auc_score(test_targets, test_score)
+
+        print("验证集 acc: {:.4f}".format(test_acc) + " sen: {:.4f}".format(test_sen) +
+              " spe: {:.4f}".format(test_spe) + " auc: {:.4f}".format(test_auc) +
+              " loss: {:.4f}".format(total_test_loss))
+
+    writer.close()
     end_time = time.time()
     training_time = end_time - start_time
 
     print(f"Training time: {training_time} seconds")
-
-    plt.figure(figsize=(10, 5))
-    plt.plot(range(10, epochs + 1, 10), train_losses, label='Train Loss')
-    plt.plot(range(10, epochs + 1, 10), validation_losses, label='Validation Loss')
-    plt.xlabel('Epoch')
-    plt.ylabel('Loss')
-    plt.legend()
-    plt.title('Training and Validation Loss Over Time')
-    plt.show()

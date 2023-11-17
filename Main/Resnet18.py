@@ -11,8 +11,8 @@ from torch.utils.data import DataLoader
 from torch.utils.tensorboard import SummaryWriter
 from torchvision import models
 from torchvision import transforms
-from Main.Metrics import all_metrics
-from Main.data_loader import MyData
+from Metrics import all_metrics
+from data_loader import MyData
 
 # 定义自定义损失函数，加权二进制交叉熵
 class WeightedBinaryCrossEntropyLoss(nn.Module):
@@ -29,26 +29,13 @@ class WeightedBinaryCrossEntropyLoss(nn.Module):
 if __name__ == '__main__':
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-    seed = 42
-
-    # 设置 Python 的随机种子
-    random.seed(seed)
-
-    # 设置 NumPy 的随机种子
-    np.random.seed(seed)
-
-    # 设置 PyTorch 的随机种子
-    torch.manual_seed(seed)
-    torch.cuda.manual_seed(seed)
-    torch.backends.cudnn.deterministic = True
-    torch.backends.cudnn.benchmark = False
-
-    batch_size = 64
+    batch_size = 8
     epochs = 1000
     learning_rate = 1e-4
 
     # 读取数据集
     transform = transforms.Compose([
+        transforms.Resize([512, 512]),
         transforms.ToTensor(),
         transforms.Normalize((0.3281,), (0.2366,))  # 设置均值和标准差
     ])
@@ -61,35 +48,27 @@ if __name__ == '__main__':
     val_malignat_data = MyData("../data/一期数据/val/malignant", "malignant", transform=transform)
     val_data = val_benign_data + val_malignat_data
 
-    test_benign_data = MyData("../data/一期数据/test/benign", "benign", transform=transform)
-    test_malignat_data = MyData("../data/一期数据/test/malignant", "malignant", transform=transform)
-    test_data = test_benign_data + test_malignat_data
 
     training_loader = DataLoader(train_data,
                                  batch_size=batch_size,
                                  shuffle=True,
-                                 pin_memory=True)
+                                 pin_memory=True,
+                                 num_workers=4)
 
     validation_loader = DataLoader(val_data,
-                                   batch_size=32,
+                                   batch_size=batch_size,
                                    shuffle=True,
-                                   pin_memory=True)
-
-    test_loader = DataLoader(test_data,
-                                   batch_size=32,
-                                   shuffle=True,
-                                   pin_memory=True)
+                                   pin_memory=True,
+                                   num_workers=4)
 
 
 
     model = models.resnet18(pretrained=True)
-    #调整结构
-    model.conv1 = nn.Conv2d(1, 64, kernel_size=7, stride=2, padding=3, bias=False)
     num_hidden = 256
     model.fc = nn.Sequential(
         nn.Linear(model.fc.in_features, num_hidden),
         nn.ReLU(),
-        nn.Dropout(0.2),
+        nn.Dropout(0.5),
         nn.Linear(num_hidden, 1),
         nn.Sigmoid()
     )
@@ -112,7 +91,6 @@ if __name__ == '__main__':
     optimizer = optim.SGD(filter(lambda p: p.requires_grad, model.parameters()), lr=learning_rate)
 
     start_time = time.time()  # 记录训练开始时间
-    writer = SummaryWriter("../Logs")
     for epoch in range(epochs):
         model.train()
         train_score = []
@@ -121,6 +99,7 @@ if __name__ == '__main__':
         total_train_loss = 0.0
         for batch in training_loader:
             images, targets, names = batch
+            images = torch.cat([images] * 3, dim=1)
             images = images.to(device)
             # targets = targets.to(torch.float32)
             targets = targets.to(device)
@@ -136,7 +115,6 @@ if __name__ == '__main__':
             train_score.append(output.cpu().detach().numpy())
             train_pred.extend(pred.cpu().numpy())
             train_targets.extend(targets.cpu().numpy())
-        writer.add_scalar('Loss/Train', total_train_loss, epoch)
 
         model.eval()
         val_score = []
@@ -146,6 +124,7 @@ if __name__ == '__main__':
         with torch.no_grad():
             for batch in validation_loader:
                 images, targets, names = batch
+                images = torch.cat([images] * 3, dim=1)
                 # targets = targets.to(torch.float32)
                 images = images.to(device)
                 targets = targets.to(device)
@@ -158,31 +137,9 @@ if __name__ == '__main__':
                 val_score.append(output.flatten().cpu().numpy())
                 val_pred.extend(predicted_labels.cpu().numpy())
                 val_targets.extend(targets.cpu().numpy())
-        writer.add_scalar('Loss/Val', total_val_loss, epoch)
 
-        test_score = []
-        test_pred = []
-        test_targets = []
-        total_test_loss = 0.0
-        with torch.no_grad():
-            for batch in test_loader:
-                images, targets, names = batch
-                # targets = targets.to(torch.float32)
-                images = images.to(device)
-                targets = targets.to(device)
-                output = model(images)
-                loss = criterion(targets.view(-1, 1), output)
-
-                total_test_loss += loss.item()
-                predicted_labels = (output >= 0.5).int().squeeze()
-
-                test_score.append(output.flatten().cpu().numpy())
-                test_pred.extend(predicted_labels.cpu().numpy())
-                test_targets.extend(targets.cpu().numpy())
-        writer.add_scalar('Loss/Test', total_test_loss, epoch)
-
-        if ((epoch + 1) == 520):
-            torch.save(model, "../models/resnet/resnet18{}.pth".format(epoch + 1))
+        if ((epoch + 1)%50 == 0):
+            torch.save(model, "../models/VQ-Resnet/resnet18{}.pth".format(epoch + 1))
 
         print('%d epoch' % (epoch + 1))
 
@@ -206,17 +163,7 @@ if __name__ == '__main__':
               " spe: {:.4f}".format(val_spe) + " auc: {:.4f}".format(val_auc) +
               " loss: {:.4f}".format(total_val_loss))
 
-        test_acc, test_sen, test_spe = all_metrics(test_targets, test_pred)
 
-        test_score = np.concatenate(test_score)  # 将列表转换为NumPy数组
-        test_targets = np.array(test_targets)
-        test_auc = roc_auc_score(test_targets, test_score)
-
-        print("验证集 acc: {:.4f}".format(test_acc) + " sen: {:.4f}".format(test_sen) +
-              " spe: {:.4f}".format(test_spe) + " auc: {:.4f}".format(test_auc) +
-              " loss: {:.4f}".format(total_test_loss))
-
-    writer.close()
     end_time = time.time()
     training_time = end_time - start_time
 

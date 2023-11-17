@@ -347,17 +347,20 @@ if __name__ == '__main__':
     training_loader = DataLoader(train_data,
                                  batch_size=batch_size,
                                  shuffle=True,
-                                 pin_memory=True)
+                                 pin_memory=True,
+                                 num_workers=8)
 
     validation_loader = DataLoader(val_data,
                                    batch_size=32,
                                    shuffle=True,
-                                   pin_memory=True)
+                                   pin_memory=True,
+                                   num_workers=8)
 
     test_loader = DataLoader(test_data,
                              batch_size=32,
                              shuffle=True,
-                             pin_memory=True)
+                             pin_memory=True,
+                             num_workers=8)
 
     model = resnet18()
 
@@ -471,7 +474,7 @@ if __name__ == '__main__':
         writer.add_scalar('Loss/Test', total_test_loss, epoch)
 
         if ((epoch + 1) == 662):
-            torch.save(model, "../models/resnet/resnet18{}.pth".format(epoch + 1))
+            torch.save(model, "../models/VQ-Resnet/resnet18{}.pth".format(epoch + 1))
         print('%d epoch' % (epoch + 1))
 
         train_acc, train_sen, train_spe = all_metrics(train_targets, train_pred)

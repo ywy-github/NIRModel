@@ -8,7 +8,7 @@ resnet18-model
 VQ-VAE-resnet18
 训练集 acc: 1.0000 sen: 1.0000 spe: 1.0000 auc: 1.0000 loss: 6.7153
 验证集 acc: 0.7111 sen: 0.4105 spe: 0.8409 auc: 0.6671 loss: 43.8988
-测试集 acc: 0.6982sen: 0.4138  spe: 0.8298loss: 4.2576
+测试集 acc: 0.6982sen: 0.4138  spe: 0.8298 loss: 4.2576
 
 Attention_resnet18_1_v1
 训练集 acc: 0.9492 sen: 0.9265 spe: 0.9604 auc: 0.9896 loss: 4.3708
@@ -54,6 +54,16 @@ Resnet_SCFF
 验证集 acc: 0.6982 sen: 0.5402 spe: 0.7713 auc: 0.7022 loss: 7.7147
 
 
+resize224*224
+resnet18-resize
+训练集 acc: 0.9989 sen: 1.0000 spe: 0.9984 auc: 1.0000 loss: 1.3364
+验证集 acc: 0.7397 sen: 0.5545 spe: 0.8271 auc: 0.7444 loss: 11.0779
+测试集 acc: 0.7236 sen: 0.5172 spe: 0.8191 auc: 0.7312 loss: 11.7655
+
+验证集 acc: 0.6889sen: 0.5446spe: 0.7570 loss: 1.0304
+测试集 acc: 0.6873sen: 0.5057spe: 0.7713 loss: 1.3547
+
+
 二期数据：
 resnet18-data2
 验证集 acc: 0.9733sen: 0.9590spe: 0.9831loss: 0.2951
@@ -65,3 +75,49 @@ VQ-VAE-resnet18_data2
 训练集 acc: 1.0000 sen: 1.0000 spe: 1.0000  良：533  恶：367
 验证集 acc: 0.5500 sen: 0.5414 spe: 0.5569  良：167  恶:133
 测试集 acc: 0.5850 sen: 0.6343 spe: 0.5467  良：225  恶：175
+
+
+二期双十：
+resnet18_data2_双十
+训练集 acc: 0.6933 sen: 0.7236 spe: 0.6626 auc: 0.7684 loss: 5.0206
+验证集 acc: 0.5842 sen: 0.6842 spe: 0.4545 auc: 0.6164 loss: 2.6999
+验证集 acc: 0.6040 sen: 0.6905 spe: 0.4923 auc: 0.6266 loss: 3.3569
+
+101 epoch
+训练集 acc: 1.0000 sen: 1.0000 spe: 1.0000 auc: 1.0000 loss: 4.7804
+验证集 acc: 0.5842 sen: 0.7193 spe: 0.4091 auc: 0.6372 loss: 15.2600
+测试集 acc: 0.6174 sen: 0.7619 spe: 0.4308 auc: 0.6313 loss: 15.8018
+
+
+
+AlexNet:
+72 epoch
+训练集 acc: 0.5604 sen: 0.4560 spe: 0.6107 auc: 0.5589 loss: 13.7016
+验证集 acc: 0.6190 sen: 0.6139 spe: 0.6215 auc: 0.6585 loss: 9.0851
+验证集 acc: 0.6327 sen: 0.5862 spe: 0.6543 auc: 0.6454 loss: 8.1362
+VQ-AlexNet:
+250
+训练集 acc: 0.9481 sen: 0.9316 spe: 0.9560 auc: 0.9903 loss: 4.5696
+验证集 acc: 0.6476 sen: 0.6337 spe: 0.6542 auc: 0.7239 loss: 15.6440
+测试集 acc: 0.6618 sen: 0.7126 spe: 0.6383 auc: 0.7219 loss: 15.9435
+300 epoch
+训练集 acc: 1.0000 sen: 1.0000 spe: 1.0000 auc: 1.0000 loss: 3.6621
+验证集 acc: 0.7111 sen: 0.5248 spe: 0.7991 auc: 0.7212 loss: 26.5824
+测试集 acc: 0.7018 sen: 0.5977 spe: 0.7500 auc: 0.7202 loss: 24.6527
+
+MobileNet:
+300 epoch
+训练集 acc: 0.9110 sen: 0.9121 spe: 0.9105 auc: 0.9688 loss: 24.6350
+验证集 acc: 0.7111 sen: 0.4059 spe: 0.8551 auc: 0.7229 loss: 9.0161
+验证集 acc: 0.7164 sen: 0.4598 spe: 0.8351 auc: 0.7334 loss: 7.7782
+VQ-MobileNet:
+
+
+DenseNet:
+验证集 acc: 0.6444sen: 0.4356spe: 0.7430loss: 0.9193
+测试集 acc: 0.6182sen: 0.3908spe: 0.7234loss: 0.9493
+VQ-DenseNet:
+150 epoch
+训练集 acc: 1.0000 sen: 1.0000 spe: 1.0000 auc: 1.0000 loss: 25.1379
+验证集 acc: 0.7206 sen: 0.4653 spe: 0.8411 auc: 0.7048 loss: 30.6605
+测试集 acc: 0.7309 sen: 0.5057 spe: 0.8351 auc: 0.7434 loss: 25.7480

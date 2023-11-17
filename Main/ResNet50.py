@@ -140,7 +140,7 @@ if __name__ == '__main__':
         writer.add_scalar('Loss/Val', total_val_loss, epoch)
 
         if ((epoch + 1) % 50 == 0):
-            torch.save(model, "../models/resnet/resnet50{}.pth".format(epoch + 1))
+            torch.save(model, "../models/VQ-Resnet/resnet50{}.pth".format(epoch + 1))
             print('%d epoch' % (epoch + 1))
 
             train_acc, train_sen, train_spe = all_metrics(train_targets, train_pred)

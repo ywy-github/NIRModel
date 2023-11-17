@@ -22,8 +22,8 @@ from PIL import Image
 import glob
 import random
 
-from Main.Metrics import all_metrics
-from Main.data_loader import MyData
+from Metrics import all_metrics
+from data_loader import MyData
 
 class VectorQuantizer(nn.Module):
     def __init__(self, num_embeddings, embedding_dim, commitment_cost):
@@ -306,8 +306,8 @@ if __name__ == '__main__':
         transforms.Normalize((0.3281,), (0.2366,))  # 设置均值和标准差
     ])
 
-    test_benign_data = MyData("../data/二期数据/train/benign", "benign", transform=transform)
-    test_malignat_data = MyData("../data/二期数据/train/malignant", "malignant", transform=transform)
+    test_benign_data = MyData("../data/一期数据/test/benign", "benign", transform=transform)
+    test_malignat_data = MyData("../data/一期数据/test/malignant", "malignant", transform=transform)
     test_data = test_benign_data + test_malignat_data
 
     test_loader = DataLoader(test_data,
@@ -315,7 +315,7 @@ if __name__ == '__main__':
                              shuffle=True,
                              pin_memory=True)
 
-    model = torch.load("../models/result/VQ-VAE-resnet18_data2.pth", map_location=device)
+    model = torch.load("../models/result/VQ-VAE-resnet18_data1.pth", map_location=device)
 
     criterion = WeightedBinaryCrossEntropyLoss(2)
     criterion.to(device)
@@ -355,4 +355,4 @@ if __name__ == '__main__':
           "spe: {:.4f}".format(train_spe) + "loss: {:.4f}".format(np.mean(total_test_loss[-10:])))
 
     df = pd.DataFrame(test_results)
-    df.to_excel("../models/result/VQ-VAE-resnet18_data2_train.xlsx", index=False)
+    # df.to_excel("../models/result/VQ-VAE-resnet18_data2_train.xlsx", index=False)
