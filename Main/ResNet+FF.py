@@ -382,12 +382,11 @@ if __name__ == '__main__':
     model.load_state_dict(model_dict)
 
     # 调整结构
-    model.conv1 = nn.Conv2d(1, 64, kernel_size=7, stride=2, padding=3, bias=False)
     num_hidden = 256
     model.fc = nn.Sequential(
         nn.Linear(model.fc.in_features, num_hidden),
         nn.ReLU(),
-        nn.Dropout(0.2),
+        nn.Dropout(0.5),
         nn.Linear(num_hidden, 1),
         nn.Sigmoid()
     )

@@ -24,6 +24,285 @@ import random
 from Metrics import all_metrics
 from data_loader import MyData
 
+class WeightedBinaryCrossEntropyLoss(nn.Module):
+    def __init__(self, weight_positive):
+        super(WeightedBinaryCrossEntropyLoss, self).__init__()
+        self.weight_positive = weight_positive
+
+    def forward(self, y_true, y_pred):
+        y_true = y_true.to(dtype=torch.float32)
+        loss = - (self.weight_positive * y_true * torch.log(y_pred + 1e-7) + (1 - y_true) * torch.log(1 - y_pred + 1e-7))
+        return torch.mean(loss)
+
+
+class SKConv(nn.Module):
+    def __init__(self, features, M: int = 2, G: int = 32, r: int = 16, stride: int = 1, L: int = 32):
+        super().__init__()
+        d = int(max(features / r, L))
+        self.M = M
+        self.features = features
+        # 1.split
+        self.convs = nn.ModuleList([])
+        for i in range(M):
+            self.convs.append(nn.Sequential(
+                nn.Conv2d(features, features, kernel_size=3, stride=stride, padding=1 + i, dilation=1 + i, groups=G,
+                          bias=False),
+                nn.BatchNorm2d(features),
+                nn.ReLU(inplace=True)
+            ))
+        # 2.fuse
+        self.gap = nn.AdaptiveAvgPool2d(1)
+        self.fc = nn.Sequential(nn.Conv2d(features, d, kernel_size=1, stride=1, bias=False),
+                                nn.BatchNorm2d(d),
+                                nn.ReLU(inplace=True))
+        # 3.select
+        self.fcs = nn.ModuleList([])
+        for i in range(M):
+            self.fcs.append(
+                nn.Conv2d(d, features, kernel_size=1, stride=1)
+            )
+        self.softmax = nn.Softmax(dim=1)
+
+    def forward(self, x, y):
+        batch_size = x.shape[0]
+        # 1.split
+        feats = torch.cat((x, y), dim=1)
+        feats = feats.view(batch_size, self.M, self.features, feats.shape[2], feats.shape[3])
+
+        # 2.fuse
+        feats_U = torch.sum(feats, dim=1)
+        feats_S = self.gap(feats_U)
+        feats_Z = self.fc(feats_S)
+
+        # 3.select
+        attention_vectors = [fc(feats_Z) for fc in self.fcs]
+        attention_vectors = torch.cat(attention_vectors, dim=1)
+
+        attention_vectors = attention_vectors.view(batch_size, self.M, self.features, 1, 1)
+
+        attention_vectors = self.softmax(attention_vectors)
+        feats_V = torch.sum(feats * attention_vectors, dim=1)
+        return feats_V
+
+class DS(nn.Module):
+    def __init__(self, input_channels):
+        super().__init__()
+        self.avg_pool = nn.AvgPool2d(kernel_size=3, stride=2, padding=1)
+        self.point_conv = nn.Conv2d(input_channels,2*input_channels,1,1)
+        self.Bn = nn.BatchNorm2d(2*input_channels)
+        self.relu = nn.ReLU()
+    def forward(self, x):
+        x = self.avg_pool(x)
+        x = self.point_conv(x)
+        x = self.Bn(x)
+        x = self.relu(x)
+        return x
+def conv3x3(in_planes, out_planes, stride=1, groups=1, dilation=1):
+    """3x3 convolution with padding"""
+    return nn.Conv2d(in_planes, out_planes, kernel_size=3, stride=stride,
+                     padding=dilation, groups=groups, bias=False, dilation=dilation)
+
+
+def conv1x1(in_planes, out_planes, stride=1):
+    """1x1 convolution"""
+    return nn.Conv2d(in_planes, out_planes, kernel_size=1, stride=stride, bias=False)
+
+
+class BasicBlock(nn.Module):
+    expansion = 1
+
+    def __init__(self, inplanes, planes, stride=1, downsample=None, groups=1,
+                 base_width=64, dilation=1, norm_layer=None):
+        super(BasicBlock, self).__init__()
+        if norm_layer is None:
+            norm_layer = nn.BatchNorm2d
+        if groups != 1 or base_width != 64:
+            raise ValueError('BasicBlock only supports groups=1 and base_width=64')
+        if dilation > 1:
+            raise NotImplementedError("Dilation > 1 not supported in BasicBlock")
+        # Both self.conv1 and self.downsample layers downsample the input when stride != 1
+        self.conv1 = conv3x3(inplanes, planes, stride)
+        self.bn1 = norm_layer(planes)
+        self.relu = nn.ReLU(inplace=True)
+        self.conv2 = conv3x3(planes, planes)
+        self.bn2 = norm_layer(planes)
+        self.downsample = downsample
+        self.stride = stride
+
+    def forward(self, x):
+        identity = x
+
+        out = self.conv1(x)
+        out = self.bn1(out)
+        out = self.relu(out)
+
+        out = self.conv2(out)
+        out = self.bn2(out)
+
+        if self.downsample is not None:
+            identity = self.downsample(x)
+
+        out += identity
+        out = self.relu(out)
+
+        return out
+
+
+class Bottleneck(nn.Module):
+    expansion = 4
+
+    def __init__(self, inplanes, planes, stride=1, downsample=None, groups=1,
+                 base_width=64, dilation=1, norm_layer=None):
+        super(Bottleneck, self).__init__()
+        if norm_layer is None:
+            norm_layer = nn.BatchNorm2d
+        width = int(planes * (base_width / 64.)) * groups
+        # Both self.conv2 and self.downsample layers downsample the input when stride != 1
+        self.conv1 = conv1x1(inplanes, width)
+        self.bn1 = norm_layer(width)
+        self.conv2 = conv3x3(width, width, stride, groups, dilation)
+        self.bn2 = norm_layer(width)
+        self.conv3 = conv1x1(width, planes * self.expansion)
+        self.bn3 = norm_layer(planes * self.expansion)
+        self.relu = nn.ReLU(inplace=True)
+        self.downsample = downsample
+        self.stride = stride
+
+    def forward(self, x):
+        identity = x
+
+        out = self.conv1(x)
+        out = self.bn1(out)
+        out = self.relu(out)
+
+        out = self.conv2(out)
+        out = self.bn2(out)
+        out = self.relu(out)
+
+        out = self.conv3(out)
+        out = self.bn3(out)
+
+        if self.downsample is not None:
+            identity = self.downsample(x)
+
+        out += identity
+        out = self.relu(out)
+
+        return out
+
+
+class ResNet(nn.Module):
+
+    def __init__(self, block, layers, num_classes=1000, zero_init_residual=False,
+                 groups=1, width_per_group=64, replace_stride_with_dilation=None,
+                 norm_layer=None):
+        super(ResNet, self).__init__()
+        if norm_layer is None:
+            norm_layer = nn.BatchNorm2d
+        self._norm_layer = norm_layer
+
+        self.inplanes = 64
+        self.dilation = 1
+        if replace_stride_with_dilation is None:
+            # each element in the tuple indicates if we should replace
+            # the 2x2 stride with a dilated convolution instead
+            replace_stride_with_dilation = [False, False, False]
+        if len(replace_stride_with_dilation) != 3:
+            raise ValueError("replace_stride_with_dilation should be None "
+                             "or a 3-element tuple, got {}".format(replace_stride_with_dilation))
+        self.groups = groups
+        self.base_width = width_per_group
+        self.conv1 = nn.Conv2d(3, self.inplanes, kernel_size=7, stride=2, padding=3,
+                               bias=False)
+        self.bn1 = norm_layer(self.inplanes)
+        self.relu = nn.ReLU(inplace=True)
+        self.maxpool = nn.MaxPool2d(kernel_size=3, stride=2, padding=1)
+        self.layer1 = self._make_layer(block, 64, layers[0])
+        self.layer2 = self._make_layer(block, 128, layers[1], stride=2,
+                                       dilate=replace_stride_with_dilation[0])
+        self.layer3 = self._make_layer(block, 256, layers[2], stride=2,
+                                       dilate=replace_stride_with_dilation[1])
+        self.layer4 = self._make_layer(block, 512, layers[3], stride=2,
+                                       dilate=replace_stride_with_dilation[2])
+        self.avgpool = nn.AdaptiveAvgPool2d((1, 1))
+
+        self.fc = nn.Linear(512 * block.expansion, num_classes)
+        for m in self.modules():
+            if isinstance(m, nn.Conv2d):
+                nn.init.kaiming_normal_(m.weight, mode='fan_out', nonlinearity='relu')
+            elif isinstance(m, (nn.BatchNorm2d, nn.GroupNorm)):
+                nn.init.constant_(m.weight, 1)
+                nn.init.constant_(m.bias, 0)
+
+        # Zero-initialize the last BN in each residual branch,
+        # so that the residual branch starts with zeros, and each residual block behaves like an identity.
+        # This improves the model by 0.2~0.3% according to https://arxiv.org/abs/1706.02677
+        if zero_init_residual:
+            for m in self.modules():
+                if isinstance(m, Bottleneck):
+                    nn.init.constant_(m.bn3.weight, 0)
+                elif isinstance(m, BasicBlock):
+                    nn.init.constant_(m.bn2.weight, 0)
+
+    def _make_layer(self, block, planes, blocks, stride=1, dilate=False):
+        norm_layer = self._norm_layer
+        downsample = None
+        previous_dilation = self.dilation
+        if dilate:
+            self.dilation *= stride
+            stride = 1
+        if stride != 1 or self.inplanes != planes * block.expansion:
+            downsample = nn.Sequential(
+                conv1x1(self.inplanes, planes * block.expansion, stride),
+                norm_layer(planes * block.expansion),
+            )
+
+        layers = []
+        layers.append(block(self.inplanes, planes, stride, downsample, self.groups,
+                            self.base_width, previous_dilation, norm_layer))
+        self.inplanes = planes * block.expansion
+        for _ in range(1, blocks):
+            layers.append(block(self.inplanes, planes, groups=self.groups,
+                                base_width=self.base_width, dilation=self.dilation,
+                                norm_layer=norm_layer))
+
+        return nn.Sequential(*layers)
+
+    def forward(self, x):
+        x = self.conv1(x)
+        x = self.bn1(x)
+        x = self.relu(x)
+        x = self.maxpool(x)
+
+        x = self.layer1(x)
+        ds = DS(x.shape[1]).to(device)
+        x1 = ds(x)
+
+        x = self.layer2(x)
+        sk = SKConv(x.shape[1]).to(device)
+        x2 = sk(x1,x)
+        ds = DS(x2.shape[1]).to(device)
+        x2 = ds(x2)
+
+        x = self.layer3(x)
+        sk = SKConv(x.shape[1]).to(device)
+        x3 = sk(x2, x)
+        ds = DS(x3.shape[1]).to(device)
+        x3 = ds(x3)
+
+        x = self.layer4(x)
+        sk = SKConv(x.shape[1]).to(device)
+        x4 = sk(x3, x)
+
+        x = self.avgpool(x4)
+        x = torch.flatten(x, 1)
+        x = self.fc(x)
+        return x
+
+def resnet18():
+    return ResNet(BasicBlock, [2, 2, 2, 2])
+
+
 class VectorQuantizer(nn.Module):
     def __init__(self, num_embeddings, embedding_dim, commitment_cost):
         super(VectorQuantizer, self).__init__()
@@ -135,62 +414,6 @@ class VectorQuantizerEMA(nn.Module):
 
         # convert quantized from BHWC -> BCHW
         return loss, quantized.permute(0, 3, 1, 2).contiguous(), perplexity, encodings
-
-class Residual(nn.Module):  #@save
-    def __init__(self, input_channels, num_channels,
-                 use_1x1conv=False, strides=1):
-        super().__init__()
-        self.conv1 = nn.Conv2d(input_channels, num_channels,
-                               kernel_size=3, padding=1, stride=strides)
-        self.conv2 = nn.Conv2d(num_channels, num_channels,
-                               kernel_size=3, padding=1)
-        if use_1x1conv:
-            self.conv3 = nn.Conv2d(input_channels, num_channels,
-                                   kernel_size=1, stride=strides)
-        else:
-            self.conv3 = None
-        self.bn1 = nn.BatchNorm2d(num_channels)
-        self.bn2 = nn.BatchNorm2d(num_channels)
-
-    def forward(self, X):
-        Y = F.relu(self.bn1(self.conv1(X)))
-        Y = self.bn2(self.conv2(Y))
-        if self.conv3:
-            X = self.conv3(X)
-        Y += X
-        return F.relu(Y)
-
-
-def resnet_block(input_channels, num_channels, num_residuals,
-                 first_block=False):
-    blk = []
-    for i in range(num_residuals):
-        if i == 0 and not first_block:
-            blk.append(Residual(input_channels, num_channels,
-                                use_1x1conv=True, strides=2))
-        else:
-            blk.append(Residual(num_channels, num_channels))
-    return blk
-
-
-class Encoder(nn.Module):
-    def __init__(self):
-        super(Encoder, self).__init__()
-
-        self.b1 = nn.Sequential(
-            nn.Conv2d(1, 64, kernel_size=7, stride=2, padding=3),
-            nn.BatchNorm2d(64),
-            nn.ReLU(),
-            nn.MaxPool2d(kernel_size=3, stride=2, padding=1)
-        )
-        self.b2 = nn.Sequential(*resnet_block(64, 64, 2, first_block=True))
-        self.b3 = nn.Sequential(*resnet_block(64, 128, 2))
-
-    def forward(self, inputs):
-        x = self.b1(inputs)
-        x = self.b2(x)
-        x = self.b3(x)
-        return x
 
 
 class Decoder(nn.Module):
@@ -343,7 +566,7 @@ if __name__ == '__main__':
 
     weight_positive = 2  # 调整这个权重以提高对灵敏度的重视
 
-    learning_rate = 1e-5
+    learning_rate = 1e-4
 
     lambda_recon = 0.2
     lambda_vq = 0.2
@@ -370,22 +593,38 @@ if __name__ == '__main__':
                                  batch_size=batch_size,
                                  shuffle=True,
                                  num_workers=5,
-                                 persistent_workers=True,
                                  pin_memory=True
                                  )
 
     validation_loader = DataLoader(val_data,
                                    batch_size=batch_size,
                                    shuffle=True,
+                                   num_workers=5,
                                    pin_memory=True
                                   )
 
 
     #设置encoder
-    encoder = models.resnet18(pretrained=True)
-    for param in encoder.parameters():
-        param.requires_grad = False
+    encoder = resnet18()
+    pretrained_weights_path = 'C:\\Users\\17588\\.cache\\torch\\checkpoints\\resnet18-5c106cde.pth'
 
+    # 加载预训练参数
+    pretrained_dict = torch.load(pretrained_weights_path)
+
+    # 获取自定义模型的参数字典
+    model_dict = encoder.state_dict()
+
+    # 1. 过滤掉不匹配的键（比如自定义模型中可能有不同的层名）
+    pretrained_dict = {k: v for k, v in pretrained_dict.items() if k in model_dict}
+
+    # 2. 更新自定义模型参数字典
+    model_dict.update(pretrained_dict)
+
+    # 3. 将新的参数字典加载到自定义模型中
+    encoder.load_state_dict(model_dict)
+
+    encoder = encoder.to(device)
+    # 将模型的参数移到GPU
     for name, param in encoder.named_parameters():
         if "layer3" in name:
             param.requires_grad = True
@@ -397,7 +636,6 @@ if __name__ == '__main__':
     encoder = nn.Sequential(*list(encoder.children())[:-2])
 
     model = Model(encoder,num_embeddings, embedding_dim, commitment_cost, decay).to(device)
-
 
     criterion = WeightedBinaryCrossEntropyLoss(1)
     criterion.to(device)
