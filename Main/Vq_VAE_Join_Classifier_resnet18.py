@@ -369,30 +369,33 @@ if __name__ == '__main__':
     training_loader = DataLoader(train_data,
                                  batch_size=batch_size,
                                  shuffle=True,
-                                 pin_memory=True)
+                                 pin_memory=True,
+                                 num_workers=8)
 
     validation_loader = DataLoader(val_data,
                                    batch_size=batch_size,
                                    shuffle=True,
-                                   pin_memory=True)
+                                   pin_memory=True,
+                                   num_workers=8)
 
 
     #设置encoder
-    encoder = models.resnet18(pretrained=True)
-    for param in encoder.parameters():
-        param.requires_grad = False
-
-    for name, param in encoder.named_parameters():
-        if "layer3" in name:
-            param.requires_grad = True
-        if "layer4" in name:
-            param.requires_grad = True
-        if "fc" in name:
-            param.requires_grad = True
-
-    encoder = nn.Sequential(*list(encoder.children())[:-2])
-
-    model = Model(encoder,num_embeddings, embedding_dim, commitment_cost, decay).to(device)
+    # encoder = models.resnet18(pretrained=True)
+    # for param in encoder.parameters():
+    #     param.requires_grad = False
+    #
+    # for name, param in encoder.named_parameters():
+    #     if "layer3" in name:
+    #         param.requires_grad = True
+    #     if "layer4" in name:
+    #         param.requires_grad = True
+    #     if "fc" in name:
+    #         param.requires_grad = True
+    #
+    # encoder = nn.Sequential(*list(encoder.children())[:-2])
+    model = torch.load("../models/result/VQ-VAE-resnet18_data1.pth", map_location=device)
+    model.to(device)
+    # model = Model(encoder,num_embeddings, embedding_dim, commitment_cost, decay).to(device)
 
     criterion = WeightedBinaryCrossEntropyLoss(2)
     criterion.to(device)
