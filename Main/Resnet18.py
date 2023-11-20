@@ -29,7 +29,7 @@ class WeightedBinaryCrossEntropyLoss(nn.Module):
 if __name__ == '__main__':
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-    batch_size = 8
+    batch_size = 64
     epochs = 1000
     learning_rate = 1e-4
 
@@ -53,13 +53,16 @@ if __name__ == '__main__':
                                  batch_size=batch_size,
                                  shuffle=True,
                                  pin_memory=True,
-                                 num_workers=4)
+                                 num_workers=8,
+                                 persistent_workers=True)
 
     validation_loader = DataLoader(val_data,
                                    batch_size=batch_size,
                                    shuffle=True,
                                    pin_memory=True,
-                                   num_workers=4)
+                                   num_workers=8,
+                                   persistent_workers=True
+                                  )
 
 
 
@@ -139,7 +142,7 @@ if __name__ == '__main__':
                 val_targets.extend(targets.cpu().numpy())
 
         if ((epoch + 1)%50 == 0):
-            torch.save(model, "../models/VQ-Resnet/resnet18{}.pth".format(epoch + 1))
+            torch.save(model, "../models/result/resnet18{}.pth".format(epoch + 1))
 
         print('%d epoch' % (epoch + 1))
 

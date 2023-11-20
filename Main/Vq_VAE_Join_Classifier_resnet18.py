@@ -332,7 +332,7 @@ if __name__ == '__main__':
     torch.backends.cudnn.benchmark = False
 
     batch_size = 64
-    epochs = 105
+    epochs = 1000
 
     embedding_dim = 64
     num_embeddings = 512  # 和encoder输出维度相同，和decoder输入维度相同
@@ -341,9 +341,9 @@ if __name__ == '__main__':
 
     decay = 0.99
 
-    weight_positive = 1  # 调整这个权重以提高对灵敏度的重视
+    weight_positive = 2  # 调整这个权重以提高对灵敏度的重视
 
-    learning_rate = 1e-4
+    learning_rate = 1e-5
 
     lambda_recon = 0.2
     lambda_vq = 0.2
@@ -369,14 +369,16 @@ if __name__ == '__main__':
     training_loader = DataLoader(train_data,
                                  batch_size=batch_size,
                                  shuffle=True,
-                                 pin_memory=True,
-                                 num_workers=8)
+                                 num_workers=5,
+                                 persistent_workers=True,
+                                 pin_memory=True
+                                 )
 
     validation_loader = DataLoader(val_data,
                                    batch_size=batch_size,
                                    shuffle=True,
-                                   pin_memory=True,
-                                   num_workers=8)
+                                   pin_memory=True
+                                  )
 
 
     #设置encoder
@@ -393,11 +395,11 @@ if __name__ == '__main__':
     #         param.requires_grad = True
     #
     # encoder = nn.Sequential(*list(encoder.children())[:-2])
-    model = torch.load("../models/result/VQ-VAE-resnet18_data1.pth", map_location=device)
-    model.to(device)
+    #
     # model = Model(encoder,num_embeddings, embedding_dim, commitment_cost, decay).to(device)
+    model = torch.load("../models/result/VQ-VAE-resnet18-data1-Resize-50.pth", map_location=device)
 
-    criterion = WeightedBinaryCrossEntropyLoss(2)
+    criterion = WeightedBinaryCrossEntropyLoss(1)
     criterion.to(device)
     optimizer = optim.Adam(filter(lambda p: p.requires_grad, model.parameters()), lr=learning_rate, amsgrad=False)
     # scheduler = StepLR(optimizer,50,0.1)
@@ -408,6 +410,7 @@ if __name__ == '__main__':
     val_res_perplexity = []
 
     start_time = time.time()  # 记录训练开始时间
+    writer = SummaryWriter("../Logs")
     for epoch in range(epochs):
         model.train()
         train_score = []
@@ -440,7 +443,7 @@ if __name__ == '__main__':
             total_train_loss +=total_loss
             train_res_recon_error.append(recon_loss.item())
             train_res_perplexity.append(perplexity.item())
-
+        writer.add_scalar('Loss/Train', total_train_loss, epoch)
         val_score = []
         val_pred = []
         val_targets = []
@@ -467,10 +470,10 @@ if __name__ == '__main__':
                 total_val_loss += total_loss
                 val_res_recon_error.append(recon_loss.item())
                 val_res_perplexity.append(perplexity.item())
-
+        writer.add_scalar('Loss/Val', total_val_loss, epoch)
 
         if ((epoch + 1)%50 == 0):
-            torch.save(model, "../models/VQ-Resnet/VQ-VAE-resnet18{}.pth".format(epoch + 1))
+            torch.save(model, "../models/result/VQ-VAE-resnet18-data2-双十-Resize微调-{}.pth".format(epoch + 1))
         print('%d epoch' % (epoch + 1))
 
         train_acc, train_sen, train_spe = all_metrics(train_targets, train_pred)
@@ -497,7 +500,7 @@ if __name__ == '__main__':
         print('train_perplexity: %.3f' % np.mean(train_res_perplexity[-10:]))
         print('val_recon_error: %.3f' % np.mean(val_res_recon_error[-10:]))
         print('val_perplexity: %.3f' % np.mean(val_res_perplexity[-10:]))
-
+    writer.close()
     # 结束训练时间
     end_time = time.time()
     training_time = end_time - start_time

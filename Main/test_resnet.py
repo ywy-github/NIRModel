@@ -71,7 +71,7 @@ if __name__ == '__main__':
 
     # 读取数据集
     transform = transforms.Compose([
-        transforms.Resize(224),
+        transforms.Resize([512,512]),
         transforms.ToTensor(),
         transforms.Normalize((0.3281,), (0.2366,))  # 设置均值和标准差
     ])
@@ -85,7 +85,7 @@ if __name__ == '__main__':
                              shuffle=True,
                              pin_memory=True)
 
-    model = torch.load("../models/result/resnet18-resize.pth", map_location=device)
+    model = torch.load("../models/VQ-Resnet/resnet18-resize512.pth", map_location=device)
 
     criterion = WeightedBinaryCrossEntropyLoss(2)
     criterion.to(device)
@@ -98,7 +98,7 @@ if __name__ == '__main__':
     with torch.no_grad():
         for batch in test_loader:
             data, targets, dcm_names = batch
-            # data = torch.cat([data] * 3, dim=1)
+            data = torch.cat([data] * 3, dim=1)
             data = data.to(device)
             targets = targets.to(device)
             classifier_outputs = model(data)

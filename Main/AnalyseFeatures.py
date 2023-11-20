@@ -85,7 +85,7 @@ if __name__ == '__main__':
                              shuffle=True,
                              pin_memory=True)
 
-    resnet = torch.load("../models/result/resnet18-resize.pth", map_location=device)
+    resnet = torch.load("../models/result/resnet18-resize224.pth", map_location=device)
     resnet = nn.Sequential(*list(resnet.children())[:-2])
 
     vq_resnet = torch.load("../models/result/VQ-VAE-resnet18.pth", map_location=device)

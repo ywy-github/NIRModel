@@ -293,7 +293,7 @@ class WeightedBinaryCrossEntropyLoss(nn.Module):
 if __name__ == '__main__':
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-    batch_size = 64
+    batch_size = 10
 
     weight_positive = 2  # 调整这个权重以提高对灵敏度的重视
 
@@ -315,7 +315,7 @@ if __name__ == '__main__':
                              shuffle=True,
                              pin_memory=True)
 
-    model = torch.load("../models/result/VQ-VAE-resnet18_data1.pth", map_location=device)
+    model = torch.load("../models/VQ-Resnet/VQ-VAE-resnet18_data1.pth", map_location=device)
 
     criterion = WeightedBinaryCrossEntropyLoss(2)
     criterion.to(device)

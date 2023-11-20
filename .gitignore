@@ -1,6 +1,2 @@
-/models/VQ_VAE_Join_Classifier/
 /Logs/
-/models/Attention/
-/models/VQ-AlexNet/
-/models/VQ-DenseNet/
-/models/VQ-MobileNet/
+/models/

@@ -1,39 +1,4 @@
 一期数据
-
-resnet18-model
-训练集 acc: 0.8888 sen: 0.9010 spe: 0.8827 auc: 0.9666 loss: 6.9609
-验证集 acc: 0.6762 sen: 0.5579 spe: 0.7273 auc: 0.6927 loss: 8.5593
-测试集 acc: 0.7055sen: 0.6092spe: 0.7500loss: 0.8673
-
-VQ-VAE-resnet18
-训练集 acc: 1.0000 sen: 1.0000 spe: 1.0000 auc: 1.0000 loss: 6.7153
-验证集 acc: 0.7111 sen: 0.4105 spe: 0.8409 auc: 0.6671 loss: 43.8988
-测试集 acc: 0.6982sen: 0.4138  spe: 0.8298 loss: 4.2576
-
-Attention_resnet18_1_v1
-训练集 acc: 0.9492 sen: 0.9265 spe: 0.9604 auc: 0.9896 loss: 4.3708
-验证集 acc: 0.6857 sen: 0.5053 spe: 0.7636 auc: 0.6827 loss: 9.2272
-测试集 acc: 0.6800sen: 0.5172spe: 0.7553loss: 0.9618
-
-Attention_resnet18_3_v1: 在layer3后添加
-训练集 acc: 0.8951 sen: 0.9042 spe: 0.8906 auc: 0.9692 los--s: 6.0409
-验证集 acc: 0.6857 sen: 0.5158 spe: 0.7591 auc: 0.6747 loss: 8.7615
-测试集 acc: 0.6800sen: 0.5632spe: 0.7340loss: 0.8636
-
-Attention_resnet18_4_v1: 在layer4后添加
-验证集 acc: 0.5937sen: 0.5474spe: 0.6136loss: 0.8667
-测试集 acc: 0.6327sen: 0.6322spe: 0.6330loss: 0.8756
-
-Attention_resnet18_1_v2: 在layer1后添加
-训练集 acc: 0.9417 sen: 0.9329 spe: 0.9461 auc: 0.9870 loss: 5.2118
-验证集 acc: 0.7048 sen: 0.5474 spe: 0.7727 auc: 0.6931 loss: 8.5890
-测试集 acc: 0.6364sen: 0.5517spe: 0.6755loss: 0.9756
-
-Attention_resnet18_4_v2: 在layer4后添加
-训练集 acc: 0.9417 sen: 0.9585 spe: 0.9334 auc: 0.9892 loss: 4.9753
-验证集 acc: 0.6825 sen: 0.4842 spe: 0.7682 auc: 0.6848 loss: 9.0676
-测试集 acc: 0.6476sen: 0.5053spe: 0.7091loss: 0.8812
-
 resnet18_data1
 训练集 acc: 0.8814 sen: 0.8632 spe: 0.8901 auc: 0.9549 loss: 7.1128
 验证集 acc: 0.6603 sen: 0.5050 spe: 0.7336 auc: 0.6668 loss: 8.8909
@@ -56,13 +21,14 @@ Resnet_SCFF
 
 resize224*224
 resnet18-resize
-训练集 acc: 0.9989 sen: 1.0000 spe: 0.9984 auc: 1.0000 loss: 1.3364
-验证集 acc: 0.7397 sen: 0.5545 spe: 0.8271 auc: 0.7444 loss: 11.0779
-测试集 acc: 0.7236 sen: 0.5172 spe: 0.8191 auc: 0.7312 loss: 11.7655
-
+训练集 acc: 0.8517sen: 0.7948spe: 0.8791loss: 0.6169
 验证集 acc: 0.6889sen: 0.5446spe: 0.7570 loss: 1.0304
 测试集 acc: 0.6873sen: 0.5057spe: 0.7713 loss: 1.3547
 
+
+VQ-VAE-resnet18-data1-Resize-50
+验证集 acc: 0.7143sen: 0.4554spe: 0.8364loss: 2.2243
+测试集 acc: 0.7273sen: 0.5287spe: 0.8191loss: 1.9365
 
 二期数据：
 resnet18-data2
@@ -88,7 +54,14 @@ resnet18_data2_双十
 验证集 acc: 0.5842 sen: 0.7193 spe: 0.4091 auc: 0.6372 loss: 15.2600
 测试集 acc: 0.6174 sen: 0.7619 spe: 0.4308 auc: 0.6313 loss: 15.8018
 
+VQ-VAE-resnet18-data2双十50
+验证集 acc: 0.6267sen: 0.5940spe: 0.6527loss: 1.0220
+测试集 acc: 0.6325sen: 0.5886spe: 0.6667loss: 0.9880
 
+VQ-VAE-resnet18-data2-双十-Resize微调-50
+训练集 acc: 1.0000 sen: 1.0000 spe: 1.0000 auc: 1.0000 loss: 4.7151
+验证集 acc: 0.6238 sen: 0.6667 spe: 0.5682 auc: 0.6356 loss: 3.5162
+测试集 acc: 0.5906sen: 0.5952spe: 0.5846loss: 3.5519
 
 AlexNet:
 72 epoch
