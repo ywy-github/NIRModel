@@ -331,7 +331,7 @@ if __name__ == '__main__':
     torch.backends.cudnn.deterministic = True
     torch.backends.cudnn.benchmark = False
 
-    batch_size = 64
+    batch_size = 1
     epochs = 1000
 
     embedding_dim = 64
@@ -370,7 +370,6 @@ if __name__ == '__main__':
                                  batch_size=batch_size,
                                  shuffle=True,
                                  num_workers=5,
-                                 persistent_workers=True,
                                  pin_memory=True
                                  )
 
