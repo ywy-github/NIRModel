@@ -331,7 +331,7 @@ if __name__ == '__main__':
     torch.backends.cudnn.deterministic = True
     torch.backends.cudnn.benchmark = False
 
-    batch_size = 1
+    batch_size = 10
     epochs = 1000
 
     embedding_dim = 64
@@ -370,12 +370,15 @@ if __name__ == '__main__':
                                  batch_size=batch_size,
                                  shuffle=True,
                                  num_workers=5,
+                                 persistent_workers=True,
                                  pin_memory=True
                                  )
 
     validation_loader = DataLoader(val_data,
                                    batch_size=batch_size,
                                    shuffle=True,
+                                   num_workers=5,
+                                   persistent_workers=True,
                                    pin_memory=True
                                   )
 
@@ -398,7 +401,7 @@ if __name__ == '__main__':
     model = Model(encoder,num_embeddings, embedding_dim, commitment_cost, decay).to(device)
 
 
-    criterion = WeightedBinaryCrossEntropyLoss(1)
+    criterion = WeightedBinaryCrossEntropyLoss(2)
     criterion.to(device)
     optimizer = optim.Adam(filter(lambda p: p.requires_grad, model.parameters()), lr=learning_rate, amsgrad=False)
     # scheduler = StepLR(optimizer,50,0.1)
@@ -471,8 +474,8 @@ if __name__ == '__main__':
                 val_res_perplexity.append(perplexity.item())
         writer.add_scalar('Loss/Val', total_val_loss, epoch)
 
-        if ((epoch + 1)%50 == 0):
-            torch.save(model, "../models/result/VQ-VAE-resnet18-data2-双十-Resize微调-{}.pth".format(epoch + 1))
+        if ((epoch + 1)== 95):
+            torch.save(model, "../models/result/VQ-VAE-resnet18-data2-双十-{}.pth".format(epoch + 1))
         print('%d epoch' % (epoch + 1))
 
         train_acc, train_sen, train_spe = all_metrics(train_targets, train_pred)

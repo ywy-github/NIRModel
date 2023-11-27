@@ -2,25 +2,19 @@ from __future__ import print_function
 
 import time
 
-import matplotlib.pyplot as plt
 import pandas as pd
-from six.moves import xrange
+
 
 import torch.nn as nn
 import torch.nn.functional as F
-from sklearn.metrics import roc_auc_score
-from torch.optim.lr_scheduler import ReduceLROnPlateau, StepLR
+
 from torch.utils.data import DataLoader
-import torch.optim as optim
-from torch.utils.tensorboard import SummaryWriter
+
 from torchvision import transforms
 import torch
-import torch.utils.data as data
-from torchvision import models
+
 import numpy as np
-from PIL import Image
-import glob
-import random
+
 
 from Metrics import all_metrics
 from data_loader import MyData
@@ -322,7 +316,7 @@ if __name__ == '__main__':
                              shuffle=True,
                              pin_memory=True)
 
-    model = torch.load("../models/result/VQ-VAE-resnet18-data2-双十-Resize微调-50.pth", map_location=device)
+    model = torch.load("../models/VQ-Resnet/VQ-VAE-resnet18-data2-双十-11.27.pth", map_location=device)
 
     criterion = WeightedBinaryCrossEntropyLoss(2)
     criterion.to(device)
@@ -363,4 +357,4 @@ if __name__ == '__main__':
           "spe: {:.4f}".format(train_spe) + "loss: {:.4f}".format(np.mean(total_test_loss[-10:])))
 
     df = pd.DataFrame(test_results)
-    # df.to_excel("../models/result/VQ-VAE-resnet18_data2_train.xlsx", index=False)
+    df.to_excel("../models/result/二期双十_test.xlsx", index=False)
