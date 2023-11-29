@@ -291,7 +291,7 @@ if __name__ == '__main__':
 
     model = torch.load("../models/VQ-Resnet/VQ-VAE-resnet18_data1.pth", map_location=device)
 
-    image = Image.open("../data/一期数据/test/malignant/021-SHZL-00103-MYX-201712181506-D.bmp")
+    image = Image.open("../data/一期数据/test/benign/0571-ZHJSH-00025-XHJ-201807111033-D.bmp")
 
     transform = transforms.Compose([
         transforms.ToTensor(),

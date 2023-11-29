@@ -331,7 +331,7 @@ if __name__ == '__main__':
     torch.backends.cudnn.deterministic = True
     torch.backends.cudnn.benchmark = False
 
-    batch_size = 10
+    batch_size = 128
     epochs = 1000
 
     embedding_dim = 64
@@ -369,18 +369,18 @@ if __name__ == '__main__':
     training_loader = DataLoader(train_data,
                                  batch_size=batch_size,
                                  shuffle=True,
-                                 num_workers=5,
+                                 num_workers=16,
                                  persistent_workers=True,
                                  pin_memory=True
                                  )
 
-    validation_loader = DataLoader(val_data,
-                                   batch_size=batch_size,
-                                   shuffle=True,
-                                   num_workers=5,
-                                   persistent_workers=True,
-                                   pin_memory=True
-                                  )
+    # validation_loader = DataLoader(val_data,
+    #                                batch_size=batch_size,
+    #                                shuffle=True,
+    #                                num_workers=5,
+    #                                persistent_workers=True,
+    #                                pin_memory=True
+    #                               )
 
 
     #设置encoder
@@ -445,34 +445,34 @@ if __name__ == '__main__':
             total_train_loss +=total_loss
             train_res_recon_error.append(recon_loss.item())
             train_res_perplexity.append(perplexity.item())
-        writer.add_scalar('Loss/Train', total_train_loss, epoch)
-        val_score = []
-        val_pred = []
-        val_targets = []
-        total_val_loss = 0.0
-        model.eval()
-        with torch.no_grad():
-            for batch in validation_loader:
-                data, targets, names = batch
-                data = torch.cat([data] * 3, dim=1)
-                data = data.to(device)
-                targets = targets.to(device)
-                vq_loss, data_recon, perplexity, classifier_outputs = model(data)
-                data_variance = torch.var(data)
-                recon_loss = F.mse_loss(data_recon, data) / data_variance
-                classifier_loss = criterion(targets.view(-1, 1), classifier_outputs)
-                total_loss = joint_loss_function(recon_loss, vq_loss, classifier_loss, lambda_recon, lambda_vq,
-                                                 lambda_classifier)
-
-                predicted_labels = (classifier_outputs >= 0.5).int().squeeze()
-                val_score.append(classifier_outputs.flatten().cpu().numpy())
-                val_pred.extend(predicted_labels.cpu().numpy())
-                val_targets.extend(targets.cpu().numpy())
-
-                total_val_loss += total_loss
-                val_res_recon_error.append(recon_loss.item())
-                val_res_perplexity.append(perplexity.item())
-        writer.add_scalar('Loss/Val', total_val_loss, epoch)
+        # writer.add_scalar('Loss/Train', total_train_loss, epoch)
+        # val_score = []
+        # val_pred = []
+        # val_targets = []
+        # total_val_loss = 0.0
+        # model.eval()
+        # with torch.no_grad():
+        #     for batch in validation_loader:
+        #         data, targets, names = batch
+        #         data = torch.cat([data] * 3, dim=1)
+        #         data = data.to(device)
+        #         targets = targets.to(device)
+        #         vq_loss, data_recon, perplexity, classifier_outputs = model(data)
+        #         data_variance = torch.var(data)
+        #         recon_loss = F.mse_loss(data_recon, data) / data_variance
+        #         classifier_loss = criterion(targets.view(-1, 1), classifier_outputs)
+        #         total_loss = joint_loss_function(recon_loss, vq_loss, classifier_loss, lambda_recon, lambda_vq,
+        #                                          lambda_classifier)
+        #
+        #         predicted_labels = (classifier_outputs >= 0.5).int().squeeze()
+        #         val_score.append(classifier_outputs.flatten().cpu().numpy())
+        #         val_pred.extend(predicted_labels.cpu().numpy())
+        #         val_targets.extend(targets.cpu().numpy())
+        #
+        #         total_val_loss += total_loss
+        #         val_res_recon_error.append(recon_loss.item())
+        #         val_res_perplexity.append(perplexity.item())
+        # writer.add_scalar('Loss/Val', total_val_loss, epoch)
 
         if ((epoch + 1)== 95):
             torch.save(model, "../models/result/VQ-VAE-resnet18-data2-双十-{}.pth".format(epoch + 1))
@@ -488,20 +488,20 @@ if __name__ == '__main__':
               " spe: {:.4f}".format(train_spe) + " auc: {:.4f}".format(train_auc) +
               " loss: {:.4f}".format(total_train_loss))
 
-        val_acc, val_sen, val_spe = all_metrics(val_targets, val_pred)
-
-        val_score = np.concatenate(val_score)  # 将列表转换为NumPy数组
-        val_targets = np.array(val_targets)
-        val_auc = roc_auc_score(val_targets, val_score)
-
-        print("验证集 acc: {:.4f}".format(val_acc) + " sen: {:.4f}".format(val_sen) +
-              " spe: {:.4f}".format(val_spe) + " auc: {:.4f}".format(val_auc) +
-              " loss: {:.4f}".format(total_val_loss))
+        # val_acc, val_sen, val_spe = all_metrics(val_targets, val_pred)
+        #
+        # val_score = np.concatenate(val_score)  # 将列表转换为NumPy数组
+        # val_targets = np.array(val_targets)
+        # val_auc = roc_auc_score(val_targets, val_score)
+        #
+        # print("验证集 acc: {:.4f}".format(val_acc) + " sen: {:.4f}".format(val_sen) +
+        #       " spe: {:.4f}".format(val_spe) + " auc: {:.4f}".format(val_auc) +
+        #       " loss: {:.4f}".format(total_val_loss))
 
         print('train_recon_error: %.3f' % np.mean(train_res_recon_error[-10:]))
         print('train_perplexity: %.3f' % np.mean(train_res_perplexity[-10:]))
-        print('val_recon_error: %.3f' % np.mean(val_res_recon_error[-10:]))
-        print('val_perplexity: %.3f' % np.mean(val_res_perplexity[-10:]))
+        # print('val_recon_error: %.3f' % np.mean(val_res_recon_error[-10:]))
+        # print('val_perplexity: %.3f' % np.mean(val_res_perplexity[-10:]))
     writer.close()
     # 结束训练时间
     end_time = time.time()

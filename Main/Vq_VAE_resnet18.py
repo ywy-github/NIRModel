@@ -311,7 +311,7 @@ if __name__ == '__main__':
     torch.backends.cudnn.deterministic = True
     torch.backends.cudnn.benchmark = False
 
-    batch_size = 10
+    batch_size = 64
     epochs = 1000
 
     embedding_dim = 64
@@ -340,7 +340,7 @@ if __name__ == '__main__':
     training_loader = DataLoader(train_data,
                                  batch_size=batch_size,
                                  shuffle=True,
-                                 num_workers=5,
+                                 num_workers=16,
                                  persistent_workers=True,
                                  pin_memory=True
                                  )
@@ -399,8 +399,8 @@ if __name__ == '__main__':
             torch.save(model, "../models/result/VQ-VAE-筛查-{}.pth".format(epoch + 1))
         print('%d epoch' % (epoch + 1))
 
-        print('train_recon_error: %.3f' % np.mean(train_res_recon_error[-100:]))
-        print('train_perplexity: %.3f' % np.mean(train_res_perplexity[-100:]))
+        print('train_recon_error: %.3f' % train_res_recon_error[epoch])
+        print('train_perplexity: %.3f' % train_res_perplexity[epoch])
     writer.close()
     # 结束训练时间
     end_time = time.time()
