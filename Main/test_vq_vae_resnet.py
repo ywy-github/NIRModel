@@ -355,4 +355,4 @@ if __name__ == '__main__':
           "spe: {:.4f}".format(train_spe) + "loss: {:.4f}".format(np.mean(total_test_loss[-10:])))
 
     df = pd.DataFrame(test_results)
-    df.to_excel("../models/result/VQ-VAE-resnet18_data1_train.xlsx", index=False)
+    df.to_excel("../models/result/VQ-VAE-resnet18_data1.xlsx", index=False)
