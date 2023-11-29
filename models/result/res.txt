@@ -64,9 +64,9 @@ VQ-VAE-resnet18-data2-双十-Resize微调-50
 测试集 acc: 0.5906sen: 0.5952spe: 0.5846loss: 3.5519
 
 VQ-VAE-resnet18-data2-双十-11.27
-训练集 acc: 0.9961 sen: 0.9915 spe: 1.0000 auc: 0.9999 loss: 15.2111
-验证集 acc: 0.5846 sen: 0.5763 spe: 0.5915 auc: 0.5462 loss: 27.1232
-测试集 acc: 0.5914sen: 0.5795spe: 0.6020loss: 2.2689
+训练集 acc: 0.7941sen: 0.7623spe: 0.8248loss: 1.3321
+验证集 acc: 0.5833sen: 0.5735spe: 0.5921loss: 2.5863
+测试集 acc: 0.6000sen: 0.5893spe: 0.6102loss: 2.3717
 train_recon_error: 2.446
 train_perplexity: 357.535
 val_recon_error: 2.602
