@@ -7,6 +7,7 @@ import pandas as pd
 
 import torch.nn as nn
 import torch.nn.functional as F
+from sklearn.metrics import roc_auc_score
 
 from torch.utils.data import DataLoader
 
@@ -219,6 +220,7 @@ class Decoder(nn.Module):
         )
 
 
+
     def forward(self, inputs):
         x = self.deconv1(inputs)
         x = self.deconv2(x)
@@ -260,7 +262,7 @@ class Model(nn.Module):
             self._vq_vae = VectorQuantizer(num_embeddings, embedding_dim,
                                            commitment_cost)
 
-        self.classifier = Classifier(512*16*16,512,1)
+        self.classifier = Classifier(512*14*14,512,1)
 
         self._decoder = Decoder()
 
@@ -302,13 +304,13 @@ if __name__ == '__main__':
 
     # 读取数据集
     transform = transforms.Compose([
-        transforms.Resize([512,512]),
+        transforms.Resize([448,448]),
         transforms.ToTensor(),
         transforms.Normalize((0.3281,), (0.2366,))  # 设置均值和标准差
     ])
 
-    test_benign_data = MyData("../data/二期双十/train/benign/images", "benign", transform=transform)
-    test_malignat_data = MyData("../data/二期双十/train/malignant/images", "malignant", transform=transform)
+    test_benign_data = MyData("../data/一期数据/test/benign", "benign", transform=transform)
+    test_malignat_data = MyData("../data/一期数据/test/malignant", "malignant", transform=transform)
     test_data = test_benign_data + test_malignat_data
 
     test_loader = DataLoader(test_data,
@@ -316,11 +318,12 @@ if __name__ == '__main__':
                              shuffle=True,
                              pin_memory=True)
 
-    model = torch.load("../models/VQ-Resnet/VQ-VAE-resnet18-data2-双十-11.27.pth", map_location=device)
+    model = torch.load("../models/VQ-Resnet/VQ-VAE-resnet18-data1-resize448.pth", map_location=device)
 
     criterion = WeightedBinaryCrossEntropyLoss(2)
     criterion.to(device)
 
+    test_pred = []
     test_predictions = []
     test_targets = []
     test_results = []
@@ -345,16 +348,21 @@ if __name__ == '__main__':
             test_predictions.extend(predicted_labels.cpu().numpy())
             test_targets.extend(targets.cpu().numpy())
             total_test_loss.append(loss.item())
-
+            test_pred.append(classifier_outputs.flatten().cpu().numpy())
             # concat = torch.cat((data[0].view(128, 128),
             #                     data_recon[0].view(128, 128)), 1)
             # plt.matshow(concat.cpu().detach().numpy())
             # plt.show()
 
-    train_acc, train_sen, train_spe = all_metrics(test_targets, test_predictions)
+    test_acc, test_sen, test_spe = all_metrics(test_targets, test_predictions)
 
-    print("测试集 acc: {:.4f}".format(train_acc) + "sen: {:.4f}".format(train_sen) +
-          "spe: {:.4f}".format(train_spe) + "loss: {:.4f}".format(np.mean(total_test_loss[-10:])))
+    test_pred = np.concatenate(test_pred)  # 将列表转换为NumPy数组
+    test_targets = np.array(test_targets)
+    test_auc = roc_auc_score(test_targets, test_pred)
+
+    print("测试集 acc: {:.4f}".format(test_acc) + "sen: {:.4f}".format(test_sen) +
+          "spe: {:.4f}".format(test_spe) + " auc: {:.4f}".format(test_auc) + "loss: {:.4f}".format(
+        np.mean(total_test_loss[-10:])))
 
     df = pd.DataFrame(test_results)
-    df.to_excel("../models/result/VQ-Resnet18二期双十.xlsx", index=False)
+    # df.to_excel("../models/result/VQ-Resnet18二期双十_train.xlsx", index=False)

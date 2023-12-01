@@ -192,7 +192,6 @@ class Encoder(nn.Module):
         x = self.b3(x)
         return x
 
-
 class Decoder(nn.Module):
     def __init__(self):
         super(Decoder, self).__init__()
@@ -265,19 +264,29 @@ class Model(nn.Module):
         else:
             self._vq_vae = VectorQuantizer(num_embeddings, embedding_dim,
                                            commitment_cost)
-
-        self.classifier = Classifier(512*14*14,512,1)
-
         self._decoder = Decoder()
 
     def forward(self, x):
         z = self._encoder(x)
         # z = self._pre_vq_conv(z)
         loss, quantized, perplexity, _ = self._vq_vae(z)
-        classifier_outputs = self.classifier(quantized.view(quantized.size(0),-1))
         x_recon = self._decoder(quantized)
 
         return loss, x_recon, perplexity, classifier_outputs
+
+class ExtendedModel(nn.Module):
+    def __init__(self, model):
+        super(ExtendedModel, self).__init__()
+        self.model = model
+        self.classifier = Classifier(512*14*14, 512,1)
+
+    def forward(self, x):
+        z = self.model._encoder(x)
+        loss, quantized, perplexity, _ = self.model._vq_vae(z)
+        classifier_output = self.classifier(quantized.view(quantized.size(0),-1))
+        x_recon = self.model._decoder(quantized)
+        return loss, x_recon, perplexity, classifier_output
+
 
 # 定义联合模型的损失函数
 def joint_loss_function(recon_loss,vq_loss,classifier_loss,lambda_recon,lambda_vq,lambda_classifier):
@@ -332,8 +341,8 @@ if __name__ == '__main__':
     torch.backends.cudnn.deterministic = True
     torch.backends.cudnn.benchmark = False
 
-    batch_size = 16
-    epochs = 1000
+    batch_size = 10
+    epochs = 52
 
     embedding_dim = 64
     num_embeddings = 512  # 和encoder输出维度相同，和decoder输入维度相同
@@ -357,12 +366,12 @@ if __name__ == '__main__':
         transforms.Normalize((0.3281,), (0.2366,))  # 设置均值和标准差
     ])
 
-    train_benign_data = MyData("../data/二期双十/new_train/benign", "benign", transform=transform)
-    train_malignat_data = MyData("../data/二期双十/new_train/malignant", "malignant", transform=transform)
+    train_benign_data = MyData("../data/一期数据/train/benign", "benign", transform=transform)
+    train_malignat_data = MyData("../data/一期数据/train/malignant", "malignant", transform=transform)
     train_data = train_benign_data + train_malignat_data
 
-    val_benign_data = MyData("../data/二期双十/val/benign", "benign", transform=transform)
-    val_malignat_data = MyData("../data/二期双十/val/malignant", "malignant", transform=transform)
+    val_benign_data = MyData("../data/一期数据/val/benign", "benign", transform=transform)
+    val_malignat_data = MyData("../data/一期数据/val/malignant", "malignant", transform=transform)
     val_data = val_benign_data + val_malignat_data
 
 
@@ -383,28 +392,28 @@ if __name__ == '__main__':
                                   )
 
 
-    #设置encoder
-    encoder = models.resnet18(pretrained=True)
-    for param in encoder.parameters():
-        param.requires_grad = False
 
-    for name, param in encoder.named_parameters():
-        if "layer3" in name:
-            param.requires_grad = True
-        if "layer4" in name:
-            param.requires_grad = True
-        if "fc" in name:
-            param.requires_grad = True
-
-    encoder = nn.Sequential(*list(encoder.children())[:-2])
-
-    model = Model(encoder,num_embeddings, embedding_dim, commitment_cost, decay).to(device)
+    model = torch.load("../models/VQ-Resnet/VQ-VAE-筛查-rezize448.pth", map_location=device)
 
 
-    criterion = WeightedBinaryCrossEntropyLoss(1.1)
+    # for name, param in model.named_parameters():
+    #     if "6" in name:
+    #         param.requires_grad = True
+    #     if "7" in name:
+    #         param.requires_grad = True
+    #     if "_vq_vae" in name:
+    #         param.requires_grad = True
+    #     if "_decoder" in name:
+    #         param.requires_grad = True
+
+    extendModel = ExtendedModel(model).to(device)
+    for param in extendModel.parameters():
+        param.requires_grad = True
+
+    criterion = WeightedBinaryCrossEntropyLoss(2)
     criterion.to(device)
-    optimizer = optim.Adam(filter(lambda p: p.requires_grad, model.parameters()), lr=learning_rate, amsgrad=False)
-    # scheduler = StepLR(optimizer,10,0.1)
+    optimizer = optim.Adam(filter(lambda p: p.requires_grad, extendModel.parameters()), lr=learning_rate, amsgrad=False)
+    # scheduler = StepLR(optimizer,50,0.1)
     train_res_recon_error = []
     train_res_perplexity = []
 
@@ -414,7 +423,7 @@ if __name__ == '__main__':
     start_time = time.time()  # 记录训练开始时间
     writer = SummaryWriter("../Logs")
     for epoch in range(epochs):
-        model.train()
+        extendModel.train()
         train_score = []
         train_pred = []
         train_targets = []
@@ -426,7 +435,7 @@ if __name__ == '__main__':
             targets = targets.to(device)
             optimizer.zero_grad()
 
-            vq_loss, data_recon, perplexity, classifier_outputs = model(data)
+            vq_loss, data_recon, perplexity, classifier_outputs = extendModel(data)
 
             data_variance = torch.var(data)
             recon_loss = F.mse_loss(data_recon, data) / data_variance
@@ -442,7 +451,7 @@ if __name__ == '__main__':
             train_pred.extend(predicted_labels.cpu().numpy())
             train_targets.extend(targets.cpu().numpy())
 
-            total_train_loss += total_loss
+            total_train_loss +=total_loss
             train_res_recon_error.append(recon_loss.item())
             train_res_perplexity.append(perplexity.item())
         writer.add_scalar('Loss/Train', total_train_loss, epoch)
@@ -450,14 +459,14 @@ if __name__ == '__main__':
         val_pred = []
         val_targets = []
         total_val_loss = 0.0
-        model.eval()
+        extendModel.eval()
         with torch.no_grad():
             for batch in validation_loader:
                 data, targets, names = batch
                 data = torch.cat([data] * 3, dim=1)
                 data = data.to(device)
                 targets = targets.to(device)
-                vq_loss, data_recon, perplexity, classifier_outputs = model(data)
+                vq_loss, data_recon, perplexity, classifier_outputs = extendModel(data)
                 data_variance = torch.var(data)
                 recon_loss = F.mse_loss(data_recon, data) / data_variance
                 classifier_loss = criterion(targets.view(-1, 1), classifier_outputs)
@@ -474,8 +483,8 @@ if __name__ == '__main__':
                 val_res_perplexity.append(perplexity.item())
         writer.add_scalar('Loss/Val', total_val_loss, epoch)
 
-        if ((epoch + 1)%20==0):
-            torch.save(model, "../models/result/VQ-VAE-resnet18-data2双十-resize448-{}.pth".format(epoch + 1))
+        if ((epoch + 1) == 11):
+            torch.save(extendModel, "../models/result/Vq_VAE_resnet18筛查+分类+resize448-{}.pth".format(epoch + 1))
         print('%d epoch' % (epoch + 1))
 
         train_acc, train_sen, train_spe = all_metrics(train_targets, train_pred)
