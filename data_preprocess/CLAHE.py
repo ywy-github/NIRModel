@@ -3,7 +3,7 @@ import cv2
 import numpy as np
 from PIL import Image
 
-def apply_clahe(image, clip_limit=2.0, grid_size=(5, 6)):
+def apply_clahe(image, clip_limit=2.0, grid_size=(3, 4)):
     if image.mode == 'L':
         gray_image = np.array(image)
     else:
@@ -49,8 +49,8 @@ def apply_clahe_to_folder(input_folder, output_folder):
 
 if __name__ == '__main__':
     # 指定原始图像文件夹和保存增强图像的文件夹
-    input_folder = "../data/一期数据/test"
-    output_folder = "../data/一期数据/new_test"
+    input_folder = "../data/一期数据/train"
+    output_folder = "../data/一期数据/new_train"
 
     # 应用CLAHE增强
     apply_clahe_to_folder(input_folder, output_folder)
