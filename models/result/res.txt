@@ -54,9 +54,6 @@ val_recon_error: 2.602
 val_perplexity: 364.413
 
 
-
-
-
 AlexNet:
 72 epoch
 训练集 acc: 0.5604 sen: 0.4560 spe: 0.6107 auc: 0.5589 loss: 13.7016
