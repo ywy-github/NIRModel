@@ -21,13 +21,17 @@ VQ-VAE-resnet18筛查+分类+resize512
 VQ-VAE-resnet18筛查+分类+resize448
 训练集 acc: 0.8157 sen: 0.8046 spe: 0.8210 auc: 0.8773 loss: 75.3012
 验证集 acc: 0.7460 sen: 0.5050 spe: 0.8598 auc: 0.7607 loss: 28.6422
-测试集 acc: 0.7345sen: 0.5402  spe: 0.8245 auc: 0.7446loss: 0.8496
+测试集 acc: 0.7345sen: 0.5402  spe: 0.8245 auc: 0.7446 loss: 0.8496
 
 VQ-VAE-resnet18-resize448
 训练集 acc: 0.9672 sen: 0.9642 spe: 0.9686 auc: 0.9929 loss: 56.6340
 验证集 acc: 0.7333 sen: 0.4752 spe: 0.8551 auc: 0.7547 loss: 37.7459
-测试集 acc: 0.7345 sen: 0.5402 spe: 0.8245 auc: 0.7609loss: 1.1432
+测试集 acc: 0.7345 sen: 0.5402 spe: 0.8245 auc: 0.7609  loss: 1.
 
+VQ-VAE-resnet18-resize448-clahe          2   (5,6)
+训练集 acc: 0.9936 sen: 0.9935 spe: 0.9937 auc: 0.9998 loss: 21.6325
+验证集 acc: 0.7492 sen: 0.4752 spe: 0.8785 auc: 0.7600 loss: 27.6122
+测试集 acc: 0.7091sen: 0.4483spe: 0.8298 auc: 0.7331loss: 2.0650
 
 
 二期数据：

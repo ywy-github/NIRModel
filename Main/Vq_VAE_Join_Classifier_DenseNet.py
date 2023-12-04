@@ -263,7 +263,7 @@ class Model(nn.Module):
             self._vq_vae = VectorQuantizer(num_embeddings, embedding_dim,
                                            commitment_cost)
 
-        self.classifier = Classifier(1024*16*16,1024,1)
+        self.classifier = Classifier(1024*14*14,1024,1)
 
         self._decoder = Decoder()
 
@@ -338,9 +338,9 @@ if __name__ == '__main__':
 
     decay = 0.99
 
-    weight_positive = 1  # 调整这个权重以提高对灵敏度的重视
+    weight_positive = 2  # 调整这个权重以提高对灵敏度的重视
 
-    learning_rate = 1e-4
+    learning_rate = 1e-5
 
     lambda_recon = 0.2
     lambda_vq = 0.2
@@ -348,7 +348,7 @@ if __name__ == '__main__':
 
     # 读取数据集
     transform = transforms.Compose([
-        transforms.Resize([512, 512]),
+        transforms.Resize([448, 448]),
         transforms.ToTensor(),
         transforms.Normalize((0.3281,), (0.2366,))  # 设置均值和标准差
     ])
@@ -361,29 +361,34 @@ if __name__ == '__main__':
     val_malignat_data = MyData("../data/一期数据/val/malignant", "malignant", transform=transform)
     val_data = val_benign_data + val_malignat_data
 
-    test_benign_data = MyData("../data/一期数据/test/benign", "benign", transform=transform)
-    test_malignat_data = MyData("../data/一期数据/test/malignant", "malignant", transform=transform)
-    test_data = test_benign_data + test_malignat_data
 
     training_loader = DataLoader(train_data,
                                  batch_size=batch_size,
                                  shuffle=True,
+                                 num_workers=8,
+                                 persistent_workers=True,
                                  pin_memory=True)
 
     validation_loader = DataLoader(val_data,
-                                   batch_size=32,
+                                   batch_size=batch_size,
                                    shuffle=True,
+                                   num_workers=8,
+                                   persistent_workers=True,
                                    pin_memory=True)
 
-    test_loader = DataLoader(test_data,
-                             batch_size=32,
-                             shuffle=True,
-                             pin_memory=True)
 
     #设置encoder
     encoder = models.densenet121(pretrained=True)
     for param in encoder.parameters():
-        param.requires_grad = True
+        param.requires_grad = False
+
+    for name, param in encoder.named_parameters():
+        if "layer3" in name:
+            param.requires_grad = True
+        if "layer4" in name:
+            param.requires_grad = True
+        if "fc" in name:
+            param.requires_grad = True
 
     encoder = nn.Sequential(*list(encoder.children())[:-1])
 
@@ -399,11 +404,8 @@ if __name__ == '__main__':
     val_res_recon_error = []
     val_res_perplexity = []
 
-    test_res_recon_error = []
-    test_res_perplexity = []
-
     start_time = time.time()  # 记录训练开始时间
-    writer = SummaryWriter("../Logs")
+
     for epoch in range(epochs):
         model.train()
         train_score = []
@@ -464,36 +466,9 @@ if __name__ == '__main__':
                 val_res_recon_error.append(recon_loss.item())
                 val_res_perplexity.append(perplexity.item())
 
-        test_score = []
-        test_pred = []
-        test_targets = []
-        total_test_loss = 0.0
-        with torch.no_grad():
-            for batch in test_loader:
-                data, targets, names = batch
-                data = torch.cat([data] * 3, dim=1)
-                data = data.to(device)
-                targets = targets.to(device)
-                vq_loss, data_recon, perplexity, classifier_outputs = model(data)
-                data_variance = torch.var(data)
-                recon_loss = F.mse_loss(data_recon, data) / data_variance
-                classifier_loss = criterion(targets.view(-1, 1), classifier_outputs)
-                total_loss = joint_loss_function(recon_loss, vq_loss, classifier_loss, lambda_recon, lambda_vq,
-                                                 lambda_classifier)
-
-                predicted_labels = (classifier_outputs >= 0.5).int().squeeze()
-                test_score.append(classifier_outputs.flatten().cpu().numpy())
-                test_pred.extend(predicted_labels.cpu().numpy())
-                test_targets.extend(targets.cpu().numpy())
-
-                total_test_loss += total_loss
-                test_res_recon_error.append(recon_loss.item())
-                test_res_perplexity.append(perplexity.item())
-
-        writer.add_scalar('Loss/Test', total_test_loss, epoch)
 
         if ((epoch + 1)%50 == 0):
-            torch.save(model, "../models/VQ-DenseNet/VQ-DenseNet{}.pth".format(epoch + 1))
+            torch.save(model, "../models/result/VQ-DenseNet-resize448{}.pth".format(epoch + 1))
             print('%d epoch' % (epoch + 1))
 
             train_acc, train_sen, train_spe = all_metrics(train_targets, train_pred)
@@ -516,21 +491,12 @@ if __name__ == '__main__':
                   " spe: {:.4f}".format(val_spe) + " auc: {:.4f}".format(val_auc) +
                   " loss: {:.4f}".format(total_val_loss))
 
-            test_acc, test_sen, test_spe = all_metrics(test_targets, test_pred)
-
-            test_score = np.concatenate(test_score)  # 将列表转换为NumPy数组
-            test_targets = np.array(test_targets)
-            test_auc = roc_auc_score(test_targets, test_score)
-
-            print("测试集 acc: {:.4f}".format(test_acc) + " sen: {:.4f}".format(test_sen) +
-                  " spe: {:.4f}".format(test_spe) + " auc: {:.4f}".format(test_auc) +
-                  " loss: {:.4f}".format(total_test_loss))
 
             print('train_recon_error: %.3f' % np.mean(train_res_recon_error[-10:]))
             print('train_perplexity: %.3f' % np.mean(train_res_perplexity[-10:]))
             print('val_recon_error: %.3f' % np.mean(val_res_recon_error[-10:]))
             print('val_perplexity: %.3f' % np.mean(val_res_perplexity[-10:]))
-    writer.close()
+
     # 结束训练时间
     end_time = time.time()
     training_time = end_time - start_time
