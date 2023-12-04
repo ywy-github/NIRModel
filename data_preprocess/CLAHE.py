@@ -3,7 +3,7 @@ import cv2
 import numpy as np
 from PIL import Image
 
-def apply_clahe(image, clip_limit=2.0, grid_size=(10, 10)):
+def apply_clahe(image, clip_limit=2.0, grid_size=(5, 6)):
     if image.mode == 'L':
         gray_image = np.array(image)
     else:
