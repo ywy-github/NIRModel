@@ -301,9 +301,9 @@ class WeightedBinaryCrossEntropyLoss(nn.Module):
 if __name__ == '__main__':
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-    model = torch.load("../models/VQ-Resnet/VQ-VAE-resnet18_data1.pth", map_location=device)
+    model = torch.load("../models/VQ-Resnet/VQ-VAE-resnet18-resize448-clahe.pth", map_location=device)
 
-    target_layer = model.conv1
+    target_layer = model._encoder[7][1].relu
     # 定义一个变量来保存中间层的激活值
     activation = None
     # 定义一个钩子函数，用于获取中间层的激活值
@@ -313,9 +313,10 @@ if __name__ == '__main__':
     # 注册钩子
     hook_handle = target_layer.register_forward_hook(hook)
 
-    image = Image.open("../data/一期数据/test/benign/0571-ZHJSH-00025-XHJ-201807111033-D.bmp")
+    image = Image.open("../data/一期数据/new_test/malignant/clahe_022-TJZL-00023-QXW-201712181528-D.bmp")
 
     transform = transforms.Compose([
+        transforms.Resize([448, 448]),
         transforms.ToTensor(),
         transforms.Normalize((0.3281,), (0.2366,))  # 设置均值和标准差
     ])
@@ -324,11 +325,12 @@ if __name__ == '__main__':
 
     with torch.no_grad():
         model.eval()  # 确保模型处于评估模式
+        image = torch.cat([image] * 3, dim=1)
         _, _, _, classifier_outputs = model(image)
         print("Predicted Probability:", "{:.6f}".format(classifier_outputs.item()))
 
     # 可视化激活图
-    plt.imshow(activation, cmap='viridis')
+    plt.imshow(activation[0].cpu().numpy(), cmap='viridis')
     plt.title('Activation Map')
     plt.show()
 
