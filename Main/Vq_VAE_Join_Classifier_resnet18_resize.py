@@ -298,23 +298,25 @@ class WeightedBinaryCrossEntropyLoss(nn.Module):
         return torch.mean(loss)
 
 # 定义 Focal Loss
-class Focal_Loss(nn.Module):
-    def __init__(self, alpha=0.6, gamma=2.0):
-        super(Focal_Loss, self).__init__()
-        self.alpha = alpha
-        self.gamma = gamma
+class WeightedBinaryCrossEntropyLossWithRegularization(nn.Module):
+    def __init__(self, weight_positive, lambda_reg):
+        super(WeightedBinaryCrossEntropyLossWithRegularization, self).__init__()
+        self.weight_positive = weight_positive
+        self.lambda_reg = lambda_reg  # 正则化系数
 
-    def forward(self, preds, labels):
-        """
-        preds:sigmoid的输出结果
-        labels：标签
-        """
-        labels = labels.to(dtype=torch.float32)
-        eps = 1e-7
-        loss_1 = -1 * self.alpha * torch.pow((1 - preds), self.gamma) * torch.log(preds + eps) * labels
-        loss_0 = -1 * (1 - self.alpha) * torch.pow(preds, self.gamma) * torch.log(1 - preds + eps) * (1 - labels)
-        loss = loss_0 + loss_1
-        return torch.mean(loss)
+    def forward(self, y_true, y_pred, model):
+        y_true = y_true.to(dtype=torch.float32)
+        bce_loss = - (self.weight_positive * y_true * torch.log(y_pred + 1e-7) + (1 - y_true) * torch.log(1 - y_pred + 1e-7))
+        bce_loss = torch.mean(bce_loss)
+
+        # 添加L2正则化项
+        reg_loss = 0.0
+        for param in model.parameters():
+            reg_loss += torch.norm(param, p=2)
+
+        total_loss = bce_loss + self.lambda_reg * reg_loss
+
+        return total_loss
 if __name__ == '__main__':
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
@@ -342,7 +344,6 @@ if __name__ == '__main__':
 
     decay = 0.99
 
-    weight_positive = 2  # 调整这个权重以提高对灵敏度的重视
 
     learning_rate = 1e-5
 
@@ -357,8 +358,8 @@ if __name__ == '__main__':
         transforms.Normalize((0.3281,), (0.2366,))  # 设置均值和标准差
     ])
 
-    train_benign_data = MyData("../data/一期数据/train+clahe/benign", "benign", transform=transform)
-    train_malignat_data = MyData("../data/一期数据/train+clahe/malignant", "malignant", transform=transform)
+    train_benign_data = MyData("../data/一期数据/train/benign", "benign", transform=transform)
+    train_malignat_data = MyData("../data/一期数据/train/malignant", "malignant", transform=transform)
     train_data = train_benign_data + train_malignat_data
 
     val_benign_data = MyData("../data/一期数据/val/benign", "benign", transform=transform)
@@ -401,7 +402,8 @@ if __name__ == '__main__':
     model = Model(encoder,num_embeddings, embedding_dim, commitment_cost, decay).to(device)
 
 
-    criterion = WeightedBinaryCrossEntropyLoss(1)
+    # criterion = WeightedBinaryCrossEntropyLoss(2)
+    criterion = WeightedBinaryCrossEntropyLossWithRegularization(2, 0.01)
     criterion.to(device)
     optimizer = optim.Adam(filter(lambda p: p.requires_grad, model.parameters()), lr=learning_rate, amsgrad=False)
     # scheduler = StepLR(optimizer,10,0.1)
@@ -430,7 +432,7 @@ if __name__ == '__main__':
 
             data_variance = torch.var(data)
             recon_loss = F.mse_loss(data_recon, data) / data_variance
-            classifier_loss = criterion(targets.view(-1, 1), classifier_outputs)
+            classifier_loss = criterion(targets.view(-1, 1), classifier_outputs,model)
             total_loss = joint_loss_function(recon_loss, vq_loss, classifier_loss, lambda_recon, lambda_vq,
                                              lambda_classifier)
             total_loss.backward()
@@ -460,7 +462,7 @@ if __name__ == '__main__':
                 vq_loss, data_recon, perplexity, classifier_outputs = model(data)
                 data_variance = torch.var(data)
                 recon_loss = F.mse_loss(data_recon, data) / data_variance
-                classifier_loss = criterion(targets.view(-1, 1), classifier_outputs)
+                classifier_loss = criterion(targets.view(-1, 1), classifier_outputs,model)
                 total_loss = joint_loss_function(recon_loss, vq_loss, classifier_loss, lambda_recon, lambda_vq,
                                                  lambda_classifier)
 
@@ -474,8 +476,8 @@ if __name__ == '__main__':
                 val_res_perplexity.append(perplexity.item())
         writer.add_scalar('Loss/Val', total_val_loss, epoch)
 
-        if ((epoch + 1) == 20):
-            torch.save(model, "../models/VQ-Resnet/VQ-VAE-resnet18-resize448+加入训练集clahe.pth")
+        # if ((epoch + 1) == 7):
+        #     torch.save(model, "../models/VQ-Resnet/VQ-VAE-resnet18-resize448+全增强+训练集加入未增强的恶性数据.pth")
         print('%d epoch' % (epoch + 1))
 
         train_acc, train_sen, train_spe = all_metrics(train_targets, train_pred)
