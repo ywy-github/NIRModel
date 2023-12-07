@@ -16,29 +16,30 @@ val_perplexity: 99.521
 VQ-VAE-resnet18筛查+分类+resize512
 训练集 acc: 0.7648 sen: 0.7850 spe: 0.7551 auc: 0.8385 loss: 80.4580
 验证集 acc: 0.7238 sen: 0.3762 spe: 0.8879 auc: 0.7423 loss: 29.8931
-测试集 acc: 0.7418sen: 0.4943spe: 0.8564 auc: 0.7379loss: 0.8966
+测试集 acc: 0.7418 sen: 0.4943spe: 0.8564 auc: 0.7379loss: 0.8966
 
 VQ-VAE-resnet18筛查+分类+resize448
 训练集 acc: 0.8157 sen: 0.8046 spe: 0.8210 auc: 0.8773 loss: 75.3012
 验证集 acc: 0.7460 sen: 0.5050 spe: 0.8598 auc: 0.7607 loss: 28.6422
 测试集 acc: 0.7345sen: 0.5402  spe: 0.8245 auc: 0.7446 loss: 0.8496
 
-
+VQ-VAE-resnet18-resize448
+训练集 acc: 0.9672 sen: 0.9642 spe: 0.9686 auc: 0.9929 loss: 56.6340
+验证集 acc: 0.7333 sen: 0.4752 spe: 0.8551 auc: 0.7547 loss: 37.7459
+测试集 acc: 0.7345 sen: 0.5402 spe: 0.8245 auc: 0.7609  loss: 1.
 
 VQ-VAE-resnet18-resize448-clahe          2   (5,6)
 训练集 acc: 0.9936 sen: 0.9935 spe: 0.9937 auc: 0.9998 loss: 21.6325
 验证集 acc: 0.7492 sen: 0.4752 spe: 0.8785 auc: 0.7600 loss: 27.6122
 测试集 acc: 0.7091sen: 0.4483spe: 0.8298 auc: 0.7331loss: 2.0650
 
-VQ-VAE-resnet18-resize448
-训练集 acc: 0.9672 sen: 0.9642 spe: 0.9686 auc: 0.9929 loss: 56.6340
-验证集 acc: 0.7333 sen: 0.4752 spe: 0.8551 auc: 0.7547 loss: 37.7459
-测试集 acc: 0.7345 sen: 0.5402 spe: 0.8245 auc: 0.7609  loss: 1.
 
 VQ-VAE-resnet18-resize448+clahe+加入训练集-20     将增强后的加入到训练集
 训练集 acc: 0.9958 sen: 0.9984 spe: 0.9945 auc: 0.9999 loss: 47.9403
 验证集 acc: 0.7587 sen: 0.6040 spe: 0.8318 auc: 0.7814 loss: 24.9326
-测试集 acc: 0.7236sen: 0.5862spe: 0.7872 auc: 0.7707loss: 2.0296
+测试集 acc: 0.7636 sen: 0.6092spe: 0.8351 auc: 0.7716loss: 1.7546
+
+
 
 
 二期数据：
@@ -97,3 +98,6 @@ VQ-DenseNet:
 训练集 acc: 1.0000 sen: 1.0000 spe: 1.0000 auc: 1.0000 loss: 25.1379
 验证集 acc: 0.7206 sen: 0.4653 spe: 0.8411 auc: 0.7048 loss: 30.6605
 测试集 acc: 0.7309 sen: 0.5057 spe: 0.8351 auc: 0.7434 loss: 25.7480
+
+
+测试集 acc: 0.7344sen: 0.6566spe: 0.7692 auc: 0.7936loss: 1.5221

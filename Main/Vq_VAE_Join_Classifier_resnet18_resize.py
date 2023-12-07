@@ -357,8 +357,8 @@ if __name__ == '__main__':
         transforms.Normalize((0.3281,), (0.2366,))  # 设置均值和标准差
     ])
 
-    train_benign_data = MyData("../data/一期数据/train2/benign", "benign", transform=transform)
-    train_malignat_data = MyData("../data/一期数据/train2/malignant", "malignant", transform=transform)
+    train_benign_data = MyData("../data/一期数据/train+malignant/benign", "benign", transform=transform)
+    train_malignat_data = MyData("../data/一期数据/train+malignant/malignant", "malignant", transform=transform)
     train_data = train_benign_data + train_malignat_data
 
     val_benign_data = MyData("../data/一期数据/new_val/benign", "benign", transform=transform)
@@ -401,7 +401,7 @@ if __name__ == '__main__':
     model = Model(encoder,num_embeddings, embedding_dim, commitment_cost, decay).to(device)
 
 
-    criterion = WeightedBinaryCrossEntropyLoss(2)
+    criterion = WeightedBinaryCrossEntropyLoss(1)
     criterion.to(device)
     optimizer = optim.Adam(filter(lambda p: p.requires_grad, model.parameters()), lr=learning_rate, amsgrad=False)
     # scheduler = StepLR(optimizer,10,0.1)
@@ -474,8 +474,8 @@ if __name__ == '__main__':
                 val_res_perplexity.append(perplexity.item())
         writer.add_scalar('Loss/Val', total_val_loss, epoch)
 
-        if ((epoch + 1) == 20):
-            torch.save(model, "../models/result/VQ-VAE-resnet18-resize448+clahe+加入训练集-{}.pth".format(epoch + 1))
+        # if ((epoch + 1) == 0):
+        #     torch.save(model, "../models/result/VQ-VAE-resnet18-resize448+clahe+加入训练集-{}.pth".format(epoch + 1))
         print('%d epoch' % (epoch + 1))
 
         train_acc, train_sen, train_spe = all_metrics(train_targets, train_pred)

@@ -198,27 +198,27 @@ class Decoder(nn.Module):
         super(Decoder, self).__init__()
 
         self.deconv1 = nn.Sequential(
-            nn.ConvTranspose2d(512, 256, kernel_size=4, stride=2, padding=1),
+            nn.ConvTranspose2d(1536, 768, kernel_size=4, stride=2, padding=1),
             nn.ReLU(),
             nn.MaxPool2d(kernel_size=3, stride=1, padding=1)
         )
         self.deconv2 = nn.Sequential(
-            nn.ConvTranspose2d(256, 128, kernel_size=4, stride=2, padding=1),
+            nn.ConvTranspose2d(768, 384, kernel_size=4, stride=2, padding=1),
             nn.ReLU(),
             nn.MaxPool2d(kernel_size=3, stride=1, padding=1)
         )
         self.deconv3 = nn.Sequential(
-            nn.ConvTranspose2d(128, 64, kernel_size=4, stride=2, padding=1),
+            nn.ConvTranspose2d(384, 192, kernel_size=4, stride=2, padding=1),
             nn.ReLU(),
             nn.MaxPool2d(kernel_size=3, stride=1, padding=1)
         )
         self.deconv4 = nn.Sequential(
-            nn.ConvTranspose2d(64, 32, kernel_size=4, stride=2, padding=1),
+            nn.ConvTranspose2d(192, 96, kernel_size=4, stride=2, padding=1),
             nn.ReLU(),
             nn.MaxPool2d(kernel_size=3, stride=1, padding=1)
         )
         self.deconv5 = nn.Sequential(
-            nn.ConvTranspose2d(32, 3, kernel_size=4, stride=2, padding=1),
+            nn.ConvTranspose2d(96, 3, kernel_size=4, stride=2, padding=1),
             nn.ReLU(),
             nn.MaxPool2d(kernel_size=3, stride=1, padding=1)
         )
@@ -267,7 +267,7 @@ class Model(nn.Module):
             self._vq_vae = VectorQuantizer(num_embeddings, embedding_dim,
                                            commitment_cost)
 
-        self.classifier = Classifier(512*14*14,512,1)
+        self.classifier = Classifier(1536*14*14,1536,1)
 
         self._decoder = Decoder()
 
@@ -320,6 +320,7 @@ class Focal_Loss(nn.Module):
         return torch.mean(loss)
 if __name__ == '__main__':
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    torch.cuda.empty_cache()
 
     seed = 42
 
@@ -335,7 +336,7 @@ if __name__ == '__main__':
     torch.backends.cudnn.deterministic = True
     torch.backends.cudnn.benchmark = False
 
-    batch_size = 16
+    batch_size = 8
     epochs = 1000
 
     embedding_dim = 64
@@ -360,8 +361,8 @@ if __name__ == '__main__':
         transforms.Normalize((0.3281,), (0.2366,))  # 设置均值和标准差
     ])
 
-    train_benign_data = MyData("../data/一期数据/train2/benign", "benign", transform=transform)
-    train_malignat_data = MyData("../data/一期数据/train2/malignant", "malignant", transform=transform)
+    train_benign_data = MyData("../data/一期数据/train+clahe/benign", "benign", transform=transform)
+    train_malignat_data = MyData("../data/一期数据/train+clahe/malignant", "malignant", transform=transform)
     train_data = train_benign_data + train_malignat_data
 
     val_benign_data = MyData("../data/一期数据/new_val/benign", "benign", transform=transform)

@@ -278,7 +278,7 @@ class ExtendedModel(nn.Module):
     def __init__(self, model):
         super(ExtendedModel, self).__init__()
         self.model = model
-        self.classifier = Classifier(512*16*16, 512,1)
+        self.classifier = Classifier(512*14*14, 512,1)
 
     def forward(self, x):
         z = self.model._encoder(x)
@@ -327,7 +327,7 @@ class Focal_Loss(nn.Module):
 if __name__ == '__main__':
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-    seed = 42
+    seed = 10
 
     # 设置 Python 的随机种子
     random.seed(seed)
@@ -361,17 +361,17 @@ if __name__ == '__main__':
 
     # 读取数据集
     transform = transforms.Compose([
-        transforms.Resize([512, 512]),
+        transforms.Resize([448, 448]),
         transforms.ToTensor(),
         transforms.Normalize((0.3281,), (0.2366,))  # 设置均值和标准差
     ])
 
-    train_benign_data = MyData("../data/二期双十/train/benign", "benign", transform=transform)
-    train_malignat_data = MyData("../data/二期双十/train/malignant", "malignant", transform=transform)
+    train_benign_data = MyData("../data/一期数据/train+clahe/benign", "benign", transform=transform)
+    train_malignat_data = MyData("../data/一期数据/train+clahe/malignant", "malignant", transform=transform)
     train_data = train_benign_data + train_malignat_data
 
-    val_benign_data = MyData("../data/二期双十/val/benign", "benign", transform=transform)
-    val_malignat_data = MyData("../data/二期双十/val/malignant", "malignant", transform=transform)
+    val_benign_data = MyData("../data/一期数据/val/benign", "benign", transform=transform)
+    val_malignat_data = MyData("../data/一期数据/val/malignant", "malignant", transform=transform)
     val_data = val_benign_data + val_malignat_data
 
 
@@ -393,24 +393,25 @@ if __name__ == '__main__':
 
 
 
-    model = torch.load("../models/VQ-Resnet/VQ-VAE-筛查-resize512.pth", map_location=device)
+    model = torch.load("../models/VQ-Resnet/VQ-VAE-筛查-rezize448.pth", map_location=device)
 
-
-    # for name, param in model.named_parameters():
-    #     if "6" in name:
-    #         param.requires_grad = True
-    #     if "7" in name:
-    #         param.requires_grad = True
-    #     if "_vq_vae" in name:
-    #         param.requires_grad = True
-    #     if "_decoder" in name:
-    #         param.requires_grad = True
+    for param in model.parameters():
+        param.requires_grad = False
+    for name, param in model.named_parameters():
+        if "6" in name:
+            param.requires_grad = True
+        if "7" in name:
+            param.requires_grad = True
+        if "_vq_vae" in name:
+            param.requires_grad = True
+        if "_decoder" in name:
+            param.requires_grad = True
 
     extendModel = ExtendedModel(model).to(device)
     for param in extendModel.parameters():
         param.requires_grad = True
 
-    criterion = WeightedBinaryCrossEntropyLoss(1.1)
+    criterion = WeightedBinaryCrossEntropyLoss(2)
     criterion.to(device)
     optimizer = optim.Adam(filter(lambda p: p.requires_grad, extendModel.parameters()), lr=learning_rate, amsgrad=False)
     # scheduler = StepLR(optimizer,50,0.1)
@@ -484,7 +485,7 @@ if __name__ == '__main__':
         writer.add_scalar('Loss/Val', total_val_loss, epoch)
 
         if ((epoch + 1)%50 == 0):
-            torch.save(extendModel, "../models/result/Vq_VAE_resnet18筛查+分类+resize448-data2双十-{}.pth".format(epoch + 1))
+            torch.save(extendModel, "../models/result/Vq_VAE_resnet18筛查+分类+resize448-data1—clahe-{}.pth".format(epoch + 1))
         print('%d epoch' % (epoch + 1))
 
         train_acc, train_sen, train_spe = all_metrics(train_targets, train_pred)
