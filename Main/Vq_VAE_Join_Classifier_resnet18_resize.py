@@ -357,12 +357,12 @@ if __name__ == '__main__':
         transforms.Normalize((0.3281,), (0.2366,))  # 设置均值和标准差
     ])
 
-    train_benign_data = MyData("../data/一期数据/train+malignant/benign", "benign", transform=transform)
-    train_malignat_data = MyData("../data/一期数据/train+malignant/malignant", "malignant", transform=transform)
+    train_benign_data = MyData("../data/一期数据/train+clahe/benign", "benign", transform=transform)
+    train_malignat_data = MyData("../data/一期数据/train+clahe/malignant", "malignant", transform=transform)
     train_data = train_benign_data + train_malignat_data
 
-    val_benign_data = MyData("../data/一期数据/new_val/benign", "benign", transform=transform)
-    val_malignat_data = MyData("../data/一期数据/new_val/malignant", "malignant", transform=transform)
+    val_benign_data = MyData("../data/一期数据/val/benign", "benign", transform=transform)
+    val_malignat_data = MyData("../data/一期数据/val/malignant", "malignant", transform=transform)
     val_data = val_benign_data + val_malignat_data
 
 
@@ -474,8 +474,8 @@ if __name__ == '__main__':
                 val_res_perplexity.append(perplexity.item())
         writer.add_scalar('Loss/Val', total_val_loss, epoch)
 
-        # if ((epoch + 1) == 0):
-        #     torch.save(model, "../models/result/VQ-VAE-resnet18-resize448+clahe+加入训练集-{}.pth".format(epoch + 1))
+        if ((epoch + 1) == 20):
+            torch.save(model, "../models/VQ-Resnet/VQ-VAE-resnet18-resize448+加入训练集clahe.pth")
         print('%d epoch' % (epoch + 1))
 
         train_acc, train_sen, train_spe = all_metrics(train_targets, train_pred)

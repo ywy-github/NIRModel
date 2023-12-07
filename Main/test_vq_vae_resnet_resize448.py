@@ -310,8 +310,8 @@ if __name__ == '__main__':
         transforms.Normalize((0.3281,), (0.2366,))  # 设置均值和标准差
     ])
 
-    test_benign_data = MyData("../data/一期数据/train/benign", "benign", transform=transform)
-    test_malignat_data = MyData("../data/一期数据/train/malignant", "malignant", transform=transform)
+    test_benign_data = MyData("../data/一期数据/new_test/benign", "benign", transform=transform)
+    test_malignat_data = MyData("../data/一期数据/new_test/malignant", "malignant", transform=transform)
     test_data = test_benign_data + test_malignat_data
 
     test_loader = DataLoader(test_data,
@@ -319,7 +319,7 @@ if __name__ == '__main__':
                              shuffle=True,
                              pin_memory=True)
 
-    model = torch.load("../models/VQ-Resnet/VQ-VAE-resnet18-data1-resize448.pth", map_location=device)
+    model = torch.load("../models/VQ-Resnet/VQ-VAE-resnet18-resize448+clahe+加入训练集-20.pth", map_location=device)
 
     criterion = WeightedBinaryCrossEntropyLoss(2)
     criterion.to(device)
@@ -366,14 +366,14 @@ if __name__ == '__main__':
         np.mean(total_test_loss[-10:])))
 
     df = pd.DataFrame(test_results)
-    filename = '../models/result/VQ-VAE-resnet18-data1-resize448.xlsx'
+    filename = '../models/result/全增强+train.xlsx'
 
     # 检查文件是否存在
     if not os.path.isfile(filename):
         # 如果文件不存在，创建新文件并保存数据到 Sheet1
-        df.to_excel(filename, sheet_name='train', index=False)
+        df.to_excel(filename, sheet_name='test', index=False)
     else:
         # 如果文件已经存在，打开现有文件并保存数据到 Sheet2
         with pd.ExcelWriter(filename, engine='openpyxl', mode='a') as writer:
-            df.to_excel(writer, sheet_name='train', index=False)
+            df.to_excel(writer, sheet_name='test', index=False)
 
