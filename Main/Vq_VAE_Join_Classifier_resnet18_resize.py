@@ -358,12 +358,12 @@ if __name__ == '__main__':
         transforms.Normalize((0.3281,), (0.2366,))  # 设置均值和标准差
     ])
 
-    train_benign_data = MyData("../data/一期数据/train/benign", "benign", transform=transform)
-    train_malignat_data = MyData("../data/一期数据/train/malignant", "malignant", transform=transform)
+    train_benign_data = MyData("../data/一期数据/train+benign/benign", "benign", transform=transform)
+    train_malignat_data = MyData("../data/一期数据/train+benign/malignant", "malignant", transform=transform)
     train_data = train_benign_data + train_malignat_data
 
-    val_benign_data = MyData("../data/一期数据/val/benign", "benign", transform=transform)
-    val_malignat_data = MyData("../data/一期数据/val/malignant", "malignant", transform=transform)
+    val_benign_data = MyData("../data/一期数据/new_val/benign", "benign", transform=transform)
+    val_malignat_data = MyData("../data/一期数据/new_val/malignant", "malignant", transform=transform)
     val_data = val_benign_data + val_malignat_data
 
 
@@ -402,8 +402,8 @@ if __name__ == '__main__':
     model = Model(encoder,num_embeddings, embedding_dim, commitment_cost, decay).to(device)
 
 
-    # criterion = WeightedBinaryCrossEntropyLoss(2)
-    criterion = WeightedBinaryCrossEntropyLossWithRegularization(2, 0.01)
+    criterion = WeightedBinaryCrossEntropyLoss(4)
+    # criterion = WeightedBinaryCrossEntropyLossWithRegularization(2, 0.01)
     criterion.to(device)
     optimizer = optim.Adam(filter(lambda p: p.requires_grad, model.parameters()), lr=learning_rate, amsgrad=False)
     # scheduler = StepLR(optimizer,10,0.1)
@@ -432,7 +432,7 @@ if __name__ == '__main__':
 
             data_variance = torch.var(data)
             recon_loss = F.mse_loss(data_recon, data) / data_variance
-            classifier_loss = criterion(targets.view(-1, 1), classifier_outputs,model)
+            classifier_loss = criterion(targets.view(-1, 1), classifier_outputs)
             total_loss = joint_loss_function(recon_loss, vq_loss, classifier_loss, lambda_recon, lambda_vq,
                                              lambda_classifier)
             total_loss.backward()
@@ -462,7 +462,7 @@ if __name__ == '__main__':
                 vq_loss, data_recon, perplexity, classifier_outputs = model(data)
                 data_variance = torch.var(data)
                 recon_loss = F.mse_loss(data_recon, data) / data_variance
-                classifier_loss = criterion(targets.view(-1, 1), classifier_outputs,model)
+                classifier_loss = criterion(targets.view(-1, 1), classifier_outputs)
                 total_loss = joint_loss_function(recon_loss, vq_loss, classifier_loss, lambda_recon, lambda_vq,
                                                  lambda_classifier)
 
@@ -476,8 +476,8 @@ if __name__ == '__main__':
                 val_res_perplexity.append(perplexity.item())
         writer.add_scalar('Loss/Val', total_val_loss, epoch)
 
-        # if ((epoch + 1) == 7):
-        #     torch.save(model, "../models/VQ-Resnet/VQ-VAE-resnet18-resize448+全增强+训练集加入未增强的恶性数据.pth")
+        if ((epoch + 1) == 15):
+            torch.save(model, "../models/VQ-Resnet/VQ-VAE-resnet18-resize448+全增强+训练集加入未增强的良性数据.pth")
         print('%d epoch' % (epoch + 1))
 
         train_acc, train_sen, train_spe = all_metrics(train_targets, train_pred)

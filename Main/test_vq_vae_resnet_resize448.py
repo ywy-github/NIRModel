@@ -319,7 +319,7 @@ if __name__ == '__main__':
                              shuffle=True,
                              pin_memory=True)
 
-    model = torch.load("../models/VQ-Resnet/VQ-VAE-resnet18-resize448+全增强+训练集加入未增强的恶性数据.pth", map_location=device)
+    model = torch.load("../models/VQ-Resnet/VQ-VAE-resnet18-resize448+全增强+训练集加入未增强的良性数据.pth", map_location=device)
 
     criterion = WeightedBinaryCrossEntropyLoss(2)
     criterion.to(device)
