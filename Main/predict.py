@@ -198,30 +198,37 @@ class Decoder(nn.Module):
     def __init__(self):
         super(Decoder, self).__init__()
 
+        self.deconv1 = nn.Sequential(
+            nn.ConvTranspose2d(512, 256, kernel_size=4, stride=2, padding=1),
+            nn.ReLU(),
+            nn.MaxPool2d(kernel_size=3, stride=1, padding=1)
+        )
         self.deconv2 = nn.Sequential(
-            nn.ConvTranspose2d(512, 256, kernel_size=(5, 4), stride=(2, 2), padding=(1, 1)),
+            nn.ConvTranspose2d(256, 128, kernel_size=4, stride=2, padding=1),
             nn.ReLU(),
             nn.MaxPool2d(kernel_size=3, stride=1, padding=1)
         )
         self.deconv3 = nn.Sequential(
-            nn.ConvTranspose2d(256, 128, kernel_size=(3, 4), stride=(2, 2), padding=(1, 1)),
+            nn.ConvTranspose2d(128, 64, kernel_size=4, stride=2, padding=1),
             nn.ReLU(),
-            nn.MaxPool2d(kernel_size=3, stride=1, padding=1),
+            nn.MaxPool2d(kernel_size=3, stride=1, padding=1)
         )
         self.deconv4 = nn.Sequential(
-            nn.ConvTranspose2d(128, 64, kernel_size=(5, 4), stride=(2, 2), padding=(1, 1)),
+            nn.ConvTranspose2d(64, 32, kernel_size=4, stride=2, padding=1),
             nn.ReLU(),
             nn.MaxPool2d(kernel_size=3, stride=1, padding=1)
         )
         self.deconv5 = nn.Sequential(
-            nn.ConvTranspose2d(64, 1, kernel_size=(4, 4), stride=(2, 2), padding=(1, 1)),
+            nn.ConvTranspose2d(32, 3, kernel_size=4, stride=2, padding=1),
             nn.ReLU(),
             nn.MaxPool2d(kernel_size=3, stride=1, padding=1)
         )
 
 
+
     def forward(self, inputs):
-        x = self.deconv2(inputs)
+        x = self.deconv1(inputs)
+        x = self.deconv2(x)
         x = self.deconv3(x)
         x = self.deconv4(x)
         x = self.deconv5(x)
@@ -233,10 +240,10 @@ class Classifier(nn.Module):
         self.path = nn.Sequential(
             nn.Linear(input_dim, hidden_dim),
             nn.ReLU(),
-            nn.Dropout(0.6),
+            nn.Dropout(0.5),
             nn.Linear(hidden_dim, hidden_dim // 2),
             nn.ReLU(),
-            nn.Dropout(0.6),
+            nn.Dropout(0.5),
             nn.Linear(hidden_dim // 2, num_classes),
             nn.Sigmoid()
         )
@@ -260,7 +267,7 @@ class Model(nn.Module):
             self._vq_vae = VectorQuantizer(num_embeddings, embedding_dim,
                                            commitment_cost)
 
-        self.classifier = Classifier(512*6*8,256,1)
+        self.classifier = Classifier(512*16*16,512,1)
 
         self._decoder = Decoder()
 
@@ -273,7 +280,12 @@ class Model(nn.Module):
 
         return loss, x_recon, perplexity, classifier_outputs
 
+# 定义联合模型的损失函数
+def joint_loss_function(recon_loss,vq_loss,classifier_loss,lambda_recon,lambda_vq,lambda_classifier):
+    # 总损失
+    total_loss = lambda_recon * recon_loss + lambda_vq*vq_loss + lambda_classifier * classifier_loss
 
+    return total_loss
 
 # 定义自定义损失函数，加权二进制交叉熵
 class WeightedBinaryCrossEntropyLoss(nn.Module):
@@ -289,11 +301,12 @@ class WeightedBinaryCrossEntropyLoss(nn.Module):
 if __name__ == '__main__':
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-    model = torch.load("../models/VQ-Resnet/VQ-VAE-resnet18_data1.pth", map_location=device)
+    model = torch.load("../models/VQ-Resnet/VQ-VAE-resnet18-data2-双十-11.27.pth", map_location=device)
 
-    image = Image.open("../data/一期数据/test/benign/0571-ZHJSH-00025-XHJ-201807111033-D.bmp")
+    image = Image.open("../data/二期双十/test/malignant/020-ZSSYX-00718-HYFE-202205241110-双波段-R-D.bmp")
 
     transform = transforms.Compose([
+        transforms.Resize([512,512]),
         transforms.ToTensor(),
         transforms.Normalize((0.3281,), (0.2366,))  # 设置均值和标准差
     ])
@@ -302,5 +315,6 @@ if __name__ == '__main__':
 
     with torch.no_grad():
         model.eval()  # 确保模型处于评估模式
+        image = torch.cat([image] * 3, dim=1)
         _, _, _, classifier_outputs = model(image)
         print("Predicted Probability:", "{:.6f}".format(classifier_outputs.item()))
