@@ -370,8 +370,8 @@ if __name__ == '__main__':
     train_malignat_data = MyData("../data/一期数据/train+clahe/malignant", "malignant", transform=transform)
     train_data = train_benign_data + train_malignat_data
 
-    val_benign_data = MyData("../data/一期数据/val/benign", "benign", transform=transform)
-    val_malignat_data = MyData("../data/一期数据/val/malignant", "malignant", transform=transform)
+    val_benign_data = MyData("../data/一期数据/new_val/benign", "benign", transform=transform)
+    val_malignat_data = MyData("../data/一期数据/new_val/malignant", "malignant", transform=transform)
     val_data = val_benign_data + val_malignat_data
 
 
@@ -484,8 +484,8 @@ if __name__ == '__main__':
                 val_res_perplexity.append(perplexity.item())
         writer.add_scalar('Loss/Val', total_val_loss, epoch)
 
-        if ((epoch + 1)%50 == 0):
-            torch.save(extendModel, "../models/result/Vq_VAE_resnet18筛查+分类+resize448-data1—clahe-{}.pth".format(epoch + 1))
+        # if ((epoch + 1)%50 == 0):
+        #     torch.save(extendModel, "../models/result/Vq_VAE_resnet18筛查+分类+resize448-data1—clahe-{}.pth".format(epoch + 1))
         print('%d epoch' % (epoch + 1))
 
         train_acc, train_sen, train_spe = all_metrics(train_targets, train_pred)

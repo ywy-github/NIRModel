@@ -40,12 +40,12 @@ if __name__ == '__main__':
         transforms.Normalize((0.3281,), (0.2366,))  # 设置均值和标准差
     ])
 
-    train_benign_data = MyData("../data/一期数据/train/benign", "benign", transform=transform)
-    train_malignat_data = MyData("../data/一期数据/train/malignant", "malignant", transform=transform)
+    train_benign_data = MyData("../data/一期数据/train+clahe/benign", "benign", transform=transform)
+    train_malignat_data = MyData("../data/一期数据/train+clahe/malignant", "malignant", transform=transform)
     train_data = train_benign_data + train_malignat_data
 
-    val_benign_data = MyData("../data/一期数据/val/benign", "benign", transform=transform)
-    val_malignat_data = MyData("../data/一期数据/val/malignant", "malignant", transform=transform)
+    val_benign_data = MyData("../data/一期数据/new_val/benign", "benign", transform=transform)
+    val_malignat_data = MyData("../data/一期数据/new_val/malignant", "malignant", transform=transform)
     val_data = val_benign_data + val_malignat_data
 
 
@@ -72,7 +72,10 @@ if __name__ == '__main__':
         nn.Linear(model.fc.in_features, num_hidden),
         nn.ReLU(),
         nn.Dropout(0.5),
-        nn.Linear(num_hidden, 1),
+        nn.Linear(num_hidden, num_hidden//2),
+        nn.ReLU(),
+        nn.Dropout(0.5),
+        nn.Linear(num_hidden//2, 1),
         nn.Sigmoid()
     )
 
@@ -141,8 +144,8 @@ if __name__ == '__main__':
                 val_pred.extend(predicted_labels.cpu().numpy())
                 val_targets.extend(targets.cpu().numpy())
 
-        if ((epoch + 1)%50 == 0):
-            torch.save(model, "../models/result/resnet18-resize448{}.pth".format(epoch + 1))
+        # if ((epoch + 1)%50 == 0):
+        #     torch.save(model, "../models/result/resnet18-resize448{}.pth".format(epoch + 1))
 
         print('%d epoch' % (epoch + 1))
 

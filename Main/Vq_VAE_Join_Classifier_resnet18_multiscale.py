@@ -336,7 +336,7 @@ if __name__ == '__main__':
     torch.backends.cudnn.deterministic = True
     torch.backends.cudnn.benchmark = False
 
-    batch_size = 8
+    batch_size = 6
     epochs = 1000
 
     embedding_dim = 64
@@ -373,7 +373,7 @@ if __name__ == '__main__':
     training_loader = DataLoader(train_data,
                                  batch_size=batch_size,
                                  shuffle=True,
-                                 num_workers=8,
+                                 num_workers=6,
                                  persistent_workers=True,
                                  pin_memory=True
                                  )
@@ -381,7 +381,7 @@ if __name__ == '__main__':
     validation_loader = DataLoader(val_data,
                                    batch_size=batch_size,
                                    shuffle=True,
-                                   num_workers=8,
+                                   num_workers=6,
                                    persistent_workers=True,
                                    pin_memory=True
                                   )
@@ -492,8 +492,8 @@ if __name__ == '__main__':
                 val_res_perplexity.append(perplexity.item())
         writer.add_scalar('Loss/Val', total_val_loss, epoch)
 
-        if ((epoch + 1) == 20):
-            torch.save(model, "../models/result/VQ-VAE-resnet18-resize448+clahe+加入训练集-{}.pth".format(epoch + 1))
+        # if ((epoch + 1) == 20):
+        #     torch.save(model, "../models/result/VQ-VAE-resnet18-resize448+clahe+加入训练集-{}.pth".format(epoch + 1))
         print('%d epoch' % (epoch + 1))
 
         train_acc, train_sen, train_spe = all_metrics(train_targets, train_pred)
