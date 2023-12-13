@@ -3,6 +3,7 @@ from __future__ import print_function
 import time
 
 import matplotlib.pyplot as plt
+from scipy.optimize import differential_evolution
 from six.moves import xrange
 
 import torch.nn as nn
@@ -317,6 +318,7 @@ class WeightedBinaryCrossEntropyLossWithRegularization(nn.Module):
         total_loss = bce_loss + self.lambda_reg * reg_loss
 
         return total_loss
+
 if __name__ == '__main__':
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
