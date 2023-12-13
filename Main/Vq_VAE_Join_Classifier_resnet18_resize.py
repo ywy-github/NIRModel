@@ -360,12 +360,12 @@ if __name__ == '__main__':
         transforms.Normalize((0.3281,), (0.2366,))  # 设置均值和标准差
     ])
 
-    train_benign_data = MyData("../data/一期数据/train+benign/benign", "benign", transform=transform)
-    train_malignat_data = MyData("../data/一期数据/train+benign/malignant", "malignant", transform=transform)
+    train_benign_data = MyData("../data/二期双十/train+benign/benign", "benign", transform=transform)
+    train_malignat_data = MyData("../data/二期双十/train+benign/malignant", "malignant", transform=transform)
     train_data = train_benign_data + train_malignat_data
 
-    val_benign_data = MyData("../data/一期数据/new_val/benign", "benign", transform=transform)
-    val_malignat_data = MyData("../data/一期数据/new_val/malignant", "malignant", transform=transform)
+    val_benign_data = MyData("../data/二期双十/new_val/benign", "benign", transform=transform)
+    val_malignat_data = MyData("../data/二期双十/new_val/malignant", "malignant", transform=transform)
     val_data = val_benign_data + val_malignat_data
 
 

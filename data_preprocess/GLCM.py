@@ -6,18 +6,9 @@ from skimage.exposure import rescale_intensity
 from skimage.feature import graycomatrix
 from skimage import img_as_ubyte
 
-# 指定文件夹的路径
-folder_path = '../data/train/benign'  # 替换为您的文件夹路径
-
-# 遍历文件夹中的所有文件
-for filename in os.listdir(folder_path):
-    file_path = os.path.join(folder_path, filename)
-
-    # 打开图像文件
-    original_image = Image.open(file_path)
-
+def apply_GLCM(image):
     # 将图像复制到一个NumPy数组，并将其数据类型转换为可写的
-    original_image_array = np.array(original_image, dtype=np.uint8)
+    original_image_array = np.array(image, dtype=np.uint8)
 
     # 选择GLCM参数（方向和距离）
     theta = [0]  # 方向，可以是0, 45, 90度等
@@ -41,12 +32,47 @@ for filename in os.listdir(folder_path):
             enhanced_image[i + window_size // 2, j + window_size // 2] = sum_squares
 
     # 可以根据需要对增强图像进行归一化或其他后处理
-    # 归一化增强图像像素值到0到1的范围
-    enhanced_image = rescale_intensity(enhanced_image, in_range='image', out_range=(0, 1))
+    enhanced_image = rescale_intensity(enhanced_image, in_range='image', out_range=(-1, 1))
 
-    # 将增强图像数据类型转换为整数并保存为图像文件
+    # 将增强图像数据类型转换为整数
     enhanced_image = img_as_ubyte(enhanced_image)
 
-    # 保存增强后的图像
-    os.makedirs("../enhanced_image/train/benign", exist_ok=True)
-    cv2.imwrite('../enhanced_image/train/benign/' + filename, enhanced_image)
+    # 将NumPy数组转换为Image对象
+    enhanced_image_pil = Image.fromarray(enhanced_image)
+
+    return enhanced_image_pil
+
+def apply_glcm_to_folder(input_folder, output_folder):
+    # 创建保存目录
+    os.makedirs(output_folder, exist_ok=True)
+
+    # 遍历输入目录中的每个子目录（benign和malignant）
+    for class_folder in os.listdir(input_folder):
+        class_input_path = os.path.join(input_folder, class_folder)
+        class_output_path = os.path.join(output_folder, class_folder)
+
+        # 创建保存增强图像的子目录
+        os.makedirs(class_output_path, exist_ok=True)
+
+        # 遍历每个子目录中的图像文件
+        for file_name in os.listdir(class_input_path):
+            file_path = os.path.join(class_input_path, file_name)
+            output_file_path = os.path.join(class_output_path, file_name)
+
+            # 读取图像
+            image = Image.open(file_path)
+
+            # 应用GLCM增强
+            enhanced_image = apply_GLCM(image)
+
+            # 保存增强后的图像
+            enhanced_image.save(os.path.join(class_output_path, "glcm_" + file_name))
+
+
+if __name__ == '__main__':
+    # 指定原始图像文件夹和保存增强图像的文件夹
+    input_folder = "../data/一期数据/test"
+    output_folder = "../data/一期GLCM/test"
+
+    # 应用GLCM增强
+    apply_glcm_to_folder(input_folder, output_folder)
