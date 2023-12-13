@@ -306,8 +306,8 @@ if __name__ == '__main__':
         transforms.Normalize((0.3281,), (0.2366,))  # 设置均值和标准差
     ])
 
-    test_benign_data = MyData("../data/一期数据/train/benign", "benign", transform=transform)
-    test_malignat_data = MyData("../data/一期数据/train/malignant", "malignant", transform=transform)
+    test_benign_data = MyData("../data/二期双十/train/benign", "benign", transform=transform)
+    test_malignat_data = MyData("../data/二期双十/train/malignant", "malignant", transform=transform)
     test_data = test_benign_data + test_malignat_data
 
     test_loader = DataLoader(test_data,
@@ -315,7 +315,7 @@ if __name__ == '__main__':
                              shuffle=True,
                              pin_memory=True)
 
-    model = torch.load("../models/VQ-Resnet/VQ-VAE-resnet18_data1.pth", map_location=device)
+    model = torch.load("../models/VQ-Resnet/VQ-VAE-resnet18-data2-双十-11.27.pth", map_location=device)
 
     criterion = WeightedBinaryCrossEntropyLoss(2)
     criterion.to(device)
@@ -354,5 +354,5 @@ if __name__ == '__main__':
     print("测试集 acc: {:.4f}".format(train_acc) + "sen: {:.4f}".format(train_sen) +
           "spe: {:.4f}".format(train_spe) + "loss: {:.4f}".format(np.mean(total_test_loss[-10:])))
 
-    df = pd.DataFrame(test_results)
-    df.to_excel("../models/result/VQ-VAE-resnet18_data1.xlsx", index=False)
+    # df = pd.DataFrame(test_results)
+    # df.to_excel("../models/result/VQ-VAE-resnet18_data1.xlsx", index=False)

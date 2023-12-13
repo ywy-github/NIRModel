@@ -303,7 +303,7 @@ if __name__ == '__main__':
 
     model = torch.load("../models/VQ-Resnet/VQ-VAE-resnet18-data2-双十-11.27.pth", map_location=device)
 
-    image = Image.open("../data/二期双十/test/malignant/020-ZSSYX-02042-PMYU-202308041100-L-D.bmp")
+    image = Image.open("../data/二期双十/test/malignant/KBMK3AH1.bmp")
 
     transform = transforms.Compose([
         transforms.Resize([512,512]),
