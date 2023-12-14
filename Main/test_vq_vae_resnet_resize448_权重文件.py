@@ -12,7 +12,7 @@ from sklearn.metrics import roc_auc_score
 
 from torch.utils.data import DataLoader
 
-from torchvision import transforms
+from torchvision import transforms, models
 import torch
 
 import numpy as np
@@ -296,11 +296,21 @@ class WeightedBinaryCrossEntropyLoss(nn.Module):
 if __name__ == '__main__':
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-    batch_size = 64
+    batch_size = 16
+    epochs = 1000
 
-    weight_positive = 2  # 调整这个权重以提高对灵敏度的重视
+    embedding_dim = 64
+    num_embeddings = 512  # 和encoder输出维度相同，和decoder输入维度相同
+
+    commitment_cost = 0.25
+
+    decay = 0.99
 
     learning_rate = 1e-5
+
+    lambda_recon = 0.2
+    lambda_vq = 0.2
+    lambda_classifier = 0.6
 
 
     # 读取数据集
@@ -310,8 +320,8 @@ if __name__ == '__main__':
         transforms.Normalize((0.3281,), (0.2366,))  # 设置均值和标准差
     ])
 
-    test_benign_data = MyData("../data/二期双十+双十五/test/benign", "benign", transform=transform)
-    test_malignat_data = MyData("../data/二期双十+双十五/test/malignant", "malignant", transform=transform)
+    test_benign_data = MyData("../data/二期双十+双十五/train/benign", "benign", transform=transform)
+    test_malignat_data = MyData("../data/二期双十+双十五/train/malignant", "malignant", transform=transform)
     test_data = test_benign_data + test_malignat_data
 
     test_loader = DataLoader(test_data,
@@ -319,7 +329,24 @@ if __name__ == '__main__':
                              shuffle=True,
                              pin_memory=True)
 
-    model = torch.load("../models/VQ-Resnet/VQ-VAE-resnet18-data2-双十-11.27.pth", map_location=device)
+    # 设置encoder
+    encoder = models.resnet18(pretrained=True)
+    for param in encoder.parameters():
+        param.requires_grad = False
+
+    for name, param in encoder.named_parameters():
+        if "layer3" in name:
+            param.requires_grad = True
+        if "layer4" in name:
+            param.requires_grad = True
+        if "fc" in name:
+            param.requires_grad = True
+
+    encoder = nn.Sequential(*list(encoder.children())[:-2])
+
+    model = Model(encoder, num_embeddings, embedding_dim, commitment_cost, decay).to(device)
+
+    model.load_state_dict(torch.load('../models/VQ-Resnet/VQ-VAE-resnet18-二期双十+双十五.pth'))
 
     criterion = WeightedBinaryCrossEntropyLoss(2)
     criterion.to(device)
@@ -366,14 +393,14 @@ if __name__ == '__main__':
         np.mean(total_test_loss[-10:])))
 
     df = pd.DataFrame(test_results)
-    # filename = '../models/result/VQ-VAE-resnet18-一期全增强-扩充训练集.xlsx'
-    #
-    # # 检查文件是否存在
-    # if not os.path.isfile(filename):
-    #     # 如果文件不存在，创建新文件并保存数据到 Sheet1
-    #     df.to_excel(filename, sheet_name='train', index=False)
-    # else:
-    #     # 如果文件已经存在，打开现有文件并保存数据到 Sheet2
-    #     with pd.ExcelWriter(filename, engine='openpyxl', mode='a') as writer:
-    #         df.to_excel(writer, sheet_name='train', index=False)
+    filename = '../models/result/VQ-VAE-resnet18-二期双十+双十五.xlsx'
+
+    # 检查文件是否存在
+    if not os.path.isfile(filename):
+        # 如果文件不存在，创建新文件并保存数据到 Sheet1
+        df.to_excel(filename, sheet_name='train', index=False)
+    else:
+        # 如果文件已经存在，打开现有文件并保存数据到 Sheet2
+        with pd.ExcelWriter(filename, engine='openpyxl', mode='a') as writer:
+            df.to_excel(writer, sheet_name='train', index=False)
 

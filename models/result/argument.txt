@@ -1,0 +1,41 @@
+
+一期
+
+clahe：
+VQ-VAE-resnet18-resize448      未增强
+训练集 acc: 0.9672 sen: 0.9642 spe: 0.9686 auc: 0.9929 loss: 56.6340
+验证集 acc: 0.7333 sen: 0.4752 spe: 0.8551 auc: 0.7547 loss: 37.7459
+测试集 acc: 0.7345 sen: 0.5402 spe: 0.8245 auc: 0.7609  loss: 1.
+
+VQ-VAE-resnet18-resize448+加入训练集clahe.pth      未增强 + 训练集加入增强后的数据
+训练集 acc: 0.9931 sen: 0.9870 spe: 0.9961 auc: 0.9997 loss: 46.6581
+验证集 acc: 0.7619 sen: 0.4455 spe: 0.9112 auc: 0.7614 loss: 23.8405
+测试集 acc: 0.7382sen: 0.4598spe: 0.8670 auc: 0.7664loss: 2.3335
+
+VQ-VAE-resnet18-resize448-clahe          2   (5,6)  全增强后
+训练集 acc: 0.9936 sen: 0.9935 spe: 0.9937 auc: 0.9998 loss: 21.6325
+验证集 acc: 0.7492 sen: 0.4752 spe: 0.8785 auc: 0.7600 loss: 27.6122
+测试集 acc: 0.7091 sen: 0.4483 spe: 0.8298 auc: 0.7331loss: 2.0650
+
+
+VQ-VAE-resnet18-resize448+clahe+加入训练集-20     全增强 + 训练集加入未增强的数据
+训练集 acc: 0.9958 sen: 0.9984 spe: 0.9945 auc: 0.9999 loss: 47.9403
+验证集 acc: 0.7587 sen: 0.6040 spe: 0.8318 auc: 0.7814 loss: 24.9326
+测试集 acc: 0.7636 sen: 0.6092spe: 0.8351 auc: 0.7716loss: 1.7546
+
+
+VQ-VAE-resnet18-resize448+全增强+训练集加入未增强的恶性数据   全增强 + 训练集加入未增强的恶性数据
+训练集 acc: 0.7674 sen: 0.8518 spe: 0.6860 auc: 0.8844 loss: 58.4095
+验证集 acc: 0.7270 sen: 0.5050 spe: 0.8318 auc: 0.7564 loss: 16.3220
+测试集 acc: 0.7200sen: 0.5632spe: 0.7926 auc: 0.7379loss: 0.8079
+
+VQ-VAE-resnet18-resize448+全增强+训练集加入未增强的良性数据
+训练集 acc: 0.9855 sen: 0.9902 spe: 0.9843 auc: 0.9982 loss: 45.5670
+验证集 acc: 0.7460 sen: 0.4752 spe: 0.8738 auc: 0.7545 loss: 38.2895
+测试集 acc: 0.7164sen: 0.5517spe: 0.7926 auc: 0.7406loss: 1.6074
+
+
+单gamma矫正：
+19 epoch
+训练集 acc: 0.9947 sen: 0.9967 spe: 0.9937 auc: 0.9990 loss: 69.5208
+验证集 acc: 0.7206 sen: 0.4554 spe: 0.8458 auc: 0.7311 loss: 39.3540
