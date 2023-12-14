@@ -5,7 +5,7 @@ from PIL import Image
 
 if __name__ == '__main__':
     # 打开图像
-    image_path = '../data/一期数据/new_train/malignant/clahe_021-SHZL-00022-XML-201708091549-D.bmp'
+    image_path = '../data/一期数据/test/benign/021-SHZL-00003-HYM-201707131339-D.bmp'
     image = Image.open(image_path)
 
     # 将Pillow Image对象转换为NumPy数组

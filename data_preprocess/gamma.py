@@ -28,9 +28,9 @@ def multi_objective_function(gamma_values, image):
     std_dev = np.std(corrected_image)
 
     # 赋予不同指标不同权重
-    weight_entropy = 0.3
-    weight_edge_content = 0.3
-    weight_std_dev = 0.3
+    weight_entropy = 0.6
+    weight_edge_content = 0.2
+    weight_std_dev = 0.2
 
     # 计算综合评估值
     objective_value = (
