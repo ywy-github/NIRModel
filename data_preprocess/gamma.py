@@ -90,11 +90,8 @@ def apply_gamma_to_folder(input_folder, output_folder):
             # 读取图像
             image = Image.open(file_path)
 
-            # 优化伽马值
-            optimal_gamma_values = optimize_gamma(np.array(image))
-
             # 应用优化后的伽马值
-            enhanced_image = apply_gamma(np.array(image), *optimal_gamma_values)
+            enhanced_image = apply_gamma(image,1.5,0.5)
 
             # 保存增强后的图像
             enhanced_image.save(os.path.join(class_output_path, "gamma_" + file_name))
@@ -102,8 +99,8 @@ def apply_gamma_to_folder(input_folder, output_folder):
 
 if __name__ == '__main__':
     # 指定原始图像文件夹和保存增强图像的文件夹
-    input_folder = "../data/一期数据/train"
-    output_folder = "../data/一期gamma/train"
+    input_folder = "../data/一期数据/test"
+    output_folder = "../data/一期gamma/test"
 
     # 应用gamma增强
     apply_gamma_to_folder(input_folder, output_folder)
