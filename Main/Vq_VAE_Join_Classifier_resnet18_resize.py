@@ -318,6 +318,13 @@ class WeightedBinaryCrossEntropyLossWithRegularization(nn.Module):
         total_loss = bce_loss + self.lambda_reg * reg_loss
 
         return total_loss
+def mixup_data(x, y, alpha=1.0):
+    lam = np.random.beta(alpha, alpha)
+    batch_size = x.size()[0]
+    index = torch.randperm(batch_size)
+    mixed_x = lam * x + (1 - lam) * x[index, :]
+    y_a, y_b = y, y[index]
+    return mixed_x, y_a, y_b, lam
 
 if __name__ == '__main__':
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -428,13 +435,14 @@ if __name__ == '__main__':
             data = torch.cat([data] * 3, dim=1)
             data = data.to(device)
             targets = targets.to(device)
+            data, target_a, target_b, lam = mixup_data(data, targets)
             optimizer.zero_grad()
 
             vq_loss, data_recon, perplexity, classifier_outputs = model(data)
 
             data_variance = torch.var(data)
             recon_loss = F.mse_loss(data_recon, data) / data_variance
-            classifier_loss = criterion(targets.view(-1, 1), classifier_outputs)
+            classifier_loss = lam * criterion(target_a.view(-1, 1), classifier_outputs)+ (1 - lam) * criterion(target_b.view(-1, 1), classifier_outputs)
             total_loss = joint_loss_function(recon_loss, vq_loss, classifier_loss, lambda_recon, lambda_vq,
                                              lambda_classifier)
             total_loss.backward()
