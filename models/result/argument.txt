@@ -35,7 +35,24 @@ VQ-VAE-resnet18-resize448+全增强+训练集加入未增强的良性数据
 测试集 acc: 0.7164sen: 0.5517spe: 0.7926 auc: 0.7406loss: 1.6074
 
 
-单gamma矫正：
-19 epoch
-训练集 acc: 0.9947 sen: 0.9967 spe: 0.9937 auc: 0.9990 loss: 69.5208
-验证集 acc: 0.7206 sen: 0.4554 spe: 0.8458 auc: 0.7311 loss: 39.3540
+
+自适应gauss：
+14 epoch
+训练集 acc: 0.8475 sen: 0.8208 spe: 0.8603 auc: 0.9250 loss: 88.7701
+验证集 acc: 0.7079 sen: 0.4653 spe: 0.8224 auc: 0.7244 loss: 20.8482
+测试集 acc: 0.7230sen: 0.5747spe: 0.7906 auc: 0.7368loss: 0.8115
+
+
+双gamma矫正：
+35 epoch
+训练集 acc: 0.9995 sen: 1.0000 spe: 0.9992 auc: 1.0000 loss: 44.6608
+验证集 acc: 0.7619 sen: 0.5644 spe: 0.8551 auc: 0.7491 loss: 37.5617
+测试集 acc: 0.7266sen: 0.6552spe: 0.7592 auc: 0.7478loss: 2.3100
+
+
+三合一：
+12 epoch
+训练集 acc: 0.9733 sen: 0.9796 spe: 0.9702 auc: 0.9938 loss: 110.6570
+验证集 acc: 0.7302 sen: 0.4851 spe: 0.8458 auc: 0.7553 loss: 28.1280
+测试集 acc: 0.7230sen: 0.5287spe: 0.8115 auc: 0.7716loss: 1.5034
+
