@@ -67,6 +67,8 @@ def apply_glcm_to_folder(input_folder, output_folder):
 
             # 保存增强后的图像
             enhanced_image.save(os.path.join(class_output_path, "glcm_" + file_name))
+            break
+        break
 
 
 if __name__ == '__main__':

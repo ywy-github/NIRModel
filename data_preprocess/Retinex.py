@@ -6,18 +6,21 @@ from PIL import Image
 
 
 def single_scale_retinex(image, sigma):
+    # 将PIL Image对象转换为numpy数组
+    image_array = np.array(image)
     # 使用高斯滤波平滑图像
-    blurred = cv2.GaussianBlur(image, (0, 0), sigma)
+    blurred = cv2.GaussianBlur(image_array, (0, 0), sigma)
 
     # 计算图像的对数域表示
-    log_image = np.log1p(image.astype(float))
+    log_image = np.log1p(image_array.astype(float))
     log_blurred = np.log1p(blurred.astype(float))
 
     # 计算反射分量
     reflection = log_image - log_blurred
 
     # 将反射分量映射回0-255范围
-    reflection = (reflection - np.min(reflection)) / (np.max(reflection) - np.min(reflection)) * 255
+    reflection = (reflection - np.min(reflection)) * (255.0 / (np.max(reflection) - np.min(reflection)))
+
 
     return reflection
 
@@ -56,13 +59,20 @@ def apply_retinex_to_folder(input_folder, output_folder):
             # 读取图像
             image = Image.open(file_path)
 
-            scales = [5, 50, 250]
+            scales = [2, 2, 2]
 
             # 应用GLCM增强
             enhanced_image = multi_scale_retinex(image,scales)
 
+            # 将numpy数组转换为PIL Image对象
+            enhanced_image_pil = Image.fromarray(enhanced_image)
+
             # 保存增强后的图像
-            enhanced_image.save(os.path.join(class_output_path, "retinex_" + file_name))
+            enhanced_image_pil.save(os.path.join(class_output_path, "retinex_" + file_name))
+
+            break
+
+        break
 
 
 if __name__ == '__main__':
