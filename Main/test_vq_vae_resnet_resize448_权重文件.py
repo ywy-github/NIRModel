@@ -320,8 +320,8 @@ if __name__ == '__main__':
         transforms.Normalize((0.3281,), (0.2366,))  # 设置均值和标准差
     ])
 
-    test_benign_data = MyData("../data/三合一/test/benign", "benign", transform=transform)
-    test_malignat_data = MyData("../data/三合一/test/malignant", "malignant", transform=transform)
+    test_benign_data = MyData("../data/二期双十/test/benign", "benign", transform=transform)
+    test_malignat_data = MyData("../data/二期双十/test/malignant", "malignant", transform=transform)
     test_data = test_benign_data + test_malignat_data
 
     test_loader = DataLoader(test_data,
@@ -346,7 +346,7 @@ if __name__ == '__main__':
 
     model = Model(encoder, num_embeddings, embedding_dim, commitment_cost, decay).to(device)
 
-    model.load_state_dict(torch.load('../models/VQ-Resnet/VQ-VAE-resnet18-三合一-12.pth'))
+    model.load_state_dict(torch.load('../models/VQ-Resnet/VQ-VAE-resnet18-mixup一二期双十-101.pth'))
 
     criterion = WeightedBinaryCrossEntropyLoss(2)
     criterion.to(device)
