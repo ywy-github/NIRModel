@@ -43,7 +43,7 @@ def compare_and_remove(original_folder, otsu_folder):
 
 
 if __name__ == "__main__":
-    original_folder = "../data/一期数据/ti_test"  # 原始图像文件夹
-    otsu_folder = "../data/一期数据/otsu_test"  # 使用大津法获取有效光照区域后的图像文件夹
+    original_folder = "../data/二期双十/ti_val"  # 原始图像文件夹
+    otsu_folder = "../data/二期双十/otsu_val"  # 使用大津法获取有效光照区域后的图像文件夹
 
     compare_and_remove(original_folder, otsu_folder)
