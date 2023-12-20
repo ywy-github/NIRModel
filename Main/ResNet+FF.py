@@ -98,6 +98,224 @@ class DS(nn.Module):
         x = self.Bn(x)
         x = self.relu(x)
         return x
+class VectorQuantizer(nn.Module):
+    def __init__(self, num_embeddings, embedding_dim, commitment_cost):
+        super(VectorQuantizer, self).__init__()
+
+        self._embedding_dim = embedding_dim
+        self._num_embeddings = num_embeddings
+
+        self._embedding = nn.Embedding(self._num_embeddings, self._embedding_dim)
+        self._embedding.weight.data.uniform_(-1 / self._num_embeddings, 1 / self._num_embeddings)
+        self._commitment_cost = commitment_cost
+
+    def forward(self, inputs):
+        # convert inputs from BCHW -> BHWC
+        inputs = inputs.permute(0, 2, 3, 1).contiguous()
+        input_shape = inputs.shape
+
+        # Flatten input
+        flat_input = inputs.view(-1, self._embedding_dim)
+
+        # Calculate distances
+        distances = (torch.sum(flat_input ** 2, dim=1, keepdim=True)
+                     + torch.sum(self._embedding.weight ** 2, dim=1)
+                     - 2 * torch.matmul(flat_input, self._embedding.weight.t()))
+
+        # Encoding
+        encoding_indices = torch.argmin(distances, dim=1).unsqueeze(1)
+        encodings = torch.zeros(encoding_indices.shape[0], self._num_embeddings, device=inputs.device)
+        encodings.scatter_(1, encoding_indices, 1)
+
+        # Quantize and unflatten
+        quantized = torch.matmul(encodings, self._embedding.weight).view(input_shape)
+
+        # Loss
+        e_latent_loss = F.mse_loss(quantized.detach(), inputs)
+        q_latent_loss = F.mse_loss(quantized, inputs.detach())
+        loss = q_latent_loss + self._commitment_cost * e_latent_loss
+
+        quantized = inputs + (quantized - inputs).detach()
+        avg_probs = torch.mean(encodings, dim=0)
+        perplexity = torch.exp(-torch.sum(avg_probs * torch.log(avg_probs + 1e-10)))
+
+        # convert quantized from BHWC -> BCHW
+        return loss, quantized.permute(0, 3, 1, 2).contiguous(), perplexity, encodings
+
+
+class VectorQuantizerEMA(nn.Module):
+    def __init__(self, num_embeddings, embedding_dim, commitment_cost, decay, epsilon=1e-5):
+        super(VectorQuantizerEMA, self).__init__()
+
+        self._embedding_dim = embedding_dim
+        self._num_embeddings = num_embeddings
+
+        self._embedding = nn.Embedding(self._num_embeddings, self._embedding_dim)
+        self._embedding.weight.data.normal_()
+        self._commitment_cost = commitment_cost
+
+        self.register_buffer('_ema_cluster_size', torch.zeros(num_embeddings))
+        self._ema_w = nn.Parameter(torch.Tensor(num_embeddings, self._embedding_dim))
+        self._ema_w.data.normal_()
+
+        self._decay = decay
+        self._epsilon = epsilon
+
+    def forward(self, inputs):
+        # convert inputs from BCHW -> BHWC
+        inputs = inputs.permute(0, 2, 3, 1).contiguous()
+        input_shape = inputs.shape
+
+        # Flatten input
+        flat_input = inputs.view(-1, self._embedding_dim)
+
+        # Calculate distances
+        distances = (torch.sum(flat_input ** 2, dim=1, keepdim=True)
+                     + torch.sum(self._embedding.weight ** 2, dim=1)
+                     - 2 * torch.matmul(flat_input, self._embedding.weight.t()))
+
+        # Encoding
+        encoding_indices = torch.argmin(distances, dim=1).unsqueeze(1)
+        encodings = torch.zeros(encoding_indices.shape[0], self._num_embeddings, device=inputs.device)
+        encodings.scatter_(1, encoding_indices, 1)
+
+        # Quantize and unflatten
+        quantized = torch.matmul(encodings, self._embedding.weight).view(input_shape)
+
+        # Use EMA to update the embedding vectors
+        if self.training:
+            self._ema_cluster_size = self._ema_cluster_size * self._decay + \
+                                     (1 - self._decay) * torch.sum(encodings, 0)
+
+            # Laplace smoothing of the cluster size
+            n = torch.sum(self._ema_cluster_size.data)
+            self._ema_cluster_size = (
+                    (self._ema_cluster_size + self._epsilon)
+                    / (n + self._num_embeddings * self._epsilon) * n)
+
+            dw = torch.matmul(encodings.t(), flat_input)
+            self._ema_w = nn.Parameter(self._ema_w * self._decay + (1 - self._decay) * dw)
+
+            self._embedding.weight = nn.Parameter(self._ema_w / self._ema_cluster_size.unsqueeze(1))
+
+        # Loss
+        e_latent_loss = F.mse_loss(quantized.detach(), inputs)
+        loss = self._commitment_cost * e_latent_loss
+
+        # Straight Through Estimator
+        quantized = inputs + (quantized - inputs).detach()
+        avg_probs = torch.mean(encodings, dim=0)
+        perplexity = torch.exp(-torch.sum(avg_probs * torch.log(avg_probs + 1e-10)))
+
+        # convert quantized from BHWC -> BCHW
+        return loss, quantized.permute(0, 3, 1, 2).contiguous(), perplexity, encodings
+
+class Encoder(nn.Module):
+    def __init__(self):
+        super(Encoder, self).__init__()
+
+        self.b1 = nn.Sequential(
+            nn.Conv2d(1, 64, kernel_size=7, stride=2, padding=3),
+            nn.BatchNorm2d(64),
+            nn.ReLU(),
+            nn.MaxPool2d(kernel_size=3, stride=2, padding=1)
+        )
+        self.b2 = nn.Sequential(*resnet_block(64, 64, 2, first_block=True))
+        self.b3 = nn.Sequential(*resnet_block(64, 128, 2))
+
+    def forward(self, inputs):
+        x = self.b1(inputs)
+        x = self.b2(x)
+        x = self.b3(x)
+        return x
+
+
+class Decoder(nn.Module):
+    def __init__(self):
+        super(Decoder, self).__init__()
+
+        self.deconv1 = nn.Sequential(
+            nn.ConvTranspose2d(512, 256, kernel_size=4, stride=2, padding=1),
+            nn.ReLU(),
+            nn.MaxPool2d(kernel_size=3, stride=1, padding=1)
+        )
+        self.deconv2 = nn.Sequential(
+            nn.ConvTranspose2d(256, 128, kernel_size=4, stride=2, padding=1),
+            nn.ReLU(),
+            nn.MaxPool2d(kernel_size=3, stride=1, padding=1)
+        )
+        self.deconv3 = nn.Sequential(
+            nn.ConvTranspose2d(128, 64, kernel_size=4, stride=2, padding=1),
+            nn.ReLU(),
+            nn.MaxPool2d(kernel_size=3, stride=1, padding=1)
+        )
+        self.deconv4 = nn.Sequential(
+            nn.ConvTranspose2d(64, 32, kernel_size=4, stride=2, padding=1),
+            nn.ReLU(),
+            nn.MaxPool2d(kernel_size=3, stride=1, padding=1)
+        )
+        self.deconv5 = nn.Sequential(
+            nn.ConvTranspose2d(32, 3, kernel_size=4, stride=2, padding=1),
+            nn.ReLU(),
+            nn.MaxPool2d(kernel_size=3, stride=1, padding=1)
+        )
+
+
+
+    def forward(self, inputs):
+        x = self.deconv1(inputs)
+        x = self.deconv2(x)
+        x = self.deconv3(x)
+        x = self.deconv4(x)
+        x = self.deconv5(x)
+        return x
+
+class Classifier(nn.Module):
+    def __init__(self, input_dim, hidden_dim, num_classes):
+        super(Classifier, self).__init__()
+        self.path = nn.Sequential(
+            nn.Linear(input_dim, hidden_dim),
+            nn.ReLU(),
+            nn.Dropout(0.5),
+            nn.Linear(hidden_dim, hidden_dim // 2),
+            nn.ReLU(),
+            nn.Dropout(0.5),
+            nn.Linear(hidden_dim // 2, num_classes),
+            nn.Sigmoid()
+        )
+    def forward(self, x):
+        x = self.path(x)
+        return x
+
+class Model(nn.Module):
+    def __init__(self,encoder,num_embeddings, embedding_dim, commitment_cost, decay=0):
+        super(Model, self).__init__()
+
+        self._encoder = encoder
+        # self._pre_vq_conv = nn.Conv2d(in_channels=num_hiddens,
+        #                               out_channels=embedding_dim,
+        #                               kernel_size=1,
+        #                               stride=1)
+        if decay > 0.0:
+            self._vq_vae = VectorQuantizerEMA(num_embeddings, embedding_dim,
+                                              commitment_cost, decay)
+        else:
+            self._vq_vae = VectorQuantizer(num_embeddings, embedding_dim,
+                                           commitment_cost)
+
+        self.classifier = Classifier(512*14*14,512,1)
+
+        self._decoder = Decoder()
+
+    def forward(self, x):
+        z = self._encoder(x)
+        # z = self._pre_vq_conv(z)
+        loss, quantized, perplexity, _ = self._vq_vae(z)
+        classifier_outputs = self.classifier(quantized.view(quantized.size(0),-1))
+        x_recon = self._decoder(quantized)
+
+        return loss, x_recon, perplexity, classifier_outputs
+
 def conv3x3(in_planes, out_planes, stride=1, groups=1, dilation=1):
     """3x3 convolution with padding"""
     return nn.Conv2d(in_planes, out_planes, kernel_size=3, stride=stride,
@@ -322,12 +540,25 @@ if __name__ == '__main__':
     torch.backends.cudnn.deterministic = True
     torch.backends.cudnn.benchmark = False
 
-    batch_size = 64
+    batch_size = 16
     epochs = 1000
-    learning_rate = 1e-4
+
+    embedding_dim = 64
+    num_embeddings = 512  # 和encoder输出维度相同，和decoder输入维度相同
+
+    commitment_cost = 0.25
+
+    decay = 0.99
+
+    learning_rate = 1e-5
+
+    lambda_recon = 0.2
+    lambda_vq = 0.2
+    lambda_classifier = 0.6
 
     # 读取数据集
     transform = transforms.Compose([
+        transforms.Resize([448, 448]),
         transforms.ToTensor(),
         transforms.Normalize((0.3281,), (0.2366,))  # 设置均值和标准差
     ])
@@ -362,7 +593,7 @@ if __name__ == '__main__':
                              pin_memory=True,
                              num_workers=8)
 
-    model = resnet18()
+    resnet18 = resnet18()
 
     pretrained_weights_path = 'C:\\Users\\win10\\.cache\\torch\\hub\\checkpoints\\resnet18-f37072fd.pth'
 
@@ -370,40 +601,37 @@ if __name__ == '__main__':
     pretrained_dict = torch.load(pretrained_weights_path)
 
     # 获取自定义模型的参数字典
-    model_dict = model.state_dict()
+    resnet18_dict = resnet18.state_dict()
 
     # 1. 过滤掉不匹配的键（比如自定义模型中可能有不同的层名）
-    pretrained_dict = {k: v for k, v in pretrained_dict.items() if k in model_dict}
+    pretrained_dict = {k: v for k, v in pretrained_dict.items() if k in resnet18_dict}
 
     # 2. 更新自定义模型参数字典
-    model_dict.update(pretrained_dict)
+    resnet18_dict.update(pretrained_dict)
 
     # 3. 将新的参数字典加载到自定义模型中
-    model.load_state_dict(model_dict)
+    resnet18.load_state_dict(resnet18_dict)
+
+    for param in resnet18.parameters():
+        param.requires_grad = False
+
+    for name, param in resnet18.named_parameters():
+        if "layer3" in name:
+            param.requires_grad = True
+        if "layer4" in name:
+            param.requires_grad = True
+        if "fc" in name:
+            param.requires_grad = True
 
     # 调整结构
-    num_hidden = 256
-    model.fc = nn.Sequential(
-        nn.Linear(model.fc.in_features, num_hidden),
-        nn.ReLU(),
-        nn.Dropout(0.5),
-        nn.Linear(num_hidden, 1),
-        nn.Sigmoid()
-    )
+    resnet18 = nn.Sequential(*list(resnet18.children())[:-2])
 
-
-    model = model.to(device)
-    # 将模型的参数移到GPU
-    for param in model.parameters():
-        param.requires_grad = True
-        param = param.to(device)
+    model = Model(resnet18, num_embeddings, embedding_dim, commitment_cost, decay).to(device)
 
     criterion = WeightedBinaryCrossEntropyLoss(2).to(device)
 
-    optimizer = optim.SGD(filter(lambda p: p.requires_grad, model.parameters()), lr=learning_rate)
+    optimizer = optim.Adam(filter(lambda p: p.requires_grad, model.parameters()), lr=learning_rate, amsgrad=False)
 
-    start_time = time.time()  # 记录训练开始时间
-    writer = SummaryWriter("../Logs")
     for epoch in range(epochs):
         model.train()
         train_score = []
@@ -412,6 +640,7 @@ if __name__ == '__main__':
         total_train_loss = 0.0
         for batch in training_loader:
             images, targets, names = batch
+            images = torch.cat([images] * 3, dim=1)
             images = images.to(device)
             # targets = targets.to(torch.float32)
             targets = targets.to(device)
@@ -427,7 +656,6 @@ if __name__ == '__main__':
             train_score.append(output.cpu().detach().numpy())
             train_pred.extend(pred.cpu().numpy())
             train_targets.extend(targets.cpu().numpy())
-        writer.add_scalar('Loss/Train', total_train_loss, epoch)
 
         model.eval()
         val_score = []
@@ -439,6 +667,7 @@ if __name__ == '__main__':
                 images, targets, names = batch
                 # targets = targets.to(torch.float32)
                 images = images.to(device)
+                images = torch.cat([images] * 3, dim=1)
                 targets = targets.to(device)
                 output = model(images)
                 loss = criterion(targets.view(-1, 1), output)
@@ -449,7 +678,6 @@ if __name__ == '__main__':
                 val_score.append(output.flatten().cpu().numpy())
                 val_pred.extend(predicted_labels.cpu().numpy())
                 val_targets.extend(targets.cpu().numpy())
-        writer.add_scalar('Loss/Val', total_val_loss, epoch)
 
         test_score = []
         test_pred = []
@@ -460,6 +688,7 @@ if __name__ == '__main__':
                 images, targets, names = batch
                 # targets = targets.to(torch.float32)
                 images = images.to(device)
+                images = torch.cat([images] * 3, dim=1)
                 targets = targets.to(device)
                 output = model(images)
                 loss = criterion(targets.view(-1, 1), output)
@@ -470,10 +699,9 @@ if __name__ == '__main__':
                 test_score.append(output.flatten().cpu().numpy())
                 test_pred.extend(predicted_labels.cpu().numpy())
                 test_targets.extend(targets.cpu().numpy())
-        writer.add_scalar('Loss/Test', total_test_loss, epoch)
 
-        if ((epoch + 1) == 662):
-            torch.save(model, "../models/VQ-Resnet/resnet18{}.pth".format(epoch + 1))
+        # if ((epoch + 1) == 662):
+        #     torch.save(model, "../models/VQ-Resnet/resnet18{}.pth".format(epoch + 1))
         print('%d epoch' % (epoch + 1))
 
         train_acc, train_sen, train_spe = all_metrics(train_targets, train_pred)
@@ -505,9 +733,3 @@ if __name__ == '__main__':
         print("测试集 acc: {:.4f}".format(test_acc) + " sen: {:.4f}".format(test_sen) +
               " spe: {:.4f}".format(test_spe) + " auc: {:.4f}".format(test_auc) +
               " loss: {:.4f}".format(total_test_loss))
-
-    writer.close()
-    end_time = time.time()
-    training_time = end_time - start_time
-
-    print(f"Training time: {training_time} seconds")
