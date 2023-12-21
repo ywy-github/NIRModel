@@ -4,12 +4,12 @@ import pandas as pd
 
 if __name__ == '__main__':
     # 读取Excel文件
-    excel_file = '../data/一期单10(1539例)+二期双10(947例)+二期双15(726例)-训练测试验证-3212例_20231208.xlsx'
-    df = pd.read_excel(excel_file,sheet_name="二期双15测试148")
+    excel_file = '../data/二期双10双15-质量合格-1078例-20231220.xlsx'
+    df = pd.read_excel(excel_file,sheet_name="test")
 
     # 原始图片文件夹和目标文件夹路径
-    source_folder = '../data/2D15nir'
-    output_folder = '../data/二期双15/test'  # 存放所有数据的主文件夹
+    source_folder = '../data/二期数据'
+    output_folder = '../data/ti_二期数据/test'  # 存放所有数据的主文件夹
 
     # 创建主文件夹
     os.makedirs(output_folder, exist_ok=True)
