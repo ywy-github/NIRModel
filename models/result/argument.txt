@@ -1,6 +1,5 @@
 
 一期
-
 clahe：
 VQ-VAE-resnet18-resize448      未增强
 训练集 acc: 0.9672 sen: 0.9642 spe: 0.9686 auc: 0.9929 loss: 56.6340
@@ -103,3 +102,12 @@ VQ-VAE-resnet18-mixup一二期双十-101
 ti_val: acc: 0.6119sen: 0.5079spe: 0.7042 auc: 0.6222loss: 1.0486
 ti_test: acc: 0.6412sen: 0.6825spe: 0.6029 auc: 0.6615loss: 1.0189
 
+ti-二期双十+双十五：
+67 epoch
+训练集 acc: 0.9318sen: 0.8525spe: 0.9918 auc: 0.9934loss: 0.7546
+验证集 acc: 0.5935 sen: 0.1915 spe: 0.9083 auc: 0.6604 loss: 12.7693
+测试集 acc: 0.5982sen: 0.2500spe: 0.8699 auc: 0.6511loss: 1.1341
+87 epoch
+训练集 acc: 0.6512 sen: 0.7482 spe: 0.5777 auc: 0.6814 loss: 37.5734
+验证集 acc: 0.6495 sen: 0.4468 spe: 0.8083 auc: 0.6535 loss: 12.6646
+测试集 acc: 0.6147sen: 0.4333spe: 0.7579 auc: 0.6128loss: 1.0644
