@@ -61,25 +61,45 @@ Mixup:
 66 epoch
 训练集 acc: 0.6801 sen: 0.6840 spe: 0.6782 auc: 0.7129 loss: 51.7398
 验证集 acc: 0.7587 sen: 0.6832 spe: 0.7944 auc: 0.7902 loss: 16.8578
-测试集 acc: 0.7410sen: 0.6552spe: 0.7801 auc: 0.7781loss: 0.8151
+测试集 acc: 0.7410sen: 0.6552  spe: 0.7801 auc: 0.7781loss: 0.8151
+ti_val:  acc: 0.7474sen: 0.7010spe: 0.7708 auc: 0.7865loss: 0.7682
+ti_测试集： acc: 0.7388sen: 0.7125spe: 0.7515 auc: 0.7933loss: 0.7839
 71 epoch
 训练集 acc: 0.6875 sen: 0.6873 spe: 0.6876 auc: 0.7388 loss: 51.4518
 验证集 acc: 0.7460 sen: 0.6238 spe: 0.8037 auc: 0.7823 loss: 17.0864
 测试集 acc: 0.7590sen: 0.6207spe: 0.8220 auc: 0.7757loss: 0.9465
+ti_val : acc: 0.7370sen: 0.6392spe: 0.7865 auc: 0.7800loss: 0.9630
+ti_test: acc: 0.7551sen: 0.6750spe: 0.7939 auc: 0.7902loss: 0.7369
 98 epoch
 训练集 acc: 0.6917 sen: 0.7003 spe: 0.6876 auc: 0.7214 loss: 50.9614
 验证集 acc: 0.7587 sen: 0.4257 spe: 0.9159 auc: 0.7964 loss: 17.6621
 测试集 acc: 0.7374sen: 0.4598spe: 0.8639 auc: 0.7597loss: 0.7723
 
+ti+mixup:
+VQ-VAE-resnet18-ti-mixup-46
+训练集 acc: 0.6312 sen: 0.7645 spe: 0.5581 auc: 0.6607 loss: 45.7742
+验证集 acc: 0.7439 sen: 0.4433 spe: 0.8958 auc: 0.7782 loss: 15.4738
+测试集 acc: 0.7347sen: 0.5375spe: 0.8303 auc: 0.7542loss: 0.8876
+VQ-VAE-resnet18-ti-mixup-60
+训练集 acc: 0.6336 sen: 0.7747 spe: 0.5562 auc: 0.6635 loss: 44.5866
+验证集 acc: 0.7543 sen: 0.4330 spe: 0.9167 auc: 0.7744 loss: 15.3478
+测试集 acc: 0.7224sen: 0.4750spe: 0.8424 auc: 0.7408loss: 0.9491
+
 
 二期双十：
-73 epoch
+VQ-VAE-resnet18-mixup一二期双十-73
 训练集 acc: 0.5613 sen: 0.7970 spe: 0.3502 auc: 0.5960 loss: 36.8775
 验证集 acc: 0.6230 sen: 0.4505 spe: 0.7800 auc: 0.6400 loss: 11.5711
 测试集 acc: 0.6302sen: 0.5652spe: 0.6900 auc: 0.6416loss: 1.0679
 
-101 epoch
+ti_val: acc: 0.6493sen: 0.5079spe: 0.7746 auc: 0.6469loss: 1.0632
+ti_test: acc: 0.6641sen: 0.6032spe: 0.7206 auc: 0.6771loss: 1.0963
+
+VQ-VAE-resnet18-mixup一二期双十-101
 训练集 acc: 0.5950 sen: 0.8571 spe: 0.3603 auc: 0.6113 loss: 36.7412
 验证集 acc: 0.6283 sen: 0.5385 spe: 0.7100 auc: 0.6336 loss: 11.4340
 测试集 acc: 0.6146sen: 0.6413spe: 0.5900 auc: 0.6387loss: 1.0438
+
+ti_val: acc: 0.6119sen: 0.5079spe: 0.7042 auc: 0.6222loss: 1.0486
+ti_test: acc: 0.6412sen: 0.6825spe: 0.6029 auc: 0.6615loss: 1.0189
 

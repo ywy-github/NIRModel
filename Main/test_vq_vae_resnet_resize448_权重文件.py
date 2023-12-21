@@ -320,8 +320,8 @@ if __name__ == '__main__':
         transforms.Normalize((0.3281,), (0.2366,))  # 设置均值和标准差
     ])
 
-    test_benign_data = MyData("../data/二期双十/test/benign", "benign", transform=transform)
-    test_malignat_data = MyData("../data/二期双十/test/malignant", "malignant", transform=transform)
+    test_benign_data = MyData("../data/二期双十/ti_test/benign", "benign", transform=transform)
+    test_malignat_data = MyData("../data/二期双十/ti_test/malignant", "malignant", transform=transform)
     test_data = test_benign_data + test_malignat_data
 
     test_loader = DataLoader(test_data,
@@ -346,7 +346,7 @@ if __name__ == '__main__':
 
     model = Model(encoder, num_embeddings, embedding_dim, commitment_cost, decay).to(device)
 
-    model.load_state_dict(torch.load('../models/VQ-Resnet/VQ-VAE-resnet18-mixup一二期双十-101.pth'))
+    model.load_state_dict(torch.load('../models/argument/VQ-VAE-resnet18-mixup一二期双十-73.pth'))
 
     criterion = WeightedBinaryCrossEntropyLoss(2)
     criterion.to(device)
@@ -368,7 +368,7 @@ if __name__ == '__main__':
             loss = criterion(targets.view(-1, 1), classifier_outputs)
 
 
-            predicted_labels = (classifier_outputs >= 0.5).int().squeeze()
+            predicted_labels =  (classifier_outputs >= 0.5).int().view(-1)
             # 记录每个样本的dcm_name、预测概率值和标签
             for i in range(len(dcm_names)):
                 test_results.append({'dcm_name': dcm_names[i], 'pred': classifier_outputs[i].item(),

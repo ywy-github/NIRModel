@@ -210,25 +210,6 @@ class VectorQuantizerEMA(nn.Module):
         # convert quantized from BHWC -> BCHW
         return loss, quantized.permute(0, 3, 1, 2).contiguous(), perplexity, encodings
 
-class Encoder(nn.Module):
-    def __init__(self):
-        super(Encoder, self).__init__()
-
-        self.b1 = nn.Sequential(
-            nn.Conv2d(1, 64, kernel_size=7, stride=2, padding=3),
-            nn.BatchNorm2d(64),
-            nn.ReLU(),
-            nn.MaxPool2d(kernel_size=3, stride=2, padding=1)
-        )
-        self.b2 = nn.Sequential(*resnet_block(64, 64, 2, first_block=True))
-        self.b3 = nn.Sequential(*resnet_block(64, 128, 2))
-
-    def forward(self, inputs):
-        x = self.b1(inputs)
-        x = self.b2(x)
-        x = self.b3(x)
-        return x
-
 
 class Decoder(nn.Module):
     def __init__(self):
@@ -521,6 +502,21 @@ class ResNet(nn.Module):
 def resnet18():
     return ResNet(BasicBlock, [2, 2, 2, 2])
 
+def mixup_data(x, y, alpha=1.0):
+    lam = np.random.beta(alpha, alpha)
+    batch_size = x.size()[0]
+    index = torch.randperm(batch_size)
+    mixed_x = lam * x + (1 - lam) * x[index, :]
+    y_a, y_b = y, y[index]
+    return mixed_x, y_a, y_b, lam
+
+def joint_loss_function(recon_loss,vq_loss,classifier_loss,lambda_recon,lambda_vq,lambda_classifier):
+    # 总损失
+    total_loss = lambda_recon * recon_loss + lambda_vq*vq_loss + lambda_classifier * classifier_loss
+
+    return total_loss
+
+
 
 if __name__ == '__main__':
 
@@ -540,7 +536,7 @@ if __name__ == '__main__':
     torch.backends.cudnn.deterministic = True
     torch.backends.cudnn.benchmark = False
 
-    batch_size = 16
+    batch_size = 12
     epochs = 1000
 
     embedding_dim = 64
@@ -579,23 +575,26 @@ if __name__ == '__main__':
                                  batch_size=batch_size,
                                  shuffle=True,
                                  pin_memory=True,
-                                 num_workers=8)
+                                 persistent_workers=True,
+                                 num_workers=12)
 
     validation_loader = DataLoader(val_data,
-                                   batch_size=32,
+                                   batch_size=batch_size,
                                    shuffle=True,
                                    pin_memory=True,
-                                   num_workers=8)
+                                   persistent_workers=True,
+                                   num_workers=1)
 
     test_loader = DataLoader(test_data,
-                             batch_size=32,
+                             batch_size=batch_size,
                              shuffle=True,
                              pin_memory=True,
-                             num_workers=8)
+                             persistent_workers=True,
+                             num_workers=1)
 
     resnet18 = resnet18()
 
-    pretrained_weights_path = 'C:\\Users\\win10\\.cache\\torch\\hub\\checkpoints\\resnet18-f37072fd.pth'
+    pretrained_weights_path = 'C:\\Users\\asus\.cache\\torch\hub\\checkpoints\\resnet18-f37072fd.pth'
 
     # 加载预训练参数
     pretrained_dict = torch.load(pretrained_weights_path)
@@ -632,6 +631,14 @@ if __name__ == '__main__':
 
     optimizer = optim.Adam(filter(lambda p: p.requires_grad, model.parameters()), lr=learning_rate, amsgrad=False)
 
+    train_res_recon_error = []
+    train_res_perplexity = []
+
+    val_res_recon_error = []
+    val_res_perplexity = []
+
+    test_res_recon_error = []
+    test_res_perplexity = []
     for epoch in range(epochs):
         model.train()
         train_score = []
@@ -639,23 +646,34 @@ if __name__ == '__main__':
         train_targets = []
         total_train_loss = 0.0
         for batch in training_loader:
-            images, targets, names = batch
-            images = torch.cat([images] * 3, dim=1)
-            images = images.to(device)
-            # targets = targets.to(torch.float32)
+            data, targets, dcm_names = batch
+            data = torch.cat([data] * 3, dim=1)
+            data = data.to(device)
             targets = targets.to(device)
+            data, target_a, target_b, lam = mixup_data(data, targets)
+
             optimizer.zero_grad()
-            output = model(images)
-            loss = criterion(targets.view(-1, 1), output)
-            loss.backward()
+
+            vq_loss, data_recon, perplexity, classifier_outputs = model(data)
+
+            data_variance = torch.var(data)
+            recon_loss = F.mse_loss(data_recon, data) / data_variance
+            classifier_loss = lam * criterion(target_a.view(-1, 1), classifier_outputs) + (1 - lam) * criterion(
+                target_b.view(-1, 1), classifier_outputs)
+            total_loss = joint_loss_function(recon_loss, vq_loss, classifier_loss, lambda_recon, lambda_vq,
+                                             lambda_classifier)
+            total_loss.backward()
             optimizer.step()
+            # scheduler.step()
 
-            total_train_loss += loss.item()
-            pred = (output >= 0.5).int().squeeze()
-
-            train_score.append(output.cpu().detach().numpy())
-            train_pred.extend(pred.cpu().numpy())
+            predicted_labels = (classifier_outputs >= 0.5).int().view(-1)
+            train_score.append(classifier_outputs.cpu().detach().numpy())
+            train_pred.extend(predicted_labels.cpu().numpy())
             train_targets.extend(targets.cpu().numpy())
+
+            total_train_loss += total_loss
+            train_res_recon_error.append(recon_loss.item())
+            train_res_perplexity.append(perplexity.item())
 
         model.eval()
         val_score = []
@@ -664,20 +682,25 @@ if __name__ == '__main__':
         total_val_loss = 0.0
         with torch.no_grad():
             for batch in validation_loader:
-                images, targets, names = batch
-                # targets = targets.to(torch.float32)
-                images = images.to(device)
-                images = torch.cat([images] * 3, dim=1)
+                data, targets, names = batch
+                data = torch.cat([data] * 3, dim=1)
+                data = data.to(device)
                 targets = targets.to(device)
-                output = model(images)
-                loss = criterion(targets.view(-1, 1), output)
+                vq_loss, data_recon, perplexity, classifier_outputs = model(data)
+                data_variance = torch.var(data)
+                recon_loss = F.mse_loss(data_recon, data) / data_variance
+                classifier_loss = criterion(targets.view(-1, 1), classifier_outputs)
+                total_loss = joint_loss_function(recon_loss, vq_loss, classifier_loss, lambda_recon, lambda_vq,
+                                                 lambda_classifier)
 
-                total_val_loss += loss.item()
-                predicted_labels = (output >= 0.5).int().squeeze()
-
-                val_score.append(output.flatten().cpu().numpy())
+                predicted_labels = (classifier_outputs >= 0.5).int().view(-1)
+                val_score.append(classifier_outputs.flatten().cpu().numpy())
                 val_pred.extend(predicted_labels.cpu().numpy())
                 val_targets.extend(targets.cpu().numpy())
+
+                total_val_loss += total_loss
+                val_res_recon_error.append(recon_loss.item())
+                val_res_perplexity.append(perplexity.item())
 
         test_score = []
         test_pred = []
@@ -685,20 +708,25 @@ if __name__ == '__main__':
         total_test_loss = 0.0
         with torch.no_grad():
             for batch in test_loader:
-                images, targets, names = batch
-                # targets = targets.to(torch.float32)
-                images = images.to(device)
-                images = torch.cat([images] * 3, dim=1)
+                data, targets, names = batch
+                data = torch.cat([data] * 3, dim=1)
+                data = data.to(device)
                 targets = targets.to(device)
-                output = model(images)
-                loss = criterion(targets.view(-1, 1), output)
+                vq_loss, data_recon, perplexity, classifier_outputs = model(data)
+                data_variance = torch.var(data)
+                recon_loss = F.mse_loss(data_recon, data) / data_variance
+                classifier_loss = criterion(targets.view(-1, 1), classifier_outputs)
+                total_loss = joint_loss_function(recon_loss, vq_loss, classifier_loss, lambda_recon, lambda_vq,
+                                                 lambda_classifier)
 
-                total_test_loss += loss.item()
-                predicted_labels = (output >= 0.5).int().squeeze()
-
-                test_score.append(output.flatten().cpu().numpy())
+                predicted_labels = (classifier_outputs >= 0.5).int().view(-1)
+                test_score.append(classifier_outputs.flatten().cpu().numpy())
                 test_pred.extend(predicted_labels.cpu().numpy())
                 test_targets.extend(targets.cpu().numpy())
+
+                total_test_loss += total_loss
+                test_res_recon_error.append(recon_loss.item())
+                test_res_perplexity.append(perplexity.item())
 
         # if ((epoch + 1) == 662):
         #     torch.save(model, "../models/VQ-Resnet/resnet18{}.pth".format(epoch + 1))

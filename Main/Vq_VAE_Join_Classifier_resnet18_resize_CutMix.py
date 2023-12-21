@@ -342,8 +342,8 @@ def rand_bbox(size, lam):
     W = size[2]
     H = size[3]
     cut_rat = np.sqrt(1. - lam)
-    cut_w = np.int(W * cut_rat)
-    cut_h = np.int(H * cut_rat)
+    cut_w = int(W * cut_rat)
+    cut_h = int(H * cut_rat)
 
     # 生成随机的矩形框坐标
     cx = np.random.randint(W)
@@ -383,7 +383,7 @@ if __name__ == '__main__':
     decay = 0.99
 
 
-    learning_rate = 1e-5
+    learning_rate = 1e-4
 
     lambda_recon = 0.2
     lambda_vq = 0.2
@@ -396,12 +396,12 @@ if __name__ == '__main__':
         transforms.Normalize((0.3281,), (0.2366,))  # 设置均值和标准差
     ])
 
-    train_benign_data = MyData("../data/二期双十/train/benign", "benign", transform=transform)
-    train_malignat_data = MyData("../data/二期双十/train/malignant", "malignant", transform=transform)
+    train_benign_data = MyData("../data/一期数据/train/benign", "benign", transform=transform)
+    train_malignat_data = MyData("../data/一期数据/train/malignant", "malignant", transform=transform)
     train_data = train_benign_data + train_malignat_data
 
-    val_benign_data = MyData("../data/二期双十/val/benign", "benign", transform=transform)
-    val_malignat_data = MyData("../data/二期双十/val/malignant", "malignant", transform=transform)
+    val_benign_data = MyData("../data/一期数据/val/benign", "benign", transform=transform)
+    val_malignat_data = MyData("../data/一期数据/val/malignant", "malignant", transform=transform)
     val_data = val_benign_data + val_malignat_data
 
 
@@ -440,11 +440,13 @@ if __name__ == '__main__':
     model = Model(encoder,num_embeddings, embedding_dim, commitment_cost, decay).to(device)
 
 
-    criterion = WeightedBinaryCrossEntropyLoss(1)
+    criterion = WeightedBinaryCrossEntropyLoss(1.8)
     # criterion = WeightedBinaryCrossEntropyLossWithRegularization(2, 0.01)
     criterion.to(device)
     optimizer = optim.Adam(filter(lambda p: p.requires_grad, model.parameters()), lr=learning_rate, amsgrad=False)
-    # scheduler = StepLR(optimizer,10,0.1)
+
+    scheduler = ReduceLROnPlateau(optimizer, mode='min', factor=0.5, patience=20, threshold=0.001)
+
     train_res_recon_error = []
     train_res_perplexity = []
 
@@ -511,12 +513,14 @@ if __name__ == '__main__':
                 val_targets.extend(targets.cpu().numpy())
 
                 total_val_loss += total_loss
+                # 更新学习率
+                scheduler.step(total_val_loss)
                 val_res_recon_error.append(recon_loss.item())
                 val_res_perplexity.append(perplexity.item())
         # writer.add_scalar('Loss/Val', total_val_loss, epoch)
 
-        if ((epoch + 1) == 73 or (epoch + 1) == 101):
-            torch.save(model.state_dict(), "../models/VQ-Resnet/VQ-VAE-resnet18-mixup一二期双十-{}.pth".format(epoch + 1))
+        # if ((epoch + 1) == 73 or (epoch + 1) == 101):
+        #     torch.save(model.state_dict(), "../models/VQ-Resnet/VQ-VAE-resnet18-mixup一二期双十-{}.pth".format(epoch + 1))
         print('%d epoch' % (epoch + 1))
 
         train_acc, train_sen, train_spe = all_metrics(train_targets, train_pred)
@@ -534,6 +538,8 @@ if __name__ == '__main__':
         val_score = np.concatenate(val_score)  # 将列表转换为NumPy数组
         val_targets = np.array(val_targets)
         val_auc = roc_auc_score(val_targets, val_score)
+
+
 
         print("验证集 acc: {:.4f}".format(val_acc) + " sen: {:.4f}".format(val_sen) +
               " spe: {:.4f}".format(val_spe) + " auc: {:.4f}".format(val_auc) +

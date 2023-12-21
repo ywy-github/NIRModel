@@ -329,7 +329,7 @@ def mixup_data(x, y, alpha=1.0):
 if __name__ == '__main__':
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-    seed = 64
+    seed = 128
 
     # 设置 Python 的随机种子
     random.seed(seed)
@@ -367,12 +367,12 @@ if __name__ == '__main__':
         transforms.Normalize((0.3281,), (0.2366,))  # 设置均值和标准差
     ])
 
-    train_benign_data = MyData("../data/三合一/train/benign", "benign", transform=transform)
-    train_malignat_data = MyData("../data/三合一/train/malignant", "malignant", transform=transform)
+    train_benign_data = MyData("../data/一期数据/ti_train/benign", "benign", transform=transform)
+    train_malignat_data = MyData("../data/一期数据/ti_train/malignant", "malignant", transform=transform)
     train_data = train_benign_data + train_malignat_data
 
-    val_benign_data = MyData("../data/三合一/val/benign", "benign", transform=transform)
-    val_malignat_data = MyData("../data/三合一/val/malignant", "malignant", transform=transform)
+    val_benign_data = MyData("../data/一期数据/ti_val/benign", "benign", transform=transform)
+    val_malignat_data = MyData("../data/一期数据/ti_val/malignant", "malignant", transform=transform)
     val_data = val_benign_data + val_malignat_data
 
 
@@ -411,7 +411,7 @@ if __name__ == '__main__':
     model = Model(encoder,num_embeddings, embedding_dim, commitment_cost, decay).to(device)
 
 
-    criterion = WeightedBinaryCrossEntropyLoss(2)
+    criterion = WeightedBinaryCrossEntropyLoss(1.5)
     # criterion = WeightedBinaryCrossEntropyLossWithRegularization(2, 0.01)
     criterion.to(device)
     optimizer = optim.Adam(filter(lambda p: p.requires_grad, model.parameters()), lr=learning_rate, amsgrad=False)
@@ -425,6 +425,9 @@ if __name__ == '__main__':
     start_time = time.time()  # 记录训练开始时间
     # writer = SummaryWriter("../Logs")
     for epoch in range(epochs):
+        # if(epoch+1>40 or epoch+1>80):
+        #     for param_group in optimizer.param_groups:
+        #         param_group['lr'] = param_group['lr']/10
         model.train()
         train_score = []
         train_pred = []
@@ -436,6 +439,7 @@ if __name__ == '__main__':
             data = data.to(device)
             targets = targets.to(device)
             data, target_a, target_b, lam = mixup_data(data, targets)
+
             optimizer.zero_grad()
 
             vq_loss, data_recon, perplexity, classifier_outputs = model(data)
@@ -449,7 +453,7 @@ if __name__ == '__main__':
             optimizer.step()
             # scheduler.step()
 
-            predicted_labels = (classifier_outputs >= 0.5).int().squeeze()
+            predicted_labels = (classifier_outputs >= 0.5).int().view(-1)
             train_score.append(classifier_outputs.cpu().detach().numpy())
             train_pred.extend(predicted_labels.cpu().numpy())
             train_targets.extend(targets.cpu().numpy())
@@ -476,7 +480,7 @@ if __name__ == '__main__':
                 total_loss = joint_loss_function(recon_loss, vq_loss, classifier_loss, lambda_recon, lambda_vq,
                                                  lambda_classifier)
 
-                predicted_labels = (classifier_outputs >= 0.5).int().squeeze()
+                predicted_labels = (classifier_outputs >= 0.5).int().view(-1)
                 val_score.append(classifier_outputs.flatten().cpu().numpy())
                 val_pred.extend(predicted_labels.cpu().numpy())
                 val_targets.extend(targets.cpu().numpy())
@@ -486,8 +490,8 @@ if __name__ == '__main__':
                 val_res_perplexity.append(perplexity.item())
         # writer.add_scalar('Loss/Val', total_val_loss, epoch)
 
-        if ((epoch + 1) == 12):
-            torch.save(model.state_dict(), "../models/VQ-Resnet/VQ-VAE-resnet18-三合一-{}.pth".format(epoch + 1))
+        if ((epoch + 1) == 46 or (epoch + 1) == 60):
+            torch.save(model.state_dict(), "../models/VQ-Resnet/VQ-VAE-resnet18-ti-mixup-{}.pth".format(epoch + 1))
         print('%d epoch' % (epoch + 1))
 
         train_acc, train_sen, train_spe = all_metrics(train_targets, train_pred)
@@ -514,6 +518,7 @@ if __name__ == '__main__':
         print('train_perplexity: %.3f' % np.mean(train_res_perplexity[-10:]))
         print('val_recon_error: %.3f' % np.mean(val_res_recon_error[-10:]))
         print('val_perplexity: %.3f' % np.mean(val_res_perplexity[-10:]))
+
     # writer.close()
     # 结束训练时间
     end_time = time.time()
