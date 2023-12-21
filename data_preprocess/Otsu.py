@@ -43,8 +43,8 @@ def apply_otsu_to_folder(input_folder, output_folder):
 
 if __name__ == '__main__':
     # 指定原始图像文件夹和保存增强图像的文件夹
-    input_folder = "../data/二期双十/val"
-    output_folder = "../data/二期双十/otsu_val"
+    input_folder = "../data/筛查有病理数据_一期_52例/test"
+    output_folder = "../data/筛查有病理数据_一期_52例/otsu_test"
 
     # 应用otsu
     apply_otsu_to_folder(input_folder, output_folder)
