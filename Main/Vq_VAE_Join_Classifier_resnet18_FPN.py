@@ -161,6 +161,82 @@ class Residual(nn.Module):  #@save
         Y += X
         return F.relu(Y)
 
+class oneConv(nn.Module):
+    # 卷积+ReLU函数
+    def __init__(self, in_channels, out_channels, kernel_sizes, paddings, dilations):
+        super().__init__()
+        self.conv = nn.Sequential(
+            nn.Conv2d(in_channels, out_channels, kernel_size = kernel_sizes, padding = paddings, dilation = dilations, bias=False),###, bias=False
+            # nn.BatchNorm2d(out_channels),
+            # nn.ReLU(inplace=True),
+        )
+
+    def forward(self, x):
+        x = self.conv(x)
+        return x
+
+class CSFblock(nn.Module):
+    ###联合网络
+    def __init__(self, in_channels, channels_1, strides):
+        super().__init__()
+        # self.layer = nn.Conv1d(in_channels, 512, kernel_size = 1, padding = 0, dilation = 1)
+        self.Up = nn.Sequential(
+            # nn.MaxPool2d(kernel_size = int(strides*2+1), stride = strides, padding = strides),
+            nn.ConvTranspose2d(in_channels, in_channels, kernel_size=2, stride=strides, padding=0),
+            nn.BatchNorm2d(in_channels),
+            nn.ReLU(),
+        )
+        self.Fgp = nn.AdaptiveAvgPool2d(1)
+        self.layer1 = nn.Sequential(
+            oneConv(in_channels, channels_1, 1, 0, 1),
+            oneConv(channels_1, in_channels, 1, 0, 1),
+
+        )
+        self.SE1 = oneConv(in_channels, in_channels, 1, 0, 1)
+        self.SE2 = oneConv(in_channels, in_channels, 1, 0, 1)
+        self.softmax = nn.Softmax(dim=2)
+
+    def forward(self, x_h, x_l):
+        x1 = x_h
+        x2 = self.Up(x_l)
+
+        x_f = x1 + x2
+        # print(x_f.size())
+        Fgp = self.Fgp(x_f)
+        # print(Fgp.size())
+        x_se = self.layer1(Fgp)
+        x_se1 = self.SE1(x_se)
+        x_se2 = self.SE2(x_se)
+        x_se = torch.cat([x_se1, x_se2], 2)
+        x_se = self.softmax(x_se)
+        att_3 = torch.unsqueeze(x_se[:, :, 0], 2)
+        att_5 = torch.unsqueeze(x_se[:, :, 1], 2)
+        x1 = att_3 * x1
+        x2 = att_5 * x2
+        x_all = x1 + x2
+        return x_all
+
+
+class FPN(nn.Module):
+    def __init__(self):
+        super(FPN, self).__init__()
+        self.maxpool = nn.MaxPool2d(kernel_size = 3, stride = 2, padding = 1)
+        self.CSF1 = CSFblock(128,32,2)
+        self.CSF2 = CSFblock(128,32,2)
+        self.GAP =  nn.AdaptiveAvgPool2d(1)
+    def forward(self, x):
+        x1 = self.maxpool(x)
+        x2 = self.maxpool(x1)
+        x3 = self.maxpool(x2)
+        x3 = x3
+        x2 = self.CSF1(x2,x3)
+        x1 = self.CSF2(x1,x2)
+        x3 = self.GAP(x3).squeeze(-1).squeeze(-1)
+        x2 = self.GAP(x2).squeeze(-1).squeeze(-1)
+        x1 = self.GAP(x1).squeeze(-1).squeeze(-1)
+        results = torch.cat([x3,x2,x1],1)
+        return results
+
 
 class Decoder(nn.Module):
     def __init__(self):
@@ -229,6 +305,7 @@ class Model(nn.Module):
         #                               kernel_size=1,
         #                               stride=1)
 
+        self.FPN = FPN
         if decay > 0.0:
             self._vq_vae = VectorQuantizerEMA(num_embeddings, embedding_dim,
                                               commitment_cost, decay)
@@ -243,6 +320,7 @@ class Model(nn.Module):
 
     def forward(self, x):
         z = self._encoder(x)
+        z = self.FPN(z)
         # z = self._pre_vq_conv(z)
         loss, quantized, perplexity, _ = self._vq_vae(z)
         classifier_outputs = self.classifier(quantized.view(quantized.size(0),-1))
@@ -378,7 +456,7 @@ if __name__ == '__main__':
     training_loader = DataLoader(train_data,
                                  batch_size=batch_size,
                                  shuffle=True,
-                                 num_workers=8,
+                                 num_workers=1,
                                  persistent_workers=True,
                                  pin_memory=True
                                  )
@@ -386,7 +464,7 @@ if __name__ == '__main__':
     validation_loader = DataLoader(val_data,
                                    batch_size=batch_size,
                                    shuffle=True,
-                                   num_workers=8,
+                                   num_workers=1,
                                    persistent_workers=True,
                                    pin_memory=True
                                   )
