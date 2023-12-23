@@ -1,6 +1,7 @@
+import math
 import random
 import time
-
+import basicblock as B
 import numpy as np
 import torch
 from matplotlib import pyplot as plt
@@ -71,6 +72,176 @@ class CSFblock(nn.Module):
         return x_all
 
 
+class ChannelAttentionModule(nn.Module):
+    def __init__(self, channel, ratio=4):  ####16
+        super(ChannelAttentionModule, self).__init__()
+        self.avg_pool = nn.AdaptiveAvgPool2d(1)
+        self.max_pool = nn.AdaptiveMaxPool2d(1)
+
+        self.shared_MLP = nn.Sequential(
+            nn.Conv2d(channel, channel // ratio, 1, bias=False),
+            nn.ReLU(),
+            nn.Conv2d(channel // ratio, channel, 1, bias=False)
+        )
+
+        self.sigmoid = nn.Sigmoid()
+
+    def forward(self, x):
+        avgout = self.shared_MLP(self.avg_pool(x))
+        maxout = self.shared_MLP(self.max_pool(x))
+        return self.sigmoid(avgout + maxout)
+
+
+class SpatialAttentionModule(nn.Module):
+    def __init__(self):
+        super(SpatialAttentionModule, self).__init__()
+        self.conv2d = nn.Conv2d(in_channels=2, out_channels=1, kernel_size=15, stride=1, padding=7)  ####kernel_size=7
+        self.sigmoid = nn.Sigmoid()
+
+    def forward(self, x):
+        avgout = torch.mean(x, dim=1, keepdim=True)
+        maxout, _ = torch.max(x, dim=1, keepdim=True)
+        out = torch.cat([avgout, maxout], dim=1)
+        out = self.sigmoid(self.conv2d(out))
+        return out
+
+class CBAM(nn.Module):
+    def __init__(self, channel):
+        super(CBAM, self).__init__()
+        self.channel_attention = ChannelAttentionModule(channel)
+        self.spatial_attention = SpatialAttentionModule()
+
+    def forward(self, x):
+        out = self.channel_attention(x) * x
+        #print(out.size())
+        out = self.spatial_attention(out) * out
+        return out
+
+
+class ASPPConv(nn.Sequential):
+    def __init__(self, in_channels, out_channels, dilation):
+        modules = [
+            nn.Conv2d(in_channels, out_channels, 3, padding=dilation, dilation=dilation, bias=False),#groups = in_channels
+            nn.BatchNorm2d(out_channels),
+            nn.ReLU()
+        ]
+        super(ASPPConv, self).__init__(*modules)
+class ASPP(nn.Module):
+    def __init__(self, in_channels, atrous_rates):
+        super(ASPP, self).__init__()
+        out_channels = in_channels
+        modules = []
+        modules.append(nn.Sequential(
+            nn.Conv2d(in_channels, out_channels, 1, bias=False),
+            nn.BatchNorm2d(out_channels),
+            nn.ReLU()))
+        rate1, rate2, rate3 = tuple(atrous_rates)
+        modules.append(ASPPConv(in_channels, out_channels, rate1))
+        modules.append(ASPPConv(in_channels, out_channels, rate2))
+        modules.append(ASPPConv(in_channels, out_channels, rate3))
+        modules.append(CBAM(in_channels))#ASPPPooling(in_channels, out_channels)selfAttention(64,192*192,192*192)
+        self.convs = nn.ModuleList(modules)
+        self.project = nn.Sequential(
+            nn.Conv2d(5 * out_channels, out_channels, 1, bias=False),
+            nn.BatchNorm2d(out_channels),
+            nn.ReLU(),)
+            #nn.Dropout(0.5))
+    def forward(self, x):
+        res = []
+        for conv in self.convs:
+            res.append(conv(x))
+        res = torch.cat(res, dim=1)
+        return self.project(res)
+
+class MFEblock(nn.Module):
+    def __init__(self, in_channels, atrous_rates):
+        super(MFEblock, self).__init__()
+        out_channels = in_channels
+        # modules = []
+        # modules.append(nn.Sequential(
+            # nn.Conv2d(in_channels, out_channels, 1, bias=False),
+            # nn.BatchNorm2d(out_channels),
+            # nn.ReLU()))
+        rate1, rate2, rate3 = tuple(atrous_rates)
+        self.layer1 = nn.Sequential(
+            nn.Conv2d(in_channels, out_channels, 3, padding=1, dilation=1, bias=False),#groups = in_channels , bias=False
+            nn.BatchNorm2d(out_channels),
+            nn.ReLU())
+        self.layer2 = ASPPConv(in_channels, out_channels, rate1)
+        self.layer3 = ASPPConv(in_channels, out_channels, rate2)
+        self.layer4 = ASPPConv(in_channels, out_channels, rate3)
+        self.project = nn.Sequential(
+            nn.Conv2d(out_channels, out_channels, 1, bias=False),
+            nn.BatchNorm2d(out_channels),
+            nn.ReLU(),)
+            #nn.Dropout(0.5))
+        self.gap = nn.AdaptiveAvgPool2d(1)
+        self.softmax = nn.Softmax(dim = 2)
+        self.softmax_1 = nn.Sigmoid()
+        self.SE1 = oneConv(in_channels,in_channels,1,0,1)
+        self.SE2 = oneConv(in_channels,in_channels,1,0,1)
+        self.SE3 = oneConv(in_channels,in_channels,1,0,1)
+        self.SE4 = oneConv(in_channels,in_channels,1,0,1)
+    def forward(self, x):
+        y0 = self.layer1(x)
+        y1 = self.layer2(y0+x)
+        y2 = self.layer3(y1+x)
+        y3 = self.layer4(y2+x)
+        #res = torch.cat([y0,y1,y2,y3], dim=1)
+        y0_weight = self.SE1(self.gap(y0))
+        y1_weight = self.SE2(self.gap(y1))
+        y2_weight = self.SE3(self.gap(y2))
+        y3_weight = self.SE4(self.gap(y3))
+        weight = torch.cat([y0_weight,y1_weight,y2_weight,y3_weight],2)
+        weight = self.softmax(self.softmax_1(weight))
+        y0_weight = torch.unsqueeze(weight[:,:,0],2)
+        y1_weight = torch.unsqueeze(weight[:,:,1],2)
+        y2_weight = torch.unsqueeze(weight[:,:,2],2)
+        y3_weight = torch.unsqueeze(weight[:,:,3],2)
+        x_att = y0_weight*y0+y1_weight*y1+y2_weight*y2+y3_weight*y3
+        return self.project(x_att+x)
+
+
+class SRResNet(nn.Module):
+    def __init__(self, in_nc=3, out_nc=3, nc=64, nb=3, upscale=4, act_mode='L',
+                 upsample_mode='pixelshuffle'):  ##act_mode='L'3;2  128
+        super(SRResNet, self).__init__()
+        n_upscale = int(math.log(upscale, 2))
+        if upscale == 3:
+            n_upscale = 1
+
+        m_head = B.conv(in_nc, nc, mode='C')
+        m_body = [MFEblock(nc, [2, 4, 8]) for _ in range(nb)]
+        # m_body = [B.ResBlock(nc, nc, mode='C'+act_mode+'C') for _ in range(15)]
+        # m_body.append([MFEblock(nc,[2,4,8]) for _ in range(1)])
+        m_body.append(B.conv(nc, nc, mode='C'))
+
+        if upsample_mode == 'upconv':
+            upsample_block = B.upsample_upconv
+        elif upsample_mode == 'pixelshuffle':
+            upsample_block = B.upsample_pixelshuffle
+        elif upsample_mode == 'convtranspose':
+            upsample_block = B.upsample_convtranspose
+        else:
+            raise NotImplementedError('upsample mode [{:s}] is not found'.format(upsample_mode))
+        if upscale == 3:
+            m_uper = upsample_block(nc, nc, mode='3' + act_mode)
+        else:
+            m_uper = [upsample_block(nc, nc, mode='2' + act_mode) for _ in range(n_upscale)]
+
+        H_conv0 = B.conv(nc, nc, mode='C' + act_mode)
+        H_conv1 = B.conv(nc, out_nc, bias=False, mode='C')
+        m_tail = B.sequential(H_conv0, H_conv1)
+
+        self.backbone = B.sequential(m_head, B.ShortcutBlock(B.sequential(*m_body)))
+
+        self.up = B.sequential(*m_uper, m_tail)
+
+    def forward(self, x):
+        SR_feature = self.backbone(x)
+        SR = self.up(SR_feature)
+        return SR_feature, SR
+
 class FPN(nn.Module):
     def __init__(self):
         super(FPN, self).__init__()
@@ -90,24 +261,46 @@ class FPN(nn.Module):
         x1 = self.GAP(x1).squeeze(-1).squeeze(-1)
         results = torch.cat([x3,x2,x1],1)
         return results
+class Classifier(nn.Module):
+    def __init__(self, input_dim, hidden_dim, num_classes):
+        super(Classifier, self).__init__()
+        self.path = nn.Sequential(
+            nn.Linear(input_dim, hidden_dim),
+            nn.ReLU(),
+            nn.Dropout(0.5),
+            nn.Linear(hidden_dim, hidden_dim // 2),
+            nn.ReLU(),
+            nn.Dropout(0.5),
+            nn.Linear(hidden_dim // 2, num_classes),
+            nn.Sigmoid()
+        )
+    def forward(self, x):
+        x = self.path(x)
+        return x
 
 class CF(nn.Module):
-    def __init__(self, class_num):
+    def __init__(self,backbone):
         super(CF, self).__init__()
-        self.backbone = SK.SKNet26(2)
+        self.backbone = backbone
         self.FPN = FPN()
-        self.fc = nn.Sequential(
-                  nn.Linear(384, 256),
-                  nn.Dropout(0.1),
-                  nn.ReLU(),
-                  nn.Linear(256, 2),
-                  )
+        self.fc = Classifier(512*14*14,512,1)
     def forward(self, x):
         feature = self.backbone(x)
         #print(feature.size())
         feature = self.FPN(feature)
         results = self.fc(feature)
-        return feature,results
+        return results
+
+
+class SIHSRCNet(nn.Module):
+    def __init__(self, ):
+        super(SIHSRCNet, self).__init__()
+        self.SRNet = SRResNet()
+        self.classNet = CF(2)
+    def forward(self, x, y):
+        _,SR = self.SRNet(x)
+        results, feature = self.classNet(SR)
+        return SR,results,feature
 
 # 定义自定义损失函数，加权二进制交叉熵
 class WeightedBinaryCrossEntropyLoss(nn.Module):
@@ -131,7 +324,7 @@ if __name__ == '__main__':
 
     # 读取数据集
     transform = transforms.Compose([
-        transforms.Resize([448, 448]),
+        transforms.Resize([224, 224]),
         transforms.ToTensor(),
         transforms.Normalize((0.3281,), (0.2366,))  # 设置均值和标准差
     ])
