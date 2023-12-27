@@ -66,6 +66,7 @@ Mixup:
 测试集 acc: 0.7410sen: 0.6552  spe: 0.7801 auc: 0.7781loss: 0.8151
 ti_val:  acc: 0.7474sen: 0.7010spe: 0.7708 auc: 0.7865loss: 0.7682
 ti_测试集： acc: 0.7388sen: 0.7125spe: 0.7515 auc: 0.7933loss: 0.7839
+qc测试集 acc: 0.7434sen: 0.6769spe: 0.7702 auc: 0.7955loss: 0.6977
 71 epoch
 训练集 acc: 0.6875 sen: 0.6873 spe: 0.6876 auc: 0.7388 loss: 51.4518
 验证集 acc: 0.7460 sen: 0.6238 spe: 0.8037 auc: 0.7823 loss: 17.0864
