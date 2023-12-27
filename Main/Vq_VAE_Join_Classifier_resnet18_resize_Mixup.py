@@ -367,12 +367,12 @@ if __name__ == '__main__':
         transforms.Normalize((0.3281,), (0.2366,))  # 设置均值和标准差
     ])
 
-    train_benign_data = MyData("../data/ti_二期数据/train/benign", "benign", transform=transform)
-    train_malignat_data = MyData("../data/ti_二期数据/train/malignant", "malignant", transform=transform)
+    train_benign_data = MyData("../data/二期双十+双十五/train/benign", "benign", transform=transform)
+    train_malignat_data = MyData("../data/二期双十+双十五/train/malignant", "malignant", transform=transform)
     train_data = train_benign_data + train_malignat_data
 
-    val_benign_data = MyData("../data/ti_二期数据/val/benign", "benign", transform=transform)
-    val_malignat_data = MyData("../data/ti_二期数据/val/malignant", "malignant", transform=transform)
+    val_benign_data = MyData("../data/二期双十/val/benign", "benign", transform=transform)
+    val_malignat_data = MyData("../data/二期双十/val/malignant", "malignant", transform=transform)
     val_data = val_benign_data + val_malignat_data
 
 
@@ -425,9 +425,9 @@ if __name__ == '__main__':
     start_time = time.time()  # 记录训练开始时间
     # writer = SummaryWriter("../Logs")
     for epoch in range(epochs):
-        # if(epoch+1>40 or epoch+1>80):
+        # if((epoch+1) % 10 == 0):
         #     for param_group in optimizer.param_groups:
-        #         param_group['lr'] = param_group['lr']/10
+        #         param_group['lr'] = param_group['lr'] * 0.8
         model.train()
         train_score = []
         train_pred = []
@@ -490,8 +490,8 @@ if __name__ == '__main__':
                 val_res_perplexity.append(perplexity.item())
         # writer.add_scalar('Loss/Val', total_val_loss, epoch)
 
-        if ((epoch + 1) == 67 or (epoch + 1) == 87):
-            torch.save(model.state_dict(), "../models/VQ-Resnet/VQ-VAE-resnet18-ti-双十+双十五-{}.pth".format(epoch + 1))
+        # if ((epoch + 1) == 67 or (epoch + 1) == 87):
+        #     torch.save(model.state_dict(), "../models/VQ-Resnet/VQ-VAE-resnet18-ti-双十+双十五-{}.pth".format(epoch + 1))
         print('%d epoch' % (epoch + 1))
 
         train_acc, train_sen, train_spe = all_metrics(train_targets, train_pred)

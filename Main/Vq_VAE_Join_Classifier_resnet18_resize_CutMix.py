@@ -237,7 +237,7 @@ class Model(nn.Module):
                                            commitment_cost)
 
 
-        self.classifier = Classifier(512*14*14,512,1)
+        self.classifier = Classifier(512*21*21,512,1)
 
         self._decoder = Decoder()
 
@@ -353,7 +353,7 @@ if __name__ == '__main__':
     decay = 0.99
 
 
-    learning_rate = 1e-4
+    learning_rate = 1e-5
 
     lambda_recon = 0.2
     lambda_vq = 0.2
@@ -378,7 +378,7 @@ if __name__ == '__main__':
     training_loader = DataLoader(train_data,
                                  batch_size=batch_size,
                                  shuffle=True,
-                                 num_workers=8,
+                                 num_workers=1,
                                  persistent_workers=True,
                                  pin_memory=True
                                  )
@@ -386,7 +386,7 @@ if __name__ == '__main__':
     validation_loader = DataLoader(val_data,
                                    batch_size=batch_size,
                                    shuffle=True,
-                                   num_workers=8,
+                                   num_workers=1,
                                    persistent_workers=True,
                                    pin_memory=True
                                   )
@@ -410,12 +410,12 @@ if __name__ == '__main__':
     model = Model(encoder,num_embeddings, embedding_dim, commitment_cost, decay).to(device)
 
 
-    criterion = WeightedBinaryCrossEntropyLoss(1.8)
+    criterion = WeightedBinaryCrossEntropyLoss(2)
     # criterion = WeightedBinaryCrossEntropyLossWithRegularization(2, 0.01)
     criterion.to(device)
     optimizer = optim.Adam(filter(lambda p: p.requires_grad, model.parameters()), lr=learning_rate, amsgrad=False)
 
-    scheduler = ReduceLROnPlateau(optimizer, mode='min', factor=0.5, patience=20, threshold=0.001)
+    # scheduler = ReduceLROnPlateau(optimizer, mode='min', factor=0.5, patience=20, threshold=0.001)
 
     train_res_recon_error = []
     train_res_perplexity = []
@@ -484,7 +484,7 @@ if __name__ == '__main__':
 
                 total_val_loss += total_loss
                 # 更新学习率
-                scheduler.step(total_val_loss)
+                # scheduler.step(total_val_loss)
                 val_res_recon_error.append(recon_loss.item())
                 val_res_perplexity.append(perplexity.item())
         # writer.add_scalar('Loss/Val', total_val_loss, epoch)

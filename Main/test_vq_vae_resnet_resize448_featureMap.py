@@ -8,6 +8,8 @@ import pandas as pd
 
 import torch.nn as nn
 import torch.nn.functional as F
+from matplotlib import pyplot as plt
+from sklearn.manifold import TSNE
 from sklearn.metrics import roc_auc_score
 
 from torch.utils.data import DataLoader
@@ -20,6 +22,8 @@ import numpy as np
 
 from Metrics import all_metrics
 from data_loader import MyData
+from data_preprocess.deffrence import plot_embedding_3D, plot_embedding_2D
+
 
 class VectorQuantizer(nn.Module):
     def __init__(self, num_embeddings, embedding_dim, commitment_cost):
@@ -274,7 +278,7 @@ class Model(nn.Module):
         classifier_outputs = self.classifier(quantized.view(quantized.size(0),-1))
         x_recon = self._decoder(quantized)
 
-        return loss, x_recon, perplexity, classifier_outputs
+        return loss, x_recon, perplexity, classifier_outputs,quantized
 
 # 定义联合模型的损失函数
 def joint_loss_function(recon_loss,vq_loss,classifier_loss,lambda_recon,lambda_vq,lambda_classifier):
@@ -293,6 +297,30 @@ class WeightedBinaryCrossEntropyLoss(nn.Module):
         y_true = y_true.to(dtype=torch.float32)
         loss = - (self.weight_positive * y_true * torch.log(y_pred + 1e-7) + (1 - y_true) * torch.log(1 - y_pred + 1e-7))
         return torch.mean(loss)
+
+def get_feature_maps(loader):
+    all_feature_maps = []
+
+    for batch in loader:
+        data, targets, _ = batch
+        data = torch.cat([data] * 3, dim=1)
+        data = data.to(device)
+
+        # 获取 quantized 特征图
+        _, _, _, _, quantized_feature_maps = model(data)
+
+        # 将 quantized 特征图转换为 Numpy 数组
+        quantized_feature_maps_np = quantized_feature_maps.cpu().detach().numpy()
+
+        # 将三维特征图展平为二维
+        flattened_feature_maps = quantized_feature_maps_np.reshape(quantized_feature_maps_np.shape[0], -1)
+
+
+        all_feature_maps.append(flattened_feature_maps)
+
+
+    return np.vstack(all_feature_maps)
+
 if __name__ == '__main__':
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
@@ -310,71 +338,52 @@ if __name__ == '__main__':
         transforms.Normalize((0.3281,), (0.2366,))  # 设置均值和标准差
     ])
 
-    test_benign_data = MyData("../data/筛查有病理数据_一期_52例/ti_test_clahe/benign", "benign", transform=transform)
-    test_malignat_data = MyData("../data/筛查有病理数据_一期_52例/ti_test_clahe/malignant", "malignant", transform=transform)
-    test_data = test_benign_data + test_malignat_data
+    val_benign_data = MyData("../data/一期数据/new_val/benign", "benign", transform=transform)
+    val_malignat_data = MyData("../data/一期数据/new_val/malignant", "malignant",transform=transform)
+    # val_data = val_benign_data + val_malignat_data
 
-    test_loader = DataLoader(test_data,
+
+    # test_benign_data = MyData("../data/筛查有病理数据_一期_52例/test_clahe/benign", "benign", transform=transform)
+    test_malignat_data = MyData("../data/筛查有病理数据_一期_52例/test_clahe/malignant", "malignant", transform=transform)
+    # test_data = test_benign_data + test_malignat_data
+
+    val_benign_loader = DataLoader(val_benign_data,
+                            batch_size=batch_size,
+                            shuffle=True,
+                            pin_memory=True)
+
+    val_malignant_loader = DataLoader(val_malignat_data,
+                             batch_size=batch_size,
+                             shuffle=True,
+                             pin_memory=True)
+
+    test_loader = DataLoader(test_malignat_data,
                              batch_size=batch_size,
                              shuffle=True,
                              pin_memory=True)
 
     model = torch.load("../models/argument/VQ-VAE-resnet18-resize448+clahe+加入训练集-20.pth", map_location=device)
 
-    criterion = WeightedBinaryCrossEntropyLoss(2)
-    criterion.to(device)
+    # 获取两个数据集的 feature map 和对应的标签
+    feature_maps_dataset1 = get_feature_maps(val_benign_loader)
+    feature_maps_dataset2 = get_feature_maps(test_loader)
+    feature_maps_dataset3 = get_feature_maps(val_malignant_loader)
+    targets_dataset1 = np.full(feature_maps_dataset1.shape[0], 1)
+    targets_dataset2 = np.full(feature_maps_dataset2.shape[0], 0)
+    targets_dataset3 = np.full(feature_maps_dataset3.shape[0], 2)
+    # 合并两个数据集的 feature map 和标签
+    all_feature_maps = np.vstack([feature_maps_dataset1, feature_maps_dataset2,feature_maps_dataset3])
+    all_targets = np.concatenate([targets_dataset1, targets_dataset2,targets_dataset3])
 
-    test_pred = []
-    test_predictions = []
-    test_targets = []
-    test_results = []
-    total_test_loss = []
-    model.eval()
-    with torch.no_grad():
-        for batch in test_loader:
-            data, targets, dcm_names = batch
-            data = torch.cat([data] * 3, dim=1)
-            data = data.to(device)
-            targets = targets.to(device)
-            vq_loss, data_recon, perplexity, classifier_outputs = model(data)
-            loss = criterion(targets.view(-1, 1), classifier_outputs)
-
-
-            predicted_labels = (classifier_outputs >= 0.5).int().squeeze()
-            # 记录每个样本的dcm_name、预测概率值和标签
-            for i in range(len(dcm_names)):
-                test_results.append({'dcm_name': dcm_names[i], 'pred': classifier_outputs[i].item(),
-                                     'prob': predicted_labels[i].item(), 'label': targets[i].item()})
-            test_predictions.extend(predicted_labels.cpu().numpy())
-            test_targets.extend(targets.cpu().numpy())
-            total_test_loss.append(loss.item())
-            test_pred.append(classifier_outputs.flatten().cpu().numpy())
-            # concat = torch.cat((data[0].view(128, 128),
-            #                     data_recon[0].view(128, 128)), 1)
-            # plt.matshow(concat.cpu().detach().numpy())
-            # plt.show()
-
-
-
-    test_acc, test_sen, test_spe = all_metrics(test_targets, test_predictions)
-
-    test_pred = np.concatenate(test_pred)  # 将列表转换为NumPy数组
-    test_targets = np.array(test_targets)
-    test_auc = roc_auc_score(test_targets, test_pred)
-
-    print("测试集 acc: {:.4f}".format(test_acc) + "sen: {:.4f}".format(test_sen) +
-          "spe: {:.4f}".format(test_spe) + " auc: {:.4f}".format(test_auc) + "loss: {:.4f}".format(
-        np.mean(total_test_loss[-10:])))
-
-    df = pd.DataFrame(test_results)
-    # filename = '../models/result/VQ-VAE-resnet18-一期全增强-扩充训练集.xlsx'
-    #
-    # # 检查文件是否存在
-    # if not os.path.isfile(filename):
-    #     # 如果文件不存在，创建新文件并保存数据到 Sheet1
-    #     df.to_excel(filename, sheet_name='train', index=False)
-    # else:
-    #     # 如果文件已经存在，打开现有文件并保存数据到 Sheet2
-    #     with pd.ExcelWriter(filename, engine='openpyxl', mode='a') as writer:
-    #         df.to_excel(writer, sheet_name='train', index=False)
+    print('Begining......')  # 时间会较长，所有处理完毕后给出finished提示
+    # tsne_2D = TSNE(n_components=2, init='pca', random_state=0, perplexity=50.0)  # 调用TSNE
+    # result_2D = tsne_2D.fit_transform(all_feature_maps)
+    tsne_3D = TSNE(n_components=3, init='pca', random_state=20, perplexity=10.0)
+    result_3D = tsne_3D.fit_transform(all_feature_maps)
+    print('Finished......')
+    # # 调用上面的两个函数进行可视化
+    # fig1 = plot_embedding_2D(result_2D, all_targets, 't-SNE')
+    # fig1.show()
+    fig2 = plot_embedding_3D(result_3D, all_targets, 't-SNE')
+    plt.show()
 

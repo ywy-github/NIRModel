@@ -221,8 +221,8 @@ class FPN(nn.Module):
     def __init__(self):
         super(FPN, self).__init__()
         self.maxpool = nn.MaxPool2d(kernel_size = 3, stride = 2, padding = 1)
-        self.CSF1 = CSFblock(128,32,2)
-        self.CSF2 = CSFblock(128,32,2)
+        self.CSF1 = CSFblock(512,128,2)
+        self.CSF2 = CSFblock(512,128,2)
         self.GAP =  nn.AdaptiveAvgPool2d(1)
     def forward(self, x):
         x1 = self.maxpool(x)
@@ -305,7 +305,7 @@ class Model(nn.Module):
         #                               kernel_size=1,
         #                               stride=1)
 
-        self.FPN = FPN
+        self.FPN = FPN()
         if decay > 0.0:
             self._vq_vae = VectorQuantizerEMA(num_embeddings, embedding_dim,
                                               commitment_cost, decay)
@@ -314,16 +314,16 @@ class Model(nn.Module):
                                            commitment_cost)
 
 
-        self.classifier = Classifier(512*14*14,512,1)
+        self.classifier = Classifier(1536,512,1)
 
         self._decoder = Decoder()
 
     def forward(self, x):
         z = self._encoder(x)
-        z = self.FPN(z)
         # z = self._pre_vq_conv(z)
         loss, quantized, perplexity, _ = self._vq_vae(z)
-        classifier_outputs = self.classifier(quantized.view(quantized.size(0),-1))
+        feature = self.FPN(quantized)
+        classifier_outputs = self.classifier(feature)
         x_recon = self._decoder(quantized)
 
         return loss, x_recon, perplexity, classifier_outputs
@@ -368,40 +368,7 @@ class WeightedBinaryCrossEntropyLossWithRegularization(nn.Module):
         return total_loss
 
 
-def cutmix_data(x, y, beta=1.0):
-    batch_size = x.size(0)
-    index = torch.randperm(batch_size)
-    lam = np.random.beta(beta, beta)
 
-    # 生成随机的矩形框坐标
-    bbx1, bby1, bbx2, bby2 = rand_bbox(x.size(), lam)
-
-    # 将另一张图像的一部分替换到当前图像中
-    x[:, :, bbx1:bbx2, bby1:bby2] = x[index, :, bbx1:bbx2, bby1:bby2]
-
-    # 计算混合后的标签
-    lam = 1 - ((bbx2 - bbx1) * (bby2 - bby1) / (x.size()[-1] * x.size()[-2]))
-    y_a, y_b = y, y[index]
-
-    return x, y_a, y_b, lam
-
-
-def rand_bbox(size, lam):
-    W = size[2]
-    H = size[3]
-    cut_rat = np.sqrt(1. - lam)
-    cut_w = int(W * cut_rat)
-    cut_h = int(H * cut_rat)
-
-    # 生成随机的矩形框坐标
-    cx = np.random.randint(W)
-    cy = np.random.randint(H)
-    bbx1 = np.clip(cx - cut_w // 2, 0, W)
-    bby1 = np.clip(cy - cut_h // 2, 0, H)
-    bbx2 = np.clip(cx + cut_w // 2, 0, W)
-    bby2 = np.clip(cy + cut_h // 2, 0, H)
-
-    return bbx1, bby1, bbx2, bby2
 
 if __name__ == '__main__':
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -431,7 +398,7 @@ if __name__ == '__main__':
     decay = 0.99
 
 
-    learning_rate = 1e-4
+    learning_rate = 1e-5
 
     lambda_recon = 0.2
     lambda_vq = 0.2
@@ -439,13 +406,13 @@ if __name__ == '__main__':
 
     # 读取数据集
     transform = transforms.Compose([
-        transforms.Resize([448, 448]),
+        transforms.Resize([512, 512]),
         transforms.ToTensor(),
         transforms.Normalize((0.3281,), (0.2366,))  # 设置均值和标准差
     ])
 
-    train_benign_data = MyData("../data/一期数据/train/benign", "benign", transform=transform)
-    train_malignat_data = MyData("../data/一期数据/train/malignant", "malignant", transform=transform)
+    train_benign_data = MyData("../data/一期数据/train+clahe/benign", "benign", transform=transform)
+    train_malignat_data = MyData("../data/一期数据/train+clahe/malignant", "malignant", transform=transform)
     train_data = train_benign_data + train_malignat_data
 
     val_benign_data = MyData("../data/一期数据/val/benign", "benign", transform=transform)
@@ -456,7 +423,7 @@ if __name__ == '__main__':
     training_loader = DataLoader(train_data,
                                  batch_size=batch_size,
                                  shuffle=True,
-                                 num_workers=1,
+                                 num_workers=7,
                                  persistent_workers=True,
                                  pin_memory=True
                                  )
@@ -464,7 +431,7 @@ if __name__ == '__main__':
     validation_loader = DataLoader(val_data,
                                    batch_size=batch_size,
                                    shuffle=True,
-                                   num_workers=1,
+                                   num_workers=8,
                                    persistent_workers=True,
                                    pin_memory=True
                                   )
@@ -488,12 +455,12 @@ if __name__ == '__main__':
     model = Model(encoder,num_embeddings, embedding_dim, commitment_cost, decay).to(device)
 
 
-    criterion = WeightedBinaryCrossEntropyLoss(1.8)
+    criterion = WeightedBinaryCrossEntropyLoss(2)
     # criterion = WeightedBinaryCrossEntropyLossWithRegularization(2, 0.01)
     criterion.to(device)
     optimizer = optim.Adam(filter(lambda p: p.requires_grad, model.parameters()), lr=learning_rate, amsgrad=False)
 
-    scheduler = ReduceLROnPlateau(optimizer, mode='min', factor=0.5, patience=20, threshold=0.001)
+    # scheduler = ReduceLROnPlateau(optimizer, mode='min', factor=0.5, patience=20, threshold=0.001)
 
     train_res_recon_error = []
     train_res_perplexity = []
@@ -514,14 +481,13 @@ if __name__ == '__main__':
             data = torch.cat([data] * 3, dim=1)
             data = data.to(device)
             targets = targets.to(device)
-            data, target_a, target_b, lam = cutmix_data(data, targets)
             optimizer.zero_grad()
 
             vq_loss, data_recon, perplexity, classifier_outputs = model(data)
 
             data_variance = torch.var(data)
             recon_loss = F.mse_loss(data_recon, data) / data_variance
-            classifier_loss = lam * criterion(target_a.view(-1, 1), classifier_outputs)+ (1 - lam) * criterion(target_b.view(-1, 1), classifier_outputs)
+            classifier_loss = criterion(targets.view(-1, 1), classifier_outputs)
             total_loss = joint_loss_function(recon_loss, vq_loss, classifier_loss, lambda_recon, lambda_vq,
                                              lambda_classifier)
             total_loss.backward()
@@ -562,7 +528,7 @@ if __name__ == '__main__':
 
                 total_val_loss += total_loss
                 # 更新学习率
-                scheduler.step(total_val_loss)
+                # scheduler.step(total_val_loss)
                 val_res_recon_error.append(recon_loss.item())
                 val_res_perplexity.append(perplexity.item())
         # writer.add_scalar('Loss/Val', total_val_loss, epoch)

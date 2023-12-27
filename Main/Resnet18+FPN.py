@@ -287,20 +287,20 @@ class CF(nn.Module):
     def forward(self, x):
         feature = self.backbone(x)
         #print(feature.size())
-        feature = self.FPN(feature)
-        results = self.fc(feature)
+        # feature = self.FPN(feature)
+        results = self.fc(feature.view(feature.size(0),-1))
         return results
 
 
 class SIHSRCNet(nn.Module):
-    def __init__(self, ):
+    def __init__(self,backbone):
         super(SIHSRCNet, self).__init__()
         self.SRNet = SRResNet()
-        self.classNet = CF(2)
-    def forward(self, x, y):
+        self.classNet = CF(backbone)
+    def forward(self, x):
         _,SR = self.SRNet(x)
-        results, feature = self.classNet(SR)
-        return SR,results,feature
+        results = self.classNet(SR)
+        return results
 
 # 定义自定义损失函数，加权二进制交叉熵
 class WeightedBinaryCrossEntropyLoss(nn.Module):
@@ -313,28 +313,34 @@ class WeightedBinaryCrossEntropyLoss(nn.Module):
         loss = - (self.weight_positive * y_true * torch.log(y_pred + 1e-7) + (1 - y_true) * torch.log(1 - y_pred + 1e-7))
         return torch.mean(loss)
 
-
+def mixup_data(x, y, alpha=1.0):
+    lam = np.random.beta(alpha, alpha)
+    batch_size = x.size()[0]
+    index = torch.randperm(batch_size)
+    mixed_x = lam * x + (1 - lam) * x[index, :]
+    y_a, y_b = y, y[index]
+    return mixed_x, y_a, y_b, lam
 
 if __name__ == '__main__':
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-    batch_size = 8
+    batch_size = 16
     epochs = 1000
-    learning_rate = 1e-4
+    learning_rate = 1e-5
 
     # 读取数据集
     transform = transforms.Compose([
-        transforms.Resize([224, 224]),
+        transforms.Resize([112, 112]),
         transforms.ToTensor(),
         transforms.Normalize((0.3281,), (0.2366,))  # 设置均值和标准差
     ])
 
-    train_benign_data = MyData("../data/一期数据/train+clahe/benign", "benign", transform=transform)
-    train_malignat_data = MyData("../data/一期数据/train+clahe/malignant", "malignant", transform=transform)
+    train_benign_data = MyData("../data/一期数据/train/benign", "benign", transform=transform)
+    train_malignat_data = MyData("../data/一期数据/train/malignant", "malignant", transform=transform)
     train_data = train_benign_data + train_malignat_data
 
-    val_benign_data = MyData("../data/一期数据/new_val/benign", "benign", transform=transform)
-    val_malignat_data = MyData("../data/一期数据/new_val/malignant", "malignant", transform=transform)
+    val_benign_data = MyData("../data/一期数据/val/benign", "benign", transform=transform)
+    val_malignat_data = MyData("../data/一期数据/val/malignant", "malignant", transform=transform)
     val_data = val_benign_data + val_malignat_data
 
 
@@ -342,38 +348,22 @@ if __name__ == '__main__':
                                  batch_size=batch_size,
                                  shuffle=True,
                                  pin_memory=True,
-                                 num_workers=8,
+                                 num_workers=1,
                                  persistent_workers=True)
 
     validation_loader = DataLoader(val_data,
                                    batch_size=batch_size,
                                    shuffle=True,
                                    pin_memory=True,
-                                   num_workers=8,
+                                   num_workers=1,
                                    persistent_workers=True
                                   )
 
-
-
-    model = models.resnet18(pretrained=True)
-    num_hidden = 256
-    model.fc = nn.Sequential(
-        nn.Linear(model.fc.in_features, num_hidden),
-        nn.ReLU(),
-        nn.Dropout(0.5),
-        nn.Linear(num_hidden, num_hidden//2),
-        nn.ReLU(),
-        nn.Dropout(0.5),
-        nn.Linear(num_hidden//2, 1),
-        nn.Sigmoid()
-    )
-
-    model = model.to(device)
-
-    for param in model.parameters():
+    backbone = models.resnet18(pretrained=True)
+    for param in backbone.parameters():
         param.requires_grad = False
 
-    for name, param in model.named_parameters():
+    for name, param in backbone.named_parameters():
         if "layer3" in name:
             param.requires_grad = True
         if "layer4" in name:
@@ -381,9 +371,13 @@ if __name__ == '__main__':
         if "fc" in name:
             param.requires_grad = True
 
-    criterion = WeightedBinaryCrossEntropyLoss(2)
+    backbone = nn.Sequential(*list(backbone.children())[:-2])
 
-    optimizer = optim.SGD(filter(lambda p: p.requires_grad, model.parameters()), lr=learning_rate)
+    model = SIHSRCNet(backbone).to(device)
+
+    criterion = WeightedBinaryCrossEntropyLoss(2).to(device)
+
+    optimizer = optim.Adam(filter(lambda p: p.requires_grad, model.parameters()), lr=learning_rate)
 
     start_time = time.time()  # 记录训练开始时间
     for epoch in range(epochs):
@@ -396,11 +390,11 @@ if __name__ == '__main__':
             images, targets, names = batch
             images = torch.cat([images] * 3, dim=1)
             images = images.to(device)
-            # targets = targets.to(torch.float32)
             targets = targets.to(device)
+            images, target_a, target_b, lam = mixup_data(images, targets)
             optimizer.zero_grad()
             output = model(images)
-            loss = criterion(targets.view(-1, 1), output)
+            loss = lam * criterion(target_a.view(-1, 1), output) + (1 - lam) * criterion(target_b.view(-1, 1), output)
             loss.backward()
             optimizer.step()
 
@@ -423,8 +417,10 @@ if __name__ == '__main__':
                 # targets = targets.to(torch.float32)
                 images = images.to(device)
                 targets = targets.to(device)
+                images, target_a, target_b, lam = mixup_data(images, targets)
+
                 output = model(images)
-                loss = criterion(targets.view(-1, 1), output)
+                loss = lam * criterion(target_a.view(-1, 1), output) + (1 - lam) * criterion(target_b.view(-1, 1),output)
 
                 total_val_loss += loss.item()
                 predicted_labels = (output >= 0.5).int().squeeze()
