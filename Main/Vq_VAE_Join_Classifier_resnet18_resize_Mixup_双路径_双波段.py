@@ -199,27 +199,27 @@ class Decoder(nn.Module):
         super(Decoder, self).__init__()
 
         self.deconv1 = nn.Sequential(
-            nn.ConvTranspose2d(512, 256, kernel_size=4, stride=2, padding=1),
+            nn.ConvTranspose2d(1024, 512, kernel_size=4, stride=2, padding=1),
             nn.ReLU(),
             nn.MaxPool2d(kernel_size=3, stride=1, padding=1)
         )
         self.deconv2 = nn.Sequential(
-            nn.ConvTranspose2d(256, 128, kernel_size=4, stride=2, padding=1),
+            nn.ConvTranspose2d(512, 256, kernel_size=4, stride=2, padding=1),
             nn.ReLU(),
             nn.MaxPool2d(kernel_size=3, stride=1, padding=1)
         )
         self.deconv3 = nn.Sequential(
-            nn.ConvTranspose2d(128, 64, kernel_size=4, stride=2, padding=1),
+            nn.ConvTranspose2d(256, 128, kernel_size=4, stride=2, padding=1),
             nn.ReLU(),
             nn.MaxPool2d(kernel_size=3, stride=1, padding=1)
         )
         self.deconv4 = nn.Sequential(
-            nn.ConvTranspose2d(64, 32, kernel_size=4, stride=2, padding=1),
+            nn.ConvTranspose2d(128, 64, kernel_size=4, stride=2, padding=1),
             nn.ReLU(),
             nn.MaxPool2d(kernel_size=3, stride=1, padding=1)
         )
         self.deconv5 = nn.Sequential(
-            nn.ConvTranspose2d(32, 3, kernel_size=4, stride=2, padding=1),
+            nn.ConvTranspose2d(64, 3, kernel_size=4, stride=2, padding=1),
             nn.ReLU(),
             nn.MaxPool2d(kernel_size=3, stride=1, padding=1)
         )
@@ -268,7 +268,7 @@ class Model(nn.Module):
             self._vq_vae = VectorQuantizer(num_embeddings, embedding_dim,
                                            commitment_cost)
 
-        self.classifier = Classifier(512*14*14,512,1)
+        self.classifier = Classifier(1024*14*14,1024,1)
 
         self._decoder = Decoder()
 
@@ -370,27 +370,22 @@ if __name__ == '__main__':
         transforms.Normalize((0.3281,), (0.2366,))  # 设置均值和标准差
     ])
 
-    train_benign_data_wave1 = MyData("../data/wave1/train/benign", "benign", transform=transform)
-    train_malignat_data_wave1 = MyData("../data/wave1/train/malignant", "malignant", transform=transform)
+    train_benign_data_wave1 = MyData("../data/二期双十/train/benign", "benign", transform=transform)
+    train_malignat_data_wave1 = MyData("../data/二期双十/train/malignant", "malignant", transform=transform)
     train_data_wave1 = train_benign_data_wave1 + train_malignat_data_wave1
 
-    val_benign_data_wave1 = MyData("../data/wave1/val/benign", "benign", transform=transform)
-    val_malignat_data_wave1 = MyData("../data/wave1/val/malignant", "malignant", transform=transform)
+    val_benign_data_wave1 = MyData("../data/二期双十/val/benign", "benign", transform=transform)
+    val_malignat_data_wave1 = MyData("../data/二期双十/val/malignant", "malignant", transform=transform)
     val_data_wave1 = val_benign_data_wave1 + val_malignat_data_wave1
 
-    train_benign_data_wave2 = MyData("../data/wave2/train/benign", "benign", transform=transform)
-    train_malignat_data_wave2 = MyData("../data/wave2/train/malignant", "malignant", transform=transform)
+    train_benign_data_wave2 = MyData("../data/一期数据/train/benign", "benign", transform=transform)
+    train_malignat_data_wave2 = MyData("../data/一期数据/train/malignant", "malignant", transform=transform)
     train_data_wave2 = train_benign_data_wave2 + train_malignat_data_wave2
-
-    val_benign_data_wave2 = MyData("../data/wave2/val/benign", "benign", transform=transform)
-    val_malignat_data_wave2 = MyData("../data/wave2/val/malignant", "malignant", transform=transform)
-    val_data_wave2 = val_benign_data_wave2 + val_malignat_data_wave2
-
 
     training_loader_wave1 = DataLoader(train_data_wave1,
                                  batch_size=batch_size,
                                  shuffle=True,
-                                 num_workers=8,
+                                 num_workers=1,
                                  persistent_workers=True,
                                  pin_memory=True
                                  )
@@ -398,7 +393,7 @@ if __name__ == '__main__':
     validation_loader_wave1 = DataLoader(val_data_wave1,
                                    batch_size=batch_size,
                                    shuffle=True,
-                                   num_workers=8,
+                                   num_workers=1,
                                    persistent_workers=True,
                                    pin_memory=True
                                   )
@@ -406,7 +401,7 @@ if __name__ == '__main__':
     training_loader_wave2 = DataLoader(train_data_wave2,
                                  batch_size=batch_size,
                                  shuffle=True,
-                                 num_workers=8,
+                                 num_workers=1,
                                  persistent_workers=True,
                                  pin_memory=True
                                  )
@@ -445,7 +440,7 @@ if __name__ == '__main__':
     model = Model(encoder1,encoder2,num_embeddings, embedding_dim, commitment_cost, decay).to(device)
 
 
-    criterion = WeightedBinaryCrossEntropyLoss(1.1)
+    criterion = WeightedBinaryCrossEntropyLoss(2)
     # criterion = WeightedBinaryCrossEntropyLossWithRegularization(2, 0.01)
     criterion.to(device)
     optimizer = optim.Adam(filter(lambda p: p.requires_grad, model.parameters()), lr=learning_rate, amsgrad=False)
@@ -467,14 +462,14 @@ if __name__ == '__main__':
         train_pred = []
         train_targets = []
         total_train_loss = 0.0
-        for batch_wave1,batch_wave2 in training_loader_wave1,training_loader_wave2:
+        for batch_wave1,batch_wave2 in zip(training_loader_wave1,training_loader_wave2):
             data1, targets1, dcm_names1 = batch_wave1
             data1 = torch.cat([data1] * 3, dim=1)
             data1 = data1.to(device)
             targets1 = targets1.to(device)
 
             data2, targets2, dcm_names2 = batch_wave2
-            data2 = torch.cat([data1,data2,data1-data2], dim=1)
+            data2 = torch.cat([batch_wave1[0],data2,batch_wave1[0]-data2], dim=1)
             data2 = data2.to(device)
 
 
@@ -482,8 +477,8 @@ if __name__ == '__main__':
 
             vq_loss, data_recon, perplexity, classifier_outputs = model(data1,data2)
 
-            data_variance = torch.var(data)
-            recon_loss = F.mse_loss(data_recon, data) / data_variance
+            data_variance = torch.var(data1)
+            recon_loss = F.mse_loss(data_recon, data1) / data_variance
             classifier_loss = criterion(targets1.view(-1, 1), classifier_outputs)
             total_loss = joint_loss_function(recon_loss, vq_loss, classifier_loss, lambda_recon, lambda_vq,
                                              lambda_classifier)

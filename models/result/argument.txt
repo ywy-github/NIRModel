@@ -52,13 +52,6 @@ VQ-VAE-resnet18-resize448+全增强+训练集加入未增强的良性数据
 测试集 acc: 0.7266sen: 0.6552spe: 0.7592 auc: 0.7478loss: 2.3100
 
 
-三合一：
-12 epoch
-训练集 acc: 0.9733 sen: 0.9796 spe: 0.9702 auc: 0.9938 loss: 110.6570
-验证集 acc: 0.7302 sen: 0.4851 spe: 0.8458 auc: 0.7553 loss: 28.1280
-测试集 acc: 0.7230sen: 0.5287spe: 0.8115 auc: 0.7716loss: 1.5034
-
-
 Mixup:
 66 epoch
 训练集 acc: 0.6801 sen: 0.6840 spe: 0.6782 auc: 0.7129 loss: 51.7398
@@ -67,26 +60,13 @@ Mixup:
 ti_val:  acc: 0.7474sen: 0.7010spe: 0.7708 auc: 0.7865loss: 0.7682
 ti_测试集： acc: 0.7388sen: 0.7125spe: 0.7515 auc: 0.7933loss: 0.7839
 qc测试集 acc: 0.7434sen: 0.6769spe: 0.7702 auc: 0.7955loss: 0.6977
-71 epoch
-训练集 acc: 0.6875 sen: 0.6873 spe: 0.6876 auc: 0.7388 loss: 51.4518
-验证集 acc: 0.7460 sen: 0.6238 spe: 0.8037 auc: 0.7823 loss: 17.0864
-测试集 acc: 0.7590sen: 0.6207spe: 0.8220 auc: 0.7757loss: 0.9465
-ti_val : acc: 0.7370sen: 0.6392spe: 0.7865 auc: 0.7800loss: 0.9630
-ti_test: acc: 0.7551sen: 0.6750spe: 0.7939 auc: 0.7902loss: 0.7369
-98 epoch
-训练集 acc: 0.6917 sen: 0.7003 spe: 0.6876 auc: 0.7214 loss: 50.9614
-验证集 acc: 0.7587 sen: 0.4257 spe: 0.9159 auc: 0.7964 loss: 17.6621
-测试集 acc: 0.7374sen: 0.4598spe: 0.8639 auc: 0.7597loss: 0.7723
+
 
 ti+mixup:
 VQ-VAE-resnet18-ti-mixup-46
 训练集 acc: 0.6312 sen: 0.7645 spe: 0.5581 auc: 0.6607 loss: 45.7742
 验证集 acc: 0.7439 sen: 0.4433 spe: 0.8958 auc: 0.7782 loss: 15.4738
 测试集 acc: 0.7347sen: 0.5375spe: 0.8303 auc: 0.7542loss: 0.8876
-VQ-VAE-resnet18-ti-mixup-60
-训练集 acc: 0.6336 sen: 0.7747 spe: 0.5562 auc: 0.6635 loss: 44.5866
-验证集 acc: 0.7543 sen: 0.4330 spe: 0.9167 auc: 0.7744 loss: 15.3478
-测试集 acc: 0.7224sen: 0.4750spe: 0.8424 auc: 0.7408loss: 0.9491
 
 
 二期双十：
@@ -98,20 +78,10 @@ VQ-VAE-resnet18-mixup一二期双十-73
 ti_val: acc: 0.6493sen: 0.5079spe: 0.7746 auc: 0.6469loss: 1.0632
 ti_test: acc: 0.6641sen: 0.6032spe: 0.7206 auc: 0.6771loss: 1.0963
 
-VQ-VAE-resnet18-mixup一二期双十-101
-训练集 acc: 0.5950 sen: 0.8571 spe: 0.3603 auc: 0.6113 loss: 36.7412
-验证集 acc: 0.6283 sen: 0.5385 spe: 0.7100 auc: 0.6336 loss: 11.4340
-测试集 acc: 0.6146sen: 0.6413spe: 0.5900 auc: 0.6387loss: 1.0438
-
-ti_val: acc: 0.6119sen: 0.5079spe: 0.7042 auc: 0.6222loss: 1.0486
-ti_test: acc: 0.6412sen: 0.6825spe: 0.6029 auc: 0.6615loss: 1.0189
 
 ti-二期双十+双十五：
 67 epoch
 训练集 acc: 0.9318sen: 0.8525spe: 0.9918 auc: 0.9934loss: 0.7546
 验证集 acc: 0.5935 sen: 0.1915 spe: 0.9083 auc: 0.6604 loss: 12.7693
 测试集 acc: 0.5982sen: 0.2500spe: 0.8699 auc: 0.6511loss: 1.1341
-87 epoch
-训练集 acc: 0.6512 sen: 0.7482 spe: 0.5777 auc: 0.6814 loss: 37.5734
-验证集 acc: 0.6495 sen: 0.4468 spe: 0.8083 auc: 0.6535 loss: 12.6646
-测试集 acc: 0.6147sen: 0.4333spe: 0.7579 auc: 0.6128loss: 1.0644
+

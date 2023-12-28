@@ -489,8 +489,8 @@ if __name__ == '__main__':
                 val_res_perplexity.append(perplexity.item())
         # writer.add_scalar('Loss/Val', total_val_loss, epoch)
 
-        # if ((epoch + 1) == 67 or (epoch + 1) == 87):
-        #     torch.save(model.state_dict(), "../models/VQ-Resnet/VQ-VAE-resnet18-ti-双十+双十五-{}.pth".format(epoch + 1))
+        if ((epoch + 1) == 61 or (epoch + 1) == 65 or (epoch + 1) == 67):
+            torch.save(model.state_dict(),"../models/qc/VQ-VAE-resnet18-qc-二期双十+双十五-{}.pth".format(epoch + 1))
         print('%d epoch' % (epoch + 1))
 
         train_acc, train_sen, train_spe = all_metrics(train_targets, train_pred)

@@ -271,9 +271,9 @@ class Model(nn.Module):
 
         self._decoder = Decoder()
 
-    def forward(self, x):
-        z1 = self._encoder1(x)
-        z2 = self._encoder2(x)
+    def forward(self, data1,data2):
+        z1 = self._encoder1(data1)
+        z2 = self._encoder2(data2)
         z = torch.cat((z1, z2), dim=1)
         # z = self._pre_vq_conv(z)
         loss, quantized, perplexity, _ = self._vq_vae(z)
@@ -355,33 +355,51 @@ if __name__ == '__main__':
     lambda_classifier = 0.6
 
     # 读取数据集
-    transform = transforms.Compose([
+    transform1 = transforms.Compose([
         transforms.Resize([448, 448]),
         transforms.ToTensor(),
         transforms.Normalize((0.3281,), (0.2366,))  # 设置均值和标准差
     ])
 
-    train_benign_data = MyData("../data/一期数据/train+clahe/benign", "benign", transform=transform)
-    train_malignat_data = MyData("../data/一期数据/train+clahe/malignant", "malignant", transform=transform)
-    train_data = train_benign_data + train_malignat_data
+    transform2 = transforms.Compose([
+        transforms.Resize([512, 512]),
+        transforms.ToTensor(),
+        transforms.Normalize((0.3281,), (0.2366,))  # 设置均值和标准差
+    ])
 
-    val_benign_data = MyData("../data/一期数据/new_val/benign", "benign", transform=transform)
-    val_malignat_data = MyData("../data/一期数据/new_val/malignant", "malignant", transform=transform)
+    train_benign_data_448 = MyData("../data/一期数据/train+clahe/benign", "benign", transform=transform1)
+    train_malignat_data_448 = MyData("../data/一期数据/train+clahe/malignant", "malignant", transform=transform1)
+    train_data_448 = train_benign_data_448 + train_malignat_data_448
+
+    train_benign_data_512 = MyData("../data/一期数据/train+clahe/benign", "benign", transform=transform2)
+    train_malignat_data_512 = MyData("../data/一期数据/train+clahe/malignant", "malignant", transform=transform2)
+    train_data_512 = train_benign_data_512 + train_malignat_data_512
+
+    val_benign_data = MyData("../data/一期数据/new_val/benign", "benign", transform=transform1)
+    val_malignat_data = MyData("../data/一期数据/new_val/malignant", "malignant", transform=transform1)
     val_data = val_benign_data + val_malignat_data
 
 
-    training_loader = DataLoader(train_data,
+    training_loader_448 = DataLoader(train_data_448,
                                  batch_size=batch_size,
                                  shuffle=True,
-                                 num_workers=6,
+                                 num_workers=1,
                                  persistent_workers=True,
                                  pin_memory=True
                                  )
 
+    training_loader_512 = DataLoader(train_data_512,
+                                     batch_size=batch_size,
+                                     shuffle=True,
+                                     num_workers=1,
+                                     persistent_workers=True,
+                                     pin_memory=True
+                                     )
+
     validation_loader = DataLoader(val_data,
                                    batch_size=batch_size,
                                    shuffle=True,
-                                   num_workers=6,
+                                   num_workers=1,
                                    persistent_workers=True,
                                    pin_memory=True
                                   )
@@ -437,17 +455,21 @@ if __name__ == '__main__':
         train_pred = []
         train_targets = []
         total_train_loss = 0.0
-        for batch in training_loader:
-            data, targets, dcm_names = batch
-            data = torch.cat([data] * 3, dim=1)
-            data = data.to(device)
+        for batch_448,batch_512 in zip(training_loader_448,training_loader_512):
+            data_448, targets,_ = batch_448
+            data_448 = torch.cat([data_448] * 3, dim=1)
+            data_448 = data_448.to(device)
             targets = targets.to(device)
+
+            data_512, _, _ = batch_512
+            data_512 = torch.cat([data_512] * 3, dim=1)
+            data_512 = data_512.to(device)
+
             optimizer.zero_grad()
+            vq_loss, data_recon, perplexity, classifier_outputs = model(data_448,data_512)
 
-            vq_loss, data_recon, perplexity, classifier_outputs = model(data)
-
-            data_variance = torch.var(data)
-            recon_loss = F.mse_loss(data_recon, data) / data_variance
+            data_variance = torch.var(data_448)
+            recon_loss = F.mse_loss(data_recon, data_448) / data_variance
             classifier_loss = criterion(targets.view(-1, 1), classifier_outputs)
             total_loss = joint_loss_function(recon_loss, vq_loss, classifier_loss, lambda_recon, lambda_vq,
                                              lambda_classifier)
