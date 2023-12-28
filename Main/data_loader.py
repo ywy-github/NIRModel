@@ -27,9 +27,7 @@ class MyData(Dataset):
 
 
 if __name__ =='__main__':
-    root_dir = "../data/train"
-    benign_label_dir = "benign"
-    malignant_label_dir = "malignant"
+
     benign_dataset = MyData("../data/train/benign","benign")
     malignat_dataset = MyData("../data/train/malignant","malignant")
     train_dataset = benign_dataset + malignat_dataset

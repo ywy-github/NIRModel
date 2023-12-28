@@ -1,39 +1,22 @@
 import os
 import shutil
-import pandas as pd
 
-if __name__ == '__main__':
-    # 读取Excel文件
-    excel_file = '../data/二期双10双15-质量合格-1078例-20231220.xlsx'
-    df = pd.read_excel(excel_file,sheet_name="test")
+def copy_images(src_folder, dest_folder, corresponding_folder):
+    for root, dirs, files in os.walk(corresponding_folder):
+        for file in files:
+            src_path = os.path.join(src_folder, os.path.relpath(root, corresponding_folder), file)  # 构造波段二图片路径
+            dest_path = os.path.join(dest_folder, os.path.relpath(root, corresponding_folder), file)
+            corresponding_path = os.path.join(corresponding_folder, os.path.relpath(root, corresponding_folder), file)
 
-    # 原始图片文件夹和目标文件夹路径
-    source_folder = '../data/二期数据'
-    output_folder = '../data/ti_二期数据/test'  # 存放所有数据的主文件夹
+            os.makedirs(os.path.dirname(dest_path), exist_ok=True)
+            # 如果目标路径已存在相同的文件，则进行复制
+            if os.path.exists(src_path) and os.path.exists(corresponding_path):
+                shutil.copy2(src_path, dest_path)
+                print(f"Copied {file} to {dest_path}")
 
-    # 创建主文件夹
-    os.makedirs(output_folder, exist_ok=True)
+if __name__ == "__main__":
+    src_folder = "../data/ti_二期双十+双十五"
+    dest_folder = "../data/ti_二期双十+双十五wave1"
+    corresponding_folder = "../data/ti_二期双十+双十五wave2"  # 假设这是波段一的文件夹
 
-    # 遍历Excel数据
-    for index, row in df.iterrows():
-        filename = row['dcm_name']
-        label = row['tumor_nature']
-        label_folder=''
-        if(label==0):
-            label_folder='benign'
-        else:
-            label_folder = 'malignant'
-        # 构建文件路径
-        source_path = os.path.join(source_folder, filename)
-        target_folder = os.path.join(output_folder, label_folder)
-
-        # 创建标签文件夹（如果不存在）
-        os.makedirs(target_folder, exist_ok=True)
-
-        target_path = os.path.join(target_folder, filename)
-
-        if os.path.exists(source_path):
-            # copy图片文件
-            shutil.copy(source_path, target_path)
-        else:
-            print("filename:"+filename)
+    copy_images(src_folder, dest_folder, corresponding_folder)
