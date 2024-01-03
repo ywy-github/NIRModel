@@ -57,12 +57,13 @@ Mixup:
 训练集 acc: 0.6801 sen: 0.6840 spe: 0.6782 auc: 0.7129 loss: 51.7398
 验证集 acc: 0.7587 sen: 0.6832 spe: 0.7944 auc: 0.7902 loss: 16.8578
 测试集 acc: 0.7410sen: 0.6552  spe: 0.7801 auc: 0.7781loss: 0.8151
+直接测试用大津法剔除后的验证集和测试集
 ti_val:  acc: 0.7474sen: 0.7010spe: 0.7708 auc: 0.7865loss: 0.7682
 ti_测试集： acc: 0.7388sen: 0.7125spe: 0.7515 auc: 0.7933loss: 0.7839
 qc测试集 acc: 0.7434sen: 0.6769spe: 0.7702 auc: 0.7955loss: 0.6977
 
 
-ti+mixup:
+ti+mixup:  用大津法剔除后重新训练测试
 VQ-VAE-resnet18-ti-mixup-46
 训练集 acc: 0.6312 sen: 0.7645 spe: 0.5581 auc: 0.6607 loss: 45.7742
 验证集 acc: 0.7439 sen: 0.4433 spe: 0.8958 auc: 0.7782 loss: 15.4738

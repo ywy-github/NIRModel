@@ -1,26 +1,22 @@
 from __future__ import print_function
 
+import os
 import time
 
-import matplotlib.pyplot as plt
-from scipy.optimize import differential_evolution
-from six.moves import xrange
+import pandas as pd
+
 
 import torch.nn as nn
 import torch.nn.functional as F
 from sklearn.metrics import roc_auc_score
-from torch.optim.lr_scheduler import ReduceLROnPlateau, StepLR
+
 from torch.utils.data import DataLoader
-import torch.optim as optim
-from torch.utils.tensorboard import SummaryWriter
-from torchvision import transforms
+
+from torchvision import transforms, models
 import torch
-import torch.utils.data as data
-from torchvision import models
+
 import numpy as np
-from PIL import Image
-import glob
-import random
+
 
 from Metrics import all_metrics
 from data_loader import MyData
@@ -234,8 +230,6 @@ class Decoder(nn.Module):
         x = self.deconv5(x)
         return x
 
-
-
 class Classifier(nn.Module):
     def __init__(self, input_dim, hidden_dim, num_classes):
         super(Classifier, self).__init__()
@@ -293,7 +287,7 @@ class Model(nn.Module):
 
         return loss1,loss2,x_recon1,x_recon2,perplexity1,perplexity2,classifier_outputs
 
-# 定义联合模型的损失函数
+
 def joint_loss_function(recon_loss1,recon_loss2, vq_loss1,vq_loss2, classifier_loss,
                         lambda_recon1,lambda_recon2, lambda_vq1,lambda_vq2,lambda_classifier):
     # 总损失
@@ -301,7 +295,6 @@ def joint_loss_function(recon_loss1,recon_loss2, vq_loss1,vq_loss2, classifier_l
                  lambda_recon2 * recon_loss2 + lambda_vq2 * vq_loss2
 
     return total_loss
-
 # 定义自定义损失函数，加权二进制交叉熵
 class WeightedBinaryCrossEntropyLoss(nn.Module):
     def __init__(self, weight_positive):
@@ -312,51 +305,8 @@ class WeightedBinaryCrossEntropyLoss(nn.Module):
         y_true = y_true.to(dtype=torch.float32)
         loss = - (self.weight_positive * y_true * torch.log(y_pred + 1e-7) + (1 - y_true) * torch.log(1 - y_pred + 1e-7))
         return torch.mean(loss)
-
-# 定义 Focal Loss
-class WeightedBinaryCrossEntropyLossWithRegularization(nn.Module):
-    def __init__(self, weight_positive, lambda_reg):
-        super(WeightedBinaryCrossEntropyLossWithRegularization, self).__init__()
-        self.weight_positive = weight_positive
-        self.lambda_reg = lambda_reg  # 正则化系数
-
-    def forward(self, y_true, y_pred, model):
-        y_true = y_true.to(dtype=torch.float32)
-        bce_loss = - (self.weight_positive * y_true * torch.log(y_pred + 1e-7) + (1 - y_true) * torch.log(1 - y_pred + 1e-7))
-        bce_loss = torch.mean(bce_loss)
-
-        # 添加L2正则化项
-        reg_loss = 0.0
-        for param in model.parameters():
-            reg_loss += torch.norm(param, p=2)
-
-        total_loss = bce_loss + self.lambda_reg * reg_loss
-
-        return total_loss
-def mixup_data(x, y, alpha=1.0):
-    lam = np.random.beta(alpha, alpha)
-    batch_size = x.size()[0]
-    index = torch.randperm(batch_size)
-    mixed_x = lam * x + (1 - lam) * x[index, :]
-    y_a, y_b = y, y[index]
-    return mixed_x, y_a, y_b, lam
-
 if __name__ == '__main__':
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-
-    seed = 64
-
-    # 设置 Python 的随机种子
-    random.seed(seed)
-
-    # 设置 NumPy 的随机种子
-    np.random.seed(seed)
-
-    # 设置 PyTorch 的随机种子
-    torch.manual_seed(seed)
-    torch.cuda.manual_seed(seed)
-    torch.backends.cudnn.deterministic = True
-    torch.backends.cudnn.benchmark = False
 
     batch_size = 16
     epochs = 1000
@@ -368,7 +318,6 @@ if __name__ == '__main__':
 
     decay = 0.99
 
-
     learning_rate = 1e-5
 
     lambda_recon1 = 0.1
@@ -378,65 +327,32 @@ if __name__ == '__main__':
     lambda_recon2 = 0.1
     lambda_vq2 = 0.1
 
-
     # 读取数据集
     transform = transforms.Compose([
-        transforms.Resize([448, 448]),
+        transforms.Resize([448,448]),
         transforms.ToTensor(),
         transforms.Normalize((0.3281,), (0.2366,))  # 设置均值和标准差
     ])
 
-    train_benign_data_wave1 = MyData("../data/ti_二期双十+双十五wave1/train/benign", "benign", transform=transform)
-    train_malignat_data_wave1 = MyData("../data/ti_二期双十+双十五wave1/train/malignant", "malignant", transform=transform)
-    train_data_wave1 = train_benign_data_wave1 + train_malignat_data_wave1
+    test_benign_data_wave1 = MyData("../data/ti_二期双十wave1/test/benign", "benign", transform=transform)
+    test_malignat_data_wave1 = MyData("../data/ti_二期双十wave1/test/malignant", "malignant", transform=transform)
+    test_data_wave1 = test_benign_data_wave1 + test_malignat_data_wave1
 
-    val_benign_data_wave1 = MyData("../data/ti_二期双十wave1/val/benign", "benign", transform=transform)
-    val_malignat_data_wave1 = MyData("../data/ti_二期双十wave1/val/malignant", "malignant", transform=transform)
-    val_data_wave1 = val_benign_data_wave1 + val_malignat_data_wave1
+    test_benign_data_wave2 = MyData("../data/ti_二期双十wave2/test/benign", "benign", transform=transform)
+    test_malignat_data_wave2 = MyData("../data/ti_二期双十wave2/test/malignant", "malignant", transform=transform)
+    test_data_wave2 = test_benign_data_wave2 + test_malignat_data_wave2
 
-    train_benign_data_wave2 = MyData("../data/ti_二期双十+双十五wave2/train/benign", "benign", transform=transform)
-    train_malignat_data_wave2 = MyData("../data/ti_二期双十+双十五wave2/train/malignant", "malignant", transform=transform)
-    train_data_wave2 = train_benign_data_wave2 + train_malignat_data_wave2
-
-    val_benign_data_wave2 = MyData("../data/ti_二期双十wave2/val/benign", "benign", transform=transform)
-    val_malignat_data_wave2 = MyData("../data/ti_二期双十wave2/val/malignant", "malignant", transform=transform)
-    val_data_wave2 = val_benign_data_wave2 + val_malignat_data_wave2
-
-    training_loader_wave1 = DataLoader(train_data_wave1,
-                                 batch_size=batch_size,
-                                 shuffle=True,
-                                 num_workers=4,
-                                 persistent_workers=True,
-                                 pin_memory=True
-                                 )
-
-    validation_loader_wave1 = DataLoader(val_data_wave1,
+    test_loader_wave1 = DataLoader(test_data_wave1,
                                    batch_size=batch_size,
                                    shuffle=True,
-                                   num_workers=4,
-                                   persistent_workers=True,
-                                   pin_memory=True
-                                  )
+                                   pin_memory=True)
 
-    training_loader_wave2 = DataLoader(train_data_wave2,
-                                 batch_size=batch_size,
-                                 shuffle=True,
-                                 num_workers=4,
-                                 persistent_workers=True,
-                                 pin_memory=True
-                                 )
+    test_loader_wave2 = DataLoader(test_data_wave2,
+                             batch_size=batch_size,
+                             shuffle=True,
+                             pin_memory=True)
 
-    validation_loader_wave2 = DataLoader(val_data_wave2,
-                                         batch_size=batch_size,
-                                         shuffle=True,
-                                         num_workers=4,
-                                         persistent_workers=True,
-                                         pin_memory=True
-                                         )
-
-
-
-    #设置encoder
+    # 设置encoder
     encoder1 = models.resnet18(pretrained=True)
     for param in encoder1.parameters():
         param.requires_grad = False
@@ -465,32 +381,21 @@ if __name__ == '__main__':
 
     encoder2 = nn.Sequential(*list(encoder2.children())[:-2])
 
-    model = Model(encoder1,encoder2,num_embeddings, embedding_dim, commitment_cost, decay).to(device)
+    model = Model(encoder1, encoder2, num_embeddings, embedding_dim, commitment_cost, decay).to(device)
 
+    model.load_state_dict(torch.load('../models/qc/resnet18-双路径-ti—二期双十双十五训-二期双十测-85.pth'))
 
-    criterion = WeightedBinaryCrossEntropyLoss(1.1)
-    # criterion = WeightedBinaryCrossEntropyLossWithRegularization(2, 0.01)
+    criterion = WeightedBinaryCrossEntropyLoss(2)
     criterion.to(device)
-    optimizer = optim.Adam(filter(lambda p: p.requires_grad, model.parameters()), lr=learning_rate, amsgrad=False)
-    # scheduler = StepLR(optimizer,10,0.1)
-    train_res_recon_error = []
-    train_res_perplexity = []
 
-    val_res_recon_error = []
-    val_res_perplexity = []
-
-    start_time = time.time()  # 记录训练开始时间
-    # writer = SummaryWriter("../Logs")
-    for epoch in range(epochs):
-        # if((epoch+1) % 10 == 0):
-        #     for param_group in optimizer.param_groups:
-        #         param_group['lr'] = param_group['lr'] * 0.8
-        model.train()
-        train_score = []
-        train_pred = []
-        train_targets = []
-        total_train_loss = 0.0
-        for batch_wave1,batch_wave2 in zip(training_loader_wave1,training_loader_wave2):
+    test_pred = []
+    test_predictions = []
+    test_targets = []
+    test_results = []
+    total_test_loss = []
+    model.eval()
+    with torch.no_grad():
+        for batch_wave1, batch_wave2 in zip(test_loader_wave1, test_loader_wave2):
             data1, targets1, dcm_names1 = batch_wave1
             data1 = torch.cat([data1] * 3, dim=1)
             data1 = data1.to(device)
@@ -501,104 +406,54 @@ if __name__ == '__main__':
             data2 = data2.to(device)
             targets2 = targets2.to(device)
 
-            optimizer.zero_grad()
-
-            vq_loss1,vq_loss2,data_recon1, data_recon2,perplexity1, perplexity2,classifier_outputs = model(data1,data2)
+            vq_loss1, vq_loss2, data_recon1, data_recon2, perplexity1, perplexity2, classifier_outputs = model(data1,
+                                                                                                               data2)
 
             data_variance1 = torch.var(data1)
             recon_loss1 = F.mse_loss(data_recon1, data1) / data_variance1
+
             classifier_loss = criterion(targets1.view(-1, 1), classifier_outputs)
 
             data_variance2 = torch.var(data2)
             recon_loss2 = F.mse_loss(data_recon2, data2) / data_variance2
 
-
-            total_loss = joint_loss_function(recon_loss1,recon_loss2, vq_loss1,vq_loss2, classifier_loss,
-                                             lambda_recon1,lambda_recon2, lambda_vq1,lambda_vq2,lambda_classifier
+            total_loss = joint_loss_function(recon_loss1, recon_loss2, vq_loss1, vq_loss2, classifier_loss,
+                                             lambda_recon1, lambda_recon2, lambda_vq1, lambda_vq2, lambda_classifier
                                              )
-            total_loss.backward()
-            optimizer.step()
-            # scheduler.step()
 
-            predicted_labels = (classifier_outputs >= 0.5).int().view(-1)
-            train_score.append(classifier_outputs.cpu().detach().numpy())
-            train_pred.extend(predicted_labels.cpu().numpy())
-            train_targets.extend(targets1.cpu().numpy())
+            predicted_labels =  (classifier_outputs >= 0.5).int().view(-1)
+            # 记录每个样本的dcm_name、预测概率值和标签
+            for i in range(len(dcm_names1)):
+                test_results.append({'dcm_name': dcm_names1[i], 'pred': classifier_outputs[i].item(),
+                                     'prob': predicted_labels[i].item(), 'label': targets1[i].item()})
+            test_predictions.extend(predicted_labels.cpu().numpy())
+            test_targets.extend(targets1.cpu().numpy())
+            total_test_loss.append(total_loss.item())
+            test_pred.append(classifier_outputs.flatten().cpu().numpy())
+            # concat = torch.cat((data[0].view(128, 128),
+            #                     data_recon[0].view(128, 128)), 1)
+            # plt.matshow(concat.cpu().detach().numpy())
+            # plt.show()
 
-            total_train_loss += total_loss
+    test_acc, test_sen, test_spe = all_metrics(test_targets, test_predictions)
 
-        # writer.add_scalar('Loss/Train', total_train_loss, epoch)
-        val_score = []
-        val_pred = []
-        val_targets = []
-        total_val_loss = 0.0
-        model.eval()
-        with torch.no_grad():
-            for batch_wave1, batch_wave2 in zip(validation_loader_wave1, validation_loader_wave2):
-                data1, targets1, dcm_names1 = batch_wave1
-                data1 = torch.cat([data1] * 3, dim=1)
-                data1 = data1.to(device)
-                targets1 = targets1.to(device)
+    test_pred = np.concatenate(test_pred)  # 将列表转换为NumPy数组
+    test_targets = np.array(test_targets)
+    test_auc = roc_auc_score(test_targets, test_pred)
 
-                data2, targets2, dcm_names2 = batch_wave2
-                data2 = torch.cat([data2] * 3, dim=1)
-                data2 = data2.to(device)
-                targets2 = targets2.to(device)
+    print("测试集 acc: {:.4f}".format(test_acc) + "sen: {:.4f}".format(test_sen) +
+          "spe: {:.4f}".format(test_spe) + " auc: {:.4f}".format(test_auc) + "loss: {:.4f}".format(
+        np.mean(total_test_loss[-10:])))
 
-                vq_loss1, vq_loss2, data_recon1, data_recon2, perplexity1, perplexity2, classifier_outputs = model(data1, data2)
-
-                data_variance1 = torch.var(data1)
-                recon_loss1 = F.mse_loss(data_recon1, data1) / data_variance1
-
-                classifier_loss = criterion(targets1.view(-1, 1), classifier_outputs)
-
-                data_variance2 = torch.var(data2)
-                recon_loss2 = F.mse_loss(data_recon2, data2) / data_variance2
-
-                total_loss = joint_loss_function(recon_loss1, recon_loss2, vq_loss1, vq_loss2, classifier_loss,
-                                                 lambda_recon1, lambda_recon2, lambda_vq1, lambda_vq2, lambda_classifier
-                                                 )
-
-                predicted_labels = (classifier_outputs >= 0.5).int().view(-1)
-                val_score.append(classifier_outputs.flatten().cpu().numpy())
-                val_pred.extend(predicted_labels.cpu().numpy())
-                val_targets.extend(targets1.cpu().numpy())
-
-                total_val_loss += total_loss
-
-        # writer.add_scalar('Loss/Val', total_val_loss, epoch)
-
-        if ((epoch + 1) == 65 or (epoch + 1) == 71 or (epoch + 1) == 85):
-            torch.save(model.state_dict(), "../models/qc/resnet18-双路径-ti—二期双十双十五训-二期双十测-{}.pth".format(epoch + 1))
-        print('%d epoch' % (epoch + 1))
-
-        train_acc, train_sen, train_spe = all_metrics(train_targets, train_pred)
-
-        train_score = np.concatenate(train_score)  # 将列表转换为NumPy数组
-        train_targets = np.array(train_targets)
-        train_auc = roc_auc_score(train_targets, train_score)
-
-        print("训练集 acc: {:.4f}".format(train_acc) + " sen: {:.4f}".format(train_sen) +
-              " spe: {:.4f}".format(train_spe) + " auc: {:.4f}".format(train_auc) +
-              " loss: {:.4f}".format(total_train_loss))
-
-        val_acc, val_sen, val_spe = all_metrics(val_targets, val_pred)
-
-        val_score = np.concatenate(val_score)  # 将列表转换为NumPy数组
-        val_targets = np.array(val_targets)
-        val_auc = roc_auc_score(val_targets, val_score)
-
-        print("验证集 acc: {:.4f}".format(val_acc) + " sen: {:.4f}".format(val_sen) +
-              " spe: {:.4f}".format(val_spe) + " auc: {:.4f}".format(val_auc) +
-              " loss: {:.4f}".format(total_val_loss))
-
-
-    # writer.close()
-    # 结束训练时间
-    end_time = time.time()
-    training_time = end_time - start_time
-
-    print(f"Training time: {training_time} seconds")
-
-
+    # df = pd.DataFrame(test_results)
+    # filename = '../models/result/VQ-VAE-resnet18-二期双十+双十五.xlsx'
+    #
+    # # 检查文件是否存在
+    # if not os.path.isfile(filename):
+    #     # 如果文件不存在，创建新文件并保存数据到 Sheet1
+    #     df.to_excel(filename, sheet_name='train', index=False)
+    # else:
+    #     # 如果文件已经存在，打开现有文件并保存数据到 Sheet2
+    #     with pd.ExcelWriter(filename, engine='openpyxl', mode='a') as writer:
+    #         df.to_excel(writer, sheet_name='train', index=False)
 
