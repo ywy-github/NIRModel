@@ -388,6 +388,9 @@ if __name__ == '__main__':
     lambda_vq = 0.2
     lambda_classifier = 0.6
 
+    beta = 0.2
+    salmix_prob = 0.8
+
     # 读取数据集
     transform = transforms.Compose([
         transforms.Resize([448, 448]),
@@ -466,15 +469,29 @@ if __name__ == '__main__':
             data = data.to(device)
             targets = targets.to(device)
 
-            lam = np.random.beta(1, 1)
-            rand_index = torch.randperm(data.size()[0]).cuda()
-            target_a = targets
-            target_b = targets[rand_index]
-            bbx1, bby1, bbx2, bby2 = saliency_bbox(data[rand_index[0]], lam)
-            data[:, :, bbx1:bbx2, bby1:bby2] = data[rand_index, :, bbx1:bbx2, bby1:bby2]
-            # adjust lambda to exactly match pixel ratio
-            lam = 1 - ((bbx2 - bbx1) * (bby2 - bby1) / (data.size()[-1] * data.size()[-2]))
-            # compute output
+            r = np.random.rand(1)
+            if beta > 0 and r < salmix_prob:
+                # generate mixed sample
+                lam = np.random.beta(beta, beta)
+                rand_index = torch.randperm(data.size()[0]).cuda()
+                target_a = targets
+                target_b = targets[rand_index]
+                bbx1, bby1, bbx2, bby2 = saliency_bbox(data[rand_index[0]], lam)
+                data[:, :, bbx1:bbx2, bby1:bby2] = data[rand_index, :, bbx1:bbx2, bby1:bby2]
+                # adjust lambda to exactly match pixel ratio
+                lam = 1 - ((bbx2 - bbx1) * (bby2 - bby1) / (data.size()[-1] * data.size()[-2]))
+                # compute output
+                input_var = torch.autograd.Variable(input, requires_grad=True)
+                target_a_var = torch.autograd.Variable(target_a)
+                target_b_var = torch.autograd.Variable(target_b)
+                output = model(input_var)
+                loss = criterion(output, target_a_var) * lam + criterion(output, target_b_var) * (1. - lam)
+            else:
+                # compute output
+                input_var = torch.autograd.Variable(data, requires_grad=True)
+                target_var = torch.autograd.Variable(targets)
+                output = model(input_var)
+                loss = criterion(output, target_var)
 
             optimizer.zero_grad()
 

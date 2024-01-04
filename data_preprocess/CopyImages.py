@@ -1,7 +1,7 @@
 import os
 
-source_folder_wave1 = "../data/ti_二期双十+双十五wave1"
-source_folder_original = "../data/ti_二期双十+双十五原始图"
+source_folder_wave1 = "../data/ti_二期双十wave1"
+source_folder_original = "../data/ti_二期双十原始图"
 
 missing_images = []
 
