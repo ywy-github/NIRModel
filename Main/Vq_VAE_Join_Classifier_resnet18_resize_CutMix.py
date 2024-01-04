@@ -292,20 +292,33 @@ class WeightedBinaryCrossEntropyLossWithRegularization(nn.Module):
 
 def cutmix_data(x, y, beta=1.0):
     batch_size = x.size(0)
+
+    # 生成 16 个随机的混合权重 lam
+    lams = np.random.beta(beta, beta, size=batch_size)
+
+    lam_list = []
+
+    # 生成随机的索引排列，用于选择混合的另一个样本
     index = torch.randperm(batch_size)
-    lam = np.random.beta(beta, beta)
 
-    # 生成随机的矩形框坐标
-    bbx1, bby1, bbx2, bby2 = rand_bbox(x.size(), lam)
+    for i in range(batch_size):
+        # 生成随机的矩形框坐标
+        bbx1, bby1, bbx2, bby2 = rand_bbox(x.size(), lams[i])
 
-    # 将另一张图像的一部分替换到当前图像中
-    x[:, :, bbx1:bbx2, bby1:bby2] = x[index, :, bbx1:bbx2, bby1:bby2]
+        # 将另一张图像的一部分替换到当前图像中
+        x[i, :, bbx1:bbx2, bby1:bby2] = x[index[i], :, bbx1:bbx2, bby1:bby2]
+
+        lam = 1 - ((bbx2 - bbx1) * (bby2 - bby1) / (x.size()[-1] * x.size()[-2]))
+
+        lam_list.append(lam)
+
+    # 将混合权重列表转换为张量
+    lam_list = torch.tensor(lam_list, dtype=torch.float32)
 
     # 计算混合后的标签
-    lam = 1 - ((bbx2 - bbx1) * (bby2 - bby1) / (x.size()[-1] * x.size()[-2]))
     y_a, y_b = y, y[index]
 
-    return x, y_a, y_b, lam
+    return x, y_a, y_b, lam_list
 
 
 def rand_bbox(size, lam):
@@ -316,8 +329,8 @@ def rand_bbox(size, lam):
     cut_h = int(H * cut_rat)
 
     # 生成随机的矩形框坐标
-    cx = np.random.randint(W)
-    cy = np.random.randint(H)
+    cx = np.random.randint(W - cut_w // 2)
+    cy = np.random.randint(H - cut_h // 2)
     bbx1 = np.clip(cx - cut_w // 2, 0, W)
     bby1 = np.clip(cy - cut_h // 2, 0, H)
     bbx2 = np.clip(cx + cut_w // 2, 0, W)
@@ -342,7 +355,7 @@ if __name__ == '__main__':
     torch.backends.cudnn.deterministic = True
     torch.backends.cudnn.benchmark = False
 
-    batch_size = 4
+    batch_size = 16
     epochs = 1000
 
     embedding_dim = 64
@@ -378,18 +391,17 @@ if __name__ == '__main__':
     training_loader = DataLoader(train_data,
                                  batch_size=batch_size,
                                  shuffle=True,
-                                 num_workers=4,
-                                 persistent_workers=True,
+                                 num_workers=1,
                                  pin_memory=True
                                  )
 
-    validation_loader = DataLoader(val_data,
-                                   batch_size=batch_size,
-                                   shuffle=True,
-                                   num_workers=4,
-                                   persistent_workers=True,
-                                   pin_memory=True
-                                  )
+    # validation_loader = DataLoader(val_data,
+    #                                batch_size=batch_size,
+    #                                shuffle=True,
+    #                                num_workers=1,
+    #                                persistent_workers=True,
+    #                                pin_memory=True
+    #                               )
 
 
     #设置encoder
@@ -459,34 +471,34 @@ if __name__ == '__main__':
             train_res_recon_error.append(recon_loss.item())
             train_res_perplexity.append(perplexity.item())
         # writer.add_scalar('Loss/Train', total_train_loss, epoch)
-        val_score = []
-        val_pred = []
-        val_targets = []
-        total_val_loss = 0.0
-        model.eval()
-        with torch.no_grad():
-            for batch in validation_loader:
-                data, targets, names = batch
-                data = torch.cat([data] * 3, dim=1)
-                data = data.to(device)
-                targets = targets.to(device)
-                vq_loss, data_recon, perplexity, classifier_outputs = model(data)
-                data_variance = torch.var(data)
-                recon_loss = F.mse_loss(data_recon, data) / data_variance
-                classifier_loss = criterion(targets.view(-1, 1), classifier_outputs)
-                total_loss = joint_loss_function(recon_loss, vq_loss, classifier_loss, lambda_recon, lambda_vq,
-                                                 lambda_classifier)
-
-                predicted_labels = (classifier_outputs >= 0.5).int().squeeze()
-                val_score.append(classifier_outputs.flatten().cpu().numpy())
-                val_pred.extend(predicted_labels.cpu().numpy())
-                val_targets.extend(targets.cpu().numpy())
-
-                total_val_loss += total_loss
-                # 更新学习率
-                # scheduler.step(total_val_loss)
-                val_res_recon_error.append(recon_loss.item())
-                val_res_perplexity.append(perplexity.item())
+        # val_score = []
+        # val_pred = []
+        # val_targets = []
+        # total_val_loss = 0.0
+        # model.eval()
+        # with torch.no_grad():
+        #     for batch in validation_loader:
+        #         data, targets, names = batch
+        #         data = torch.cat([data] * 3, dim=1)
+        #         data = data.to(device)
+        #         targets = targets.to(device)
+        #         vq_loss, data_recon, perplexity, classifier_outputs = model(data)
+        #         data_variance = torch.var(data)
+        #         recon_loss = F.mse_loss(data_recon, data) / data_variance
+        #         classifier_loss = criterion(targets.view(-1, 1), classifier_outputs)
+        #         total_loss = joint_loss_function(recon_loss, vq_loss, classifier_loss, lambda_recon, lambda_vq,
+        #                                          lambda_classifier)
+        #
+        #         predicted_labels = (classifier_outputs >= 0.5).int().squeeze()
+        #         val_score.append(classifier_outputs.flatten().cpu().numpy())
+        #         val_pred.extend(predicted_labels.cpu().numpy())
+        #         val_targets.extend(targets.cpu().numpy())
+        #
+        #         total_val_loss += total_loss
+        #         # 更新学习率
+        #         # scheduler.step(total_val_loss)
+        #         val_res_recon_error.append(recon_loss.item())
+        #         val_res_perplexity.append(perplexity.item())
         # writer.add_scalar('Loss/Val', total_val_loss, epoch)
 
         # if ((epoch + 1) == 73 or (epoch + 1) == 101):

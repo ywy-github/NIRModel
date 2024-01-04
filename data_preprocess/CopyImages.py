@@ -1,22 +1,31 @@
 import os
-import shutil
 
-def copy_images(src_folder, dest_folder, corresponding_folder):
-    for root, dirs, files in os.walk(corresponding_folder):
-        for file in files:
-            src_path = os.path.join(src_folder, os.path.relpath(root, corresponding_folder), file)  # 构造波段二图片路径
-            dest_path = os.path.join(dest_folder, os.path.relpath(root, corresponding_folder), file)
-            corresponding_path = os.path.join(corresponding_folder, os.path.relpath(root, corresponding_folder), file)
+source_folder_wave1 = "../data/ti_二期双十+双十五wave1"
+source_folder_original = "../data/ti_二期双十+双十五原始图"
 
-            os.makedirs(os.path.dirname(dest_path), exist_ok=True)
-            # 如果目标路径已存在相同的文件，则进行复制
-            if os.path.exists(src_path) and os.path.exists(corresponding_path):
-                shutil.copy2(src_path, dest_path)
-                print(f"Copied {file} to {dest_path}")
+missing_images = []
 
-if __name__ == "__main__":
-    src_folder = "../data/ti_二期双十+双十五"
-    dest_folder = "../data/ti_二期双十+双十五wave1"
-    corresponding_folder = "../data/ti_二期双十+双十五wave2"  # 假设这是波段一的文件夹
+# 遍历 ti_二期双十+双十五wave1 中的 train、val 和 test 文件夹
+for set_folder in ["train", "val", "test"]:
+    set_path_wave1 = os.path.join(source_folder_wave1, set_folder)
+    set_path_original = os.path.join(source_folder_original, set_folder)
 
-    copy_images(src_folder, dest_folder, corresponding_folder)
+    # 遍历 benign 和 malignant 文件夹
+    for class_folder in ["benign", "malignant"]:
+        class_path_wave1 = os.path.join(set_path_wave1, class_folder)
+        class_path_original = os.path.join(set_path_original, class_folder)
+
+        # 遍历每个文件夹中的图像文件
+        for image_name in os.listdir(class_path_wave1):
+            # 构建源文件和目标文件路径
+            source_path_wave1 = os.path.join(class_path_wave1, image_name)
+            source_path_original = os.path.join(class_path_original, image_name)
+
+            # 检查文件是否存在于 ti_二期双十+双十五原始图 中
+            if not os.path.exists(source_path_original):
+                missing_images.append(image_name)
+
+# 打印缺失的图像文件名
+print("以下图像在 ti_二期双十+双十五原始图 中不存在:")
+for image_name in missing_images:
+    print(image_name)
