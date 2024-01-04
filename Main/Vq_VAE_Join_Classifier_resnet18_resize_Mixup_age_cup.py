@@ -381,24 +381,26 @@ if __name__ == '__main__':
     train_malignat_data = MyData("../data/一期age_cupsize/train/malignant", "malignant",age_column,cup_size_column, transform=transform)
     train_data = train_benign_data + train_malignat_data
 
-    # val_benign_data = MyData("../data/ti_一期数据/val/benign", "benign", transform=transform)
-    # val_malignat_data = MyData("../data/ti_一期数据/val/malignant", "malignant", transform=transform)
-    # val_data = val_benign_data + val_malignat_data
+    val_benign_data = MyData("../data/一期age_cupsize/val/benign", "benign",age_column,cup_size_column,transform=transform)
+    val_malignat_data = MyData("../data/一期age_cupsize/val/malignant", "malignant",age_column,cup_size_column,transform=transform)
+    val_data = val_benign_data + val_malignat_data
 
 
     training_loader = DataLoader(train_data,
-                                 batch_size=batch_size,
-                                 shuffle=True,
-                                 num_workers=1
-                                 )
+                                   batch_size=batch_size,
+                                   shuffle=True,
+                                   num_workers=8,
+                                   persistent_workers=True,
+                                   pin_memory=True
+                                  )
 
-    # validation_loader = DataLoader(val_data,
-    #                                batch_size=batch_size,
-    #                                shuffle=True,
-    #                                num_workers=8,
-    #                                persistent_workers=True,
-    #                                pin_memory=True
-    #                               )
+    validation_loader = DataLoader(val_data,
+                                   batch_size=batch_size,
+                                   shuffle=True,
+                                   num_workers=8,
+                                   persistent_workers=True,
+                                   pin_memory=True
+                                  )
 
 
     #设置encoder
@@ -419,7 +421,7 @@ if __name__ == '__main__':
     model = Model(encoder,num_embeddings, embedding_dim, commitment_cost, decay).to(device)
 
 
-    criterion = WeightedBinaryCrossEntropyLoss(1.5)
+    criterion = WeightedBinaryCrossEntropyLoss(2.1)
     # criterion = WeightedBinaryCrossEntropyLossWithRegularization(2, 0.01)
     criterion.to(device)
     optimizer = optim.Adam(filter(lambda p: p.requires_grad, model.parameters()), lr=learning_rate, amsgrad=False)
@@ -486,27 +488,40 @@ if __name__ == '__main__':
         val_targets = []
         total_val_loss = 0.0
         model.eval()
-        # with torch.no_grad():
-        #     for batch in validation_loader:
-        #         data, targets, names = batch
-        #         data = torch.cat([data] * 3, dim=1)
-        #         data = data.to(device)
-        #         targets = targets.to(device)
-        #         vq_loss, data_recon, perplexity, classifier_outputs = model(data)
-        #         data_variance = torch.var(data)
-        #         recon_loss = F.mse_loss(data_recon, data) / data_variance
-        #         classifier_loss = criterion(targets.view(-1, 1), classifier_outputs)
-        #         total_loss = joint_loss_function(recon_loss, vq_loss, classifier_loss, lambda_recon, lambda_vq,
-        #                                          lambda_classifier)
-        #
-        #         predicted_labels = (classifier_outputs >= 0.5).int().view(-1)
-        #         val_score.append(classifier_outputs.flatten().cpu().numpy())
-        #         val_pred.extend(predicted_labels.cpu().numpy())
-        #         val_targets.extend(targets.cpu().numpy())
-        #
-        #         total_val_loss += total_loss
-        #         val_res_recon_error.append(recon_loss.item())
-        #         val_res_perplexity.append(perplexity.item())
+        with torch.no_grad():
+            for batch in validation_loader:
+                data, targets, ages, cup_sizes, names = batch
+                data = torch.cat([data] * 3, dim=1)
+                data = data.to(device)
+                targets = targets.to(device)
+                ages = ages.to(device)
+
+                normalized_ages = (ages - min_age) / (max_age - min_age)
+
+                cup_size_mapping = {'A': 0, 'B': 1, 'C': 2, 'D': 3}
+                one_hot_cup_sizes = torch.zeros((len(cup_sizes), len(cup_size_mapping)))
+                for i, cup_size in enumerate(cup_sizes):
+                    one_hot_cup_sizes[i, cup_size_mapping[cup_size]] = 1
+
+                optimizer.zero_grad()
+
+                vq_loss, data_recon, perplexity, classifier_outputs = model(data, normalized_ages,
+                                                                            one_hot_cup_sizes.to(device))
+
+                data_variance = torch.var(data)
+                recon_loss = F.mse_loss(data_recon, data) / data_variance
+                classifier_loss = criterion(targets.view(-1, 1), classifier_outputs)
+                total_loss = joint_loss_function(recon_loss, vq_loss, classifier_loss, lambda_recon, lambda_vq,
+                                                 lambda_classifier)
+
+                predicted_labels = (classifier_outputs >= 0.5).int().view(-1)
+                val_score.append(classifier_outputs.flatten().cpu().numpy())
+                val_pred.extend(predicted_labels.cpu().numpy())
+                val_targets.extend(targets.cpu().numpy())
+
+                total_val_loss += total_loss
+                val_res_recon_error.append(recon_loss.item())
+                val_res_perplexity.append(perplexity.item())
         # writer.add_scalar('Loss/Val', total_val_loss, epoch)
         #
         # if ((epoch + 1) == 63 or (epoch + 1) == 65):

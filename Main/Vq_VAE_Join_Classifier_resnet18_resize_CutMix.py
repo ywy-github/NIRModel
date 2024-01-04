@@ -237,7 +237,7 @@ class Model(nn.Module):
                                            commitment_cost)
 
 
-        self.classifier = Classifier(512*21*21,512,1)
+        self.classifier = Classifier(512*14*14,512,1)
 
         self._decoder = Decoder()
 
@@ -342,7 +342,7 @@ if __name__ == '__main__':
     torch.backends.cudnn.deterministic = True
     torch.backends.cudnn.benchmark = False
 
-    batch_size = 16
+    batch_size = 4
     epochs = 1000
 
     embedding_dim = 64
@@ -378,7 +378,7 @@ if __name__ == '__main__':
     training_loader = DataLoader(train_data,
                                  batch_size=batch_size,
                                  shuffle=True,
-                                 num_workers=1,
+                                 num_workers=4,
                                  persistent_workers=True,
                                  pin_memory=True
                                  )
@@ -386,7 +386,7 @@ if __name__ == '__main__':
     validation_loader = DataLoader(val_data,
                                    batch_size=batch_size,
                                    shuffle=True,
-                                   num_workers=1,
+                                   num_workers=4,
                                    persistent_workers=True,
                                    pin_memory=True
                                   )
