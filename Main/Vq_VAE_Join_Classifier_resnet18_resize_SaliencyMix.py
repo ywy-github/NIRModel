@@ -320,13 +320,27 @@ class WeightedBinaryCrossEntropyLossWithRegularization(nn.Module):
 
         return total_loss
 
-def mixup_data(x, y, alpha=1.0):
-    lam = np.random.beta(alpha, alpha)
-    batch_size = x.size()[0]
+def saliencyMix(x, y, beta=1.0):
+    batch_size = x.size(0)
+
+    lam = np.random.beta(beta, beta)
+
+    # 生成随机的索引排列，用于选择混合的另一个样本
     index = torch.randperm(batch_size)
-    mixed_x = lam * x + (1 - lam) * x[index, :]
+
+    # 生成随机的矩形框坐标
+    bbx1, bby1, bbx2, bby2 = saliency_bbox(x.size(), lam)
+
+    # 将另一张图像的一部分替换到当前图像中
+    x[:, :, bbx1:bbx2, bby1:bby2] = x[index, :, bbx1:bbx2, bby1:bby2]
+
+    lam = 1 - ((bbx2 - bbx1) * (bby2 - bby1) / (x.size()[-1] * x.size()[-2]))
+
+    # 计算混合后的标签
     y_a, y_b = y, y[index]
-    return mixed_x, y_a, y_b, lam
+
+    return x, y_a, y_b, lam
+
 
 def saliency_bbox(img, lam):
     size = img.size()
@@ -388,7 +402,7 @@ if __name__ == '__main__':
     lambda_vq = 0.2
     lambda_classifier = 0.6
 
-    beta = 0.2
+    beta = 1
     salmix_prob = 0.8
 
     # 读取数据集
@@ -414,13 +428,13 @@ if __name__ == '__main__':
                                  pin_memory=True
                                  )
 
-    # validation_loader = DataLoader(val_data,
-    #                                batch_size=batch_size,
-    #                                shuffle=True,
-    #                                num_workers=8,
-    #                                persistent_workers=True,
-    #                                pin_memory=True
-    #                               )
+    validation_loader = DataLoader(val_data,
+                                   batch_size=batch_size,
+                                   shuffle=True,
+                                   num_workers=8,
+                                   persistent_workers=True,
+                                   pin_memory=True
+                                  )
 
 
     #设置encoder
@@ -472,36 +486,26 @@ if __name__ == '__main__':
             r = np.random.rand(1)
             if beta > 0 and r < salmix_prob:
                 # generate mixed sample
-                lam = np.random.beta(beta, beta)
-                rand_index = torch.randperm(data.size()[0]).cuda()
-                target_a = targets
-                target_b = targets[rand_index]
-                bbx1, bby1, bbx2, bby2 = saliency_bbox(data[rand_index[0]], lam)
-                data[:, :, bbx1:bbx2, bby1:bby2] = data[rand_index, :, bbx1:bbx2, bby1:bby2]
-                # adjust lambda to exactly match pixel ratio
-                lam = 1 - ((bbx2 - bbx1) * (bby2 - bby1) / (data.size()[-1] * data.size()[-2]))
+                data, target_a, target_b, lam = saliencyMix(data, targets, beta)
                 # compute output
-                input_var = torch.autograd.Variable(input, requires_grad=True)
-                target_a_var = torch.autograd.Variable(target_a)
-                target_b_var = torch.autograd.Variable(target_b)
-                output = model(input_var)
-                loss = criterion(output, target_a_var) * lam + criterion(output, target_b_var) * (1. - lam)
+
+                vq_loss, data_recon, perplexity, classifier_outputs = model(data)
+
+                data_variance = torch.var(data)
+                recon_loss = F.mse_loss(data_recon, data) / data_variance
+                classifier_loss = lam * criterion(target_a.view(-1, 1), classifier_outputs) + (1 - lam) * criterion(
+                    target_b.view(-1, 1), classifier_outputs)
+                total_loss = joint_loss_function(recon_loss, vq_loss, classifier_loss, lambda_recon, lambda_vq,
+                                                 lambda_classifier)
             else:
-                # compute output
-                input_var = torch.autograd.Variable(data, requires_grad=True)
-                target_var = torch.autograd.Variable(targets)
-                output = model(input_var)
-                loss = criterion(output, target_var)
+                vq_loss, data_recon, perplexity, classifier_outputs = model(data)
 
-            optimizer.zero_grad()
+                data_variance = torch.var(data)
+                recon_loss = F.mse_loss(data_recon, data) / data_variance
+                classifier_loss = criterion(targets.view(-1, 1), classifier_outputs)
+                total_loss = joint_loss_function(recon_loss, vq_loss, classifier_loss, lambda_recon, lambda_vq,
+                                                 lambda_classifier)
 
-            vq_loss, data_recon, perplexity, classifier_outputs = model(data)
-
-            data_variance = torch.var(data)
-            recon_loss = F.mse_loss(data_recon, data) / data_variance
-            classifier_loss = lam * criterion(target_a.view(-1, 1), classifier_outputs)+ (1 - lam) * criterion(target_b.view(-1, 1), classifier_outputs)
-            total_loss = joint_loss_function(recon_loss, vq_loss, classifier_loss, lambda_recon, lambda_vq,
-                                             lambda_classifier)
             total_loss.backward()
             optimizer.step()
             # scheduler.step()
@@ -515,32 +519,32 @@ if __name__ == '__main__':
             train_res_recon_error.append(recon_loss.item())
             train_res_perplexity.append(perplexity.item())
         # writer.add_scalar('Loss/Train', total_train_loss, epoch)
-        # val_score = []
-        # val_pred = []
-        # val_targets = []
-        # total_val_loss = 0.0
-        # model.eval()
-        # with torch.no_grad():
-        #     for batch in validation_loader:
-        #         data, targets, names = batch
-        #         data = torch.cat([data] * 3, dim=1)
-        #         data = data.to(device)
-        #         targets = targets.to(device)
-        #         vq_loss, data_recon, perplexity, classifier_outputs = model(data)
-        #         data_variance = torch.var(data)
-        #         recon_loss = F.mse_loss(data_recon, data) / data_variance
-        #         classifier_loss = criterion(targets.view(-1, 1), classifier_outputs)
-        #         total_loss = joint_loss_function(recon_loss, vq_loss, classifier_loss, lambda_recon, lambda_vq,
-        #                                          lambda_classifier)
-        #
-        #         predicted_labels = (classifier_outputs >= 0.5).int().view(-1)
-        #         val_score.append(classifier_outputs.flatten().cpu().numpy())
-        #         val_pred.extend(predicted_labels.cpu().numpy())
-        #         val_targets.extend(targets.cpu().numpy())
-        #
-        #         total_val_loss += total_loss
-        #         val_res_recon_error.append(recon_loss.item())
-        #         val_res_perplexity.append(perplexity.item())
+        val_score = []
+        val_pred = []
+        val_targets = []
+        total_val_loss = 0.0
+        model.eval()
+        with torch.no_grad():
+            for batch in validation_loader:
+                data, targets, names = batch
+                data = torch.cat([data] * 3, dim=1)
+                data = data.to(device)
+                targets = targets.to(device)
+                vq_loss, data_recon, perplexity, classifier_outputs = model(data)
+                data_variance = torch.var(data)
+                recon_loss = F.mse_loss(data_recon, data) / data_variance
+                classifier_loss = criterion(targets.view(-1, 1), classifier_outputs)
+                total_loss = joint_loss_function(recon_loss, vq_loss, classifier_loss, lambda_recon, lambda_vq,
+                                                 lambda_classifier)
+
+                predicted_labels = (classifier_outputs >= 0.5).int().view(-1)
+                val_score.append(classifier_outputs.flatten().cpu().numpy())
+                val_pred.extend(predicted_labels.cpu().numpy())
+                val_targets.extend(targets.cpu().numpy())
+
+                total_val_loss += total_loss
+                val_res_recon_error.append(recon_loss.item())
+                val_res_perplexity.append(perplexity.item())
         # writer.add_scalar('Loss/Val', total_val_loss, epoch)
         #
         # if ((epoch + 1) == 63 or (epoch + 1) == 65):
