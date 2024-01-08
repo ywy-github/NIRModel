@@ -22,8 +22,8 @@ from PIL import Image
 import glob
 import random
 
+from Main.data_loader import MyData
 from Metrics import all_metrics
-from data_loader import MyData
 
 class VectorQuantizer(nn.Module):
     def __init__(self, num_embeddings, embedding_dim, commitment_cost):
@@ -234,8 +234,6 @@ class Decoder(nn.Module):
         x = self.deconv5(x)
         return x
 
-
-
 class Classifier(nn.Module):
     def __init__(self, input_dim, hidden_dim, num_classes):
         super(Classifier, self).__init__()
@@ -254,51 +252,38 @@ class Classifier(nn.Module):
         return x
 
 class Model(nn.Module):
-    def __init__(self,encoder1,encoder2,num_embeddings, embedding_dim, commitment_cost, decay=0):
+    def __init__(self,encoder,num_embeddings, embedding_dim, commitment_cost, decay=0):
         super(Model, self).__init__()
 
-        self._encoder1 = encoder1
-        self._encoder2 = encoder2
+        self._encoder = encoder
         # self._pre_vq_conv = nn.Conv2d(in_channels=num_hiddens,
         #                               out_channels=embedding_dim,
         #                               kernel_size=1,
         #                               stride=1)
         if decay > 0.0:
-            self._vq_vae1 = VectorQuantizerEMA(num_embeddings, embedding_dim,
-                                              commitment_cost, decay)
-            self._vq_vae2 = VectorQuantizerEMA(num_embeddings, embedding_dim,
+            self._vq_vae = VectorQuantizerEMA(num_embeddings, embedding_dim,
                                               commitment_cost, decay)
         else:
-            self._vq_vae1 = VectorQuantizer(num_embeddings, embedding_dim,
+            self._vq_vae = VectorQuantizer(num_embeddings, embedding_dim,
                                            commitment_cost)
-            self._vq_vae2 = VectorQuantizer(num_embeddings, embedding_dim,
-                                            commitment_cost)
 
-        self.classifier = Classifier(1024*14*14,1024,1)
+        self.classifier = Classifier(512*14*14,512,1)
 
-        self._decoder1 = Decoder()
-        self._decoder2 = Decoder()
+        self._decoder = Decoder()
 
-    def forward(self, data1,data2):
-        z1 = self._encoder1(data1)
-        z2 = self._encoder2(data2)
-
+    def forward(self, x):
+        z = self._encoder(x)
         # z = self._pre_vq_conv(z)
-        loss1, quantized1, perplexity1, _ = self._vq_vae1(z1)
-        loss2, quantized2, perplexity2, _ = self._vq_vae2(z2)
-        quantized = torch.cat([quantized1, quantized2], dim=1)
+        loss, quantized, perplexity, _ = self._vq_vae(z)
         classifier_outputs = self.classifier(quantized.view(quantized.size(0),-1))
-        x_recon1 = self._decoder1(quantized1)
-        x_recon2 = self._decoder2(quantized2)
+        x_recon = self._decoder(quantized)
 
-        return loss1,loss2,x_recon1,x_recon2,perplexity1,perplexity2,classifier_outputs
+        return loss, x_recon, perplexity, classifier_outputs
 
 # 定义联合模型的损失函数
-def joint_loss_function(recon_loss1,recon_loss2, vq_loss1,vq_loss2, classifier_loss,
-                        lambda_recon1,lambda_recon2, lambda_vq1,lambda_vq2,lambda_classifier):
+def joint_loss_function(recon_loss,vq_loss,classifier_loss,lambda_recon,lambda_vq,lambda_classifier):
     # 总损失
-    total_loss = lambda_recon1 * recon_loss1 + lambda_vq1 * vq_loss1 + lambda_classifier * classifier_loss + \
-                 lambda_recon2 * recon_loss2 + lambda_vq2 * vq_loss2
+    total_loss = lambda_recon * recon_loss + lambda_vq*vq_loss + lambda_classifier * classifier_loss
 
     return total_loss
 
@@ -371,13 +356,9 @@ if __name__ == '__main__':
 
     learning_rate = 1e-5
 
-    lambda_recon1 = 0.2
-    lambda_vq1 = 0.1
-    lambda_classifier = 0.6
-
-    lambda_recon2 = 0.05
-    lambda_vq2 = 0.05
-
+    lambda_recon = 0.1
+    lambda_vq = 0.1
+    lambda_classifier = 0.8
 
     # 读取数据集
     transform = transforms.Compose([
@@ -387,7 +368,8 @@ if __name__ == '__main__':
     ])
 
     train_benign_data_wave1 = MyData("../data/ti_二期双十+双十五wave1/train/benign", "benign", transform=transform)
-    train_malignat_data_wave1 = MyData("../data/ti_二期双十+双十五wave1/train/malignant", "malignant", transform=transform)
+    train_malignat_data_wave1 = MyData("../data/ti_二期双十+双十五wave1/train/malignant", "malignant",
+                                       transform=transform)
     train_data_wave1 = train_benign_data_wave1 + train_malignat_data_wave1
 
     val_benign_data_wave1 = MyData("../data/ti_二期双十wave1/val/benign", "benign", transform=transform)
@@ -395,7 +377,8 @@ if __name__ == '__main__':
     val_data_wave1 = val_benign_data_wave1 + val_malignat_data_wave1
 
     train_benign_data_wave2 = MyData("../data/ti_二期双十+双十五原始图/train/benign", "benign", transform=transform)
-    train_malignat_data_wave2 = MyData("../data/ti_二期双十+双十五原始图/train/malignant", "malignant", transform=transform)
+    train_malignat_data_wave2 = MyData("../data/ti_二期双十+双十五原始图/train/malignant", "malignant",
+                                       transform=transform)
     train_data_wave2 = train_benign_data_wave2 + train_malignat_data_wave2
 
     val_benign_data_wave2 = MyData("../data/ti_二期双十原始图/val/benign", "benign", transform=transform)
@@ -403,28 +386,28 @@ if __name__ == '__main__':
     val_data_wave2 = val_benign_data_wave2 + val_malignat_data_wave2
 
     training_loader_wave1 = DataLoader(train_data_wave1,
-                                 batch_size=batch_size,
-                                 shuffle=True,
-                                 num_workers=4,
-                                 persistent_workers=True,
-                                 pin_memory=True
-                                 )
+                                       batch_size=batch_size,
+                                       shuffle=True,
+                                       num_workers=4,
+                                       persistent_workers=True,
+                                       pin_memory=True
+                                       )
 
     validation_loader_wave1 = DataLoader(val_data_wave1,
-                                   batch_size=batch_size,
-                                   shuffle=True,
-                                   num_workers=4,
-                                   persistent_workers=True,
-                                   pin_memory=True
-                                  )
+                                         batch_size=batch_size,
+                                         shuffle=True,
+                                         num_workers=4,
+                                         persistent_workers=True,
+                                         pin_memory=True
+                                         )
 
     training_loader_wave2 = DataLoader(train_data_wave2,
-                                 batch_size=batch_size,
-                                 shuffle=True,
-                                 num_workers=4,
-                                 persistent_workers=True,
-                                 pin_memory=True
-                                 )
+                                       batch_size=batch_size,
+                                       shuffle=True,
+                                       num_workers=4,
+                                       persistent_workers=True,
+                                       pin_memory=True
+                                       )
 
     validation_loader_wave2 = DataLoader(val_data_wave2,
                                          batch_size=batch_size,
@@ -434,14 +417,12 @@ if __name__ == '__main__':
                                          pin_memory=True
                                          )
 
-
-
     #设置encoder
-    encoder1 = models.resnet18(pretrained=True)
-    for param in encoder1.parameters():
+    encoder = models.resnet18(pretrained=True)
+    for param in encoder.parameters():
         param.requires_grad = False
 
-    for name, param in encoder1.named_parameters():
+    for name, param in encoder.named_parameters():
         if "layer3" in name:
             param.requires_grad = True
         if "layer4" in name:
@@ -449,26 +430,12 @@ if __name__ == '__main__':
         if "fc" in name:
             param.requires_grad = True
 
-    encoder1 = nn.Sequential(*list(encoder1.children())[:-2])
+    encoder = nn.Sequential(*list(encoder.children())[:-2])
 
-    encoder2 = models.resnet18(pretrained=True)
-    for param in encoder2.parameters():
-        param.requires_grad = False
-
-    for name, param in encoder2.named_parameters():
-        if "layer3" in name:
-            param.requires_grad = True
-        if "layer4" in name:
-            param.requires_grad = True
-        if "fc" in name:
-            param.requires_grad = True
-
-    encoder2 = nn.Sequential(*list(encoder2.children())[:-2])
-
-    model = Model(encoder1,encoder2,num_embeddings, embedding_dim, commitment_cost, decay).to(device)
+    model = Model(encoder,num_embeddings, embedding_dim, commitment_cost, decay).to(device)
 
 
-    criterion = WeightedBinaryCrossEntropyLoss(1)
+    criterion = WeightedBinaryCrossEntropyLoss(1.1)
     # criterion = WeightedBinaryCrossEntropyLossWithRegularization(2, 0.01)
     criterion.to(device)
     optimizer = optim.Adam(filter(lambda p: p.requires_grad, model.parameters()), lr=learning_rate, amsgrad=False)
@@ -490,32 +457,24 @@ if __name__ == '__main__':
         train_pred = []
         train_targets = []
         total_train_loss = 0.0
-        for batch_wave1,batch_wave2 in zip(training_loader_wave1,training_loader_wave2):
+        for batch_wave1, batch_wave2 in zip(training_loader_wave1, training_loader_wave2):
             data1, targets1, dcm_names1 = batch_wave1
-            data_path1 = torch.cat([data1] * 3, dim=1)
-            data_path1 = data_path1.to(device)
+            data2, targets2, dcm_names2 = batch_wave2
+
+            data = torch.cat([data1,data2,data1-data2], dim=1)
+            data = data.to(device)
             targets1 = targets1.to(device)
 
-            data2, targets2, dcm_names2 = batch_wave2
-            data_path2 = torch.cat([data1,data2,data1-data2], dim=1)
-            data_path2 = data_path2.to(device)
-            targets2 = targets2.to(device)
 
             optimizer.zero_grad()
 
-            vq_loss1,vq_loss2,data_recon1, data_recon2,perplexity1, perplexity2,classifier_outputs = model(data_path1,data_path2)
+            vq_loss, data_recon, perplexity, classifier_outputs = model(data)
 
-            data_variance1 = torch.var(data_path1)
-            recon_loss1 = F.mse_loss(data_recon1, data_path1) / data_variance1
+            data_variance = torch.var(data)
+            recon_loss = F.mse_loss(data_recon, data) / data_variance
             classifier_loss = criterion(targets1.view(-1, 1), classifier_outputs)
-
-            data_variance2 = torch.var(data_path2)
-            recon_loss2 = F.mse_loss(data_recon2, data_path2) / data_variance2
-
-
-            total_loss = joint_loss_function(recon_loss1,recon_loss2, vq_loss1,vq_loss2, classifier_loss,
-                                             lambda_recon1,lambda_recon2, lambda_vq1,lambda_vq2,lambda_classifier
-                                             )
+            total_loss = joint_loss_function(recon_loss, vq_loss, classifier_loss, lambda_recon, lambda_vq,
+                                             lambda_classifier)
             total_loss.backward()
             optimizer.step()
             # scheduler.step()
@@ -526,7 +485,8 @@ if __name__ == '__main__':
             train_targets.extend(targets1.cpu().numpy())
 
             total_train_loss += total_loss
-
+            train_res_recon_error.append(recon_loss.item())
+            train_res_perplexity.append(perplexity.item())
         # writer.add_scalar('Loss/Train', total_train_loss, epoch)
         val_score = []
         val_pred = []
@@ -536,28 +496,19 @@ if __name__ == '__main__':
         with torch.no_grad():
             for batch_wave1, batch_wave2 in zip(validation_loader_wave1, validation_loader_wave2):
                 data1, targets1, dcm_names1 = batch_wave1
-                data_path1 = torch.cat([data1] * 3, dim=1)
-                data_path1 = data_path1.to(device)
+                data2, targets2, dcm_names2 = batch_wave2
+
+                data = torch.cat([data1, data2, data1 - data2], dim=1)
+
+                data = data.to(device)
                 targets1 = targets1.to(device)
 
-                data2, targets2, dcm_names2 = batch_wave2
-                data_path2 = torch.cat([data1,data2,data1-data2] , dim=1)
-                data_path2 = data_path2.to(device)
-                targets2 = targets2.to(device)
-
-                vq_loss1, vq_loss2, data_recon1, data_recon2, perplexity1, perplexity2, classifier_outputs = model(data_path1, data_path2)
-
-                data_variance1 = torch.var(data_path1)
-                recon_loss1 = F.mse_loss(data_recon1, data_path1) / data_variance1
-
+                vq_loss, data_recon, perplexity, classifier_outputs = model(data)
+                data_variance = torch.var(data)
+                recon_loss = F.mse_loss(data_recon, data) / data_variance
                 classifier_loss = criterion(targets1.view(-1, 1), classifier_outputs)
-
-                data_variance2 = torch.var(data_path2)
-                recon_loss2 = F.mse_loss(data_recon2, data_path2) / data_variance2
-
-                total_loss = joint_loss_function(recon_loss1, recon_loss2, vq_loss1, vq_loss2, classifier_loss,
-                                                 lambda_recon1, lambda_recon2, lambda_vq1, lambda_vq2, lambda_classifier
-                                                 )
+                total_loss = joint_loss_function(recon_loss, vq_loss, classifier_loss, lambda_recon, lambda_vq,
+                                                 lambda_classifier)
 
                 predicted_labels = (classifier_outputs >= 0.5).int().view(-1)
                 val_score.append(classifier_outputs.flatten().cpu().numpy())
@@ -565,11 +516,12 @@ if __name__ == '__main__':
                 val_targets.extend(targets1.cpu().numpy())
 
                 total_val_loss += total_loss
-
+                val_res_recon_error.append(recon_loss.item())
+                val_res_perplexity.append(perplexity.item())
         # writer.add_scalar('Loss/Val', total_val_loss, epoch)
 
-        if ((epoch + 1) == 48 or (epoch + 1) == 86):
-            torch.save(model.state_dict(), "../models/qc/resnet18-双路径-ti—增强图-原始图-{}.pth".format(epoch + 1))
+        if ((epoch + 1) == 165 or (epoch + 1) == 225 or (epoch + 1) == 227):
+            torch.save(model.state_dict(),"../models/qc/单路径-增强图-原始图-{}.pth".format(epoch + 1))
         print('%d epoch' % (epoch + 1))
 
         train_acc, train_sen, train_spe = all_metrics(train_targets, train_pred)
@@ -592,6 +544,10 @@ if __name__ == '__main__':
               " spe: {:.4f}".format(val_spe) + " auc: {:.4f}".format(val_auc) +
               " loss: {:.4f}".format(total_val_loss))
 
+        print('train_recon_error: %.3f' % np.mean(train_res_recon_error[-10:]))
+        print('train_perplexity: %.3f' % np.mean(train_res_perplexity[-10:]))
+        print('val_recon_error: %.3f' % np.mean(val_res_recon_error[-10:]))
+        print('val_perplexity: %.3f' % np.mean(val_res_perplexity[-10:]))
 
     # writer.close()
     # 结束训练时间

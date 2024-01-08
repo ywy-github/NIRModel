@@ -282,7 +282,6 @@ def joint_loss_function(recon_loss,vq_loss,classifier_loss,lambda_recon,lambda_v
     total_loss = lambda_recon * recon_loss + lambda_vq*vq_loss + lambda_classifier * classifier_loss
 
     return total_loss
-
 # 定义自定义损失函数，加权二进制交叉熵
 class WeightedBinaryCrossEntropyLoss(nn.Module):
     def __init__(self, weight_positive):
@@ -308,10 +307,9 @@ if __name__ == '__main__':
 
     learning_rate = 1e-5
 
-    lambda_recon = 0.2
-    lambda_vq = 0.2
-    lambda_classifier = 0.6
-
+    lambda_recon = 0.1
+    lambda_vq = 0.1
+    lambda_classifier = 0.8
 
     # 读取数据集
     transform = transforms.Compose([
@@ -320,16 +318,24 @@ if __name__ == '__main__':
         transforms.Normalize((0.3281,), (0.2366,))  # 设置均值和标准差
     ])
 
-    test_benign_data = MyData("../data/一期数据/test/benign", "benign", transform=transform)
-    test_malignat_data = MyData("../data/一期数据/test/malignant", "malignant", transform=transform)
-    test_data = test_benign_data + test_malignat_data
+    test_benign_data_wave1 = MyData("../data/ti_二期双十wave1/test/benign", "benign", transform=transform)
+    test_malignat_data_wave1 = MyData("../data/ti_二期双十wave1/test/malignant", "malignant", transform=transform)
+    test_data_wave1 = test_benign_data_wave1 + test_malignat_data_wave1
 
-    test_loader = DataLoader(test_data,
+    test_benign_data_wave2 = MyData("../data/ti_二期双十原始图/test/benign", "benign", transform=transform)
+    test_malignat_data_wave2 = MyData("../data/ti_二期双十原始图/test/malignant", "malignant", transform=transform)
+    test_data_wave2 = test_benign_data_wave2 + test_malignat_data_wave2
+
+    test_loader_wave1 = DataLoader(test_data_wave1,
+                                   batch_size=batch_size,
+                                   shuffle=True,
+                                   pin_memory=True)
+
+    test_loader_wave2 = DataLoader(test_data_wave2,
                              batch_size=batch_size,
                              shuffle=True,
                              pin_memory=True)
 
-    # 设置encoder
     encoder = models.resnet18(pretrained=True)
     for param in encoder.parameters():
         param.requires_grad = False
@@ -346,7 +352,7 @@ if __name__ == '__main__':
 
     model = Model(encoder, num_embeddings, embedding_dim, commitment_cost, decay).to(device)
 
-    model.load_state_dict(torch.load('../models/argument/VQ-VAE-resnet18-cutMix-一期数据-94.pth'))
+    model.load_state_dict(torch.load('../models/qc/单路径-增强图-原始图-227.pth'))
 
     criterion = WeightedBinaryCrossEntropyLoss(2)
     criterion.to(device)
@@ -358,24 +364,29 @@ if __name__ == '__main__':
     total_test_loss = []
     model.eval()
     with torch.no_grad():
-        for batch in test_loader:
-            data, targets, dcm_names = batch
-            data = torch.cat([data] * 3, dim=1)
+        for batch_wave1, batch_wave2 in zip(test_loader_wave1, test_loader_wave2):
+            data1, targets1, dcm_names1 = batch_wave1
+            data2, targets2, dcm_names2 = batch_wave2
+
+            data = torch.cat([data1, data2, data1 - data2], dim=1)
             data = data.to(device)
-            targets = targets.to(device)
+            targets1 = targets1.to(device)
+
             vq_loss, data_recon, perplexity, classifier_outputs = model(data)
-
-            loss = criterion(targets.view(-1, 1), classifier_outputs)
-
+            data_variance = torch.var(data)
+            recon_loss = F.mse_loss(data_recon, data) / data_variance
+            classifier_loss = criterion(targets1.view(-1, 1), classifier_outputs)
+            total_loss = joint_loss_function(recon_loss, vq_loss, classifier_loss, lambda_recon, lambda_vq,
+                                             lambda_classifier)
 
             predicted_labels =  (classifier_outputs >= 0.5).int().view(-1)
             # 记录每个样本的dcm_name、预测概率值和标签
-            for i in range(len(dcm_names)):
-                test_results.append({'dcm_name': dcm_names[i], 'pred': classifier_outputs[i].item(),
-                                     'prob': predicted_labels[i].item(), 'label': targets[i].item()})
+            for i in range(len(dcm_names1)):
+                test_results.append({'dcm_name': dcm_names1[i], 'pred': classifier_outputs[i].item(),
+                                     'prob': predicted_labels[i].item(), 'label': targets1[i].item()})
             test_predictions.extend(predicted_labels.cpu().numpy())
-            test_targets.extend(targets.cpu().numpy())
-            total_test_loss.append(loss.item())
+            test_targets.extend(targets1.cpu().numpy())
+            total_test_loss.append(total_loss.item())
             test_pred.append(classifier_outputs.flatten().cpu().numpy())
             # concat = torch.cat((data[0].view(128, 128),
             #                     data_recon[0].view(128, 128)), 1)
@@ -393,7 +404,7 @@ if __name__ == '__main__':
         np.mean(total_test_loss[-10:])))
 
     # df = pd.DataFrame(test_results)
-    # filename = '../models/result/VQ-VAE-resnet18-二期双十+双十五训-双十测.xlsx'
+    # filename = '../models/result/VQ-VAE-resnet18-二期双十+双十五.xlsx'
     #
     # # 检查文件是否存在
     # if not os.path.isfile(filename):

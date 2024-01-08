@@ -329,7 +329,7 @@ def saliencyMix(x, y, beta=1.0):
     index = torch.randperm(batch_size)
 
     # 生成随机的矩形框坐标
-    bbx1, bby1, bbx2, bby2 = saliency_bbox(x.size(), lam)
+    bbx1, bby1, bbx2, bby2 = saliency_bbox(x, lam)
 
     # 将另一张图像的一部分替换到当前图像中
     x[:, :, bbx1:bbx2, bby1:bby2] = x[index, :, bbx1:bbx2, bby1:bby2]
@@ -347,8 +347,8 @@ def saliency_bbox(img, lam):
     W = size[1]
     H = size[2]
     cut_rat = np.sqrt(1. - lam)
-    cut_w = np.int(W * cut_rat)
-    cut_h = np.int(H * cut_rat)
+    cut_w = int(W * cut_rat)
+    cut_h = int(H * cut_rat)
 
     # initialize OpenCV's static fine grained saliency detector and compute the saliency map
     temp_img = img.cpu().numpy().transpose(1, 2, 0)
@@ -385,7 +385,7 @@ if __name__ == '__main__':
     torch.backends.cudnn.deterministic = True
     torch.backends.cudnn.benchmark = False
 
-    batch_size = 16
+    batch_size = 8
     epochs = 1000
 
     embedding_dim = 64
@@ -424,7 +424,7 @@ if __name__ == '__main__':
     training_loader = DataLoader(train_data,
                                  batch_size=batch_size,
                                  shuffle=True,
-                                 num_workers=1,
+                                 num_workers=8,
                                  pin_memory=True
                                  )
 
@@ -455,7 +455,7 @@ if __name__ == '__main__':
     model = Model(encoder,num_embeddings, embedding_dim, commitment_cost, decay).to(device)
 
 
-    criterion = WeightedBinaryCrossEntropyLoss(1.5)
+    criterion = WeightedBinaryCrossEntropyLoss(2)
     # criterion = WeightedBinaryCrossEntropyLossWithRegularization(2, 0.01)
     criterion.to(device)
     optimizer = optim.Adam(filter(lambda p: p.requires_grad, model.parameters()), lr=learning_rate, amsgrad=False)

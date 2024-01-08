@@ -338,8 +338,8 @@ if __name__ == '__main__':
     test_malignat_data_wave1 = MyData("../data/ti_二期双十wave1/test/malignant", "malignant", transform=transform)
     test_data_wave1 = test_benign_data_wave1 + test_malignat_data_wave1
 
-    test_benign_data_wave2 = MyData("../data/ti_二期双十wave2/test/benign", "benign", transform=transform)
-    test_malignat_data_wave2 = MyData("../data/ti_二期双十wave2/test/malignant", "malignant", transform=transform)
+    test_benign_data_wave2 = MyData("../data/ti_二期双十原始图/test/benign", "benign", transform=transform)
+    test_malignat_data_wave2 = MyData("../data/ti_二期双十原始图/test/malignant", "malignant", transform=transform)
     test_data_wave2 = test_benign_data_wave2 + test_malignat_data_wave2
 
     test_loader_wave1 = DataLoader(test_data_wave1,
@@ -383,7 +383,7 @@ if __name__ == '__main__':
 
     model = Model(encoder1, encoder2, num_embeddings, embedding_dim, commitment_cost, decay).to(device)
 
-    model.load_state_dict(torch.load('../models/qc/resnet18-双路径-ti—二期双十双十五训-二期双十测-85.pth'))
+    model.load_state_dict(torch.load('../models/qc/resnet18-双路径-ti—增强图-原始图-86.pth'))
 
     criterion = WeightedBinaryCrossEntropyLoss(2)
     criterion.to(device)
@@ -397,25 +397,25 @@ if __name__ == '__main__':
     with torch.no_grad():
         for batch_wave1, batch_wave2 in zip(test_loader_wave1, test_loader_wave2):
             data1, targets1, dcm_names1 = batch_wave1
-            data1 = torch.cat([data1] * 3, dim=1)
-            data1 = data1.to(device)
+            data_path1 = torch.cat([data1] * 3, dim=1)
+            data_path1 = data_path1.to(device)
             targets1 = targets1.to(device)
 
             data2, targets2, dcm_names2 = batch_wave2
-            data2 = torch.cat([data2] * 3, dim=1)
-            data2 = data2.to(device)
+            data_path2 = torch.cat([data1, data2, data1 - data2], dim=1)
+            data_path2 = data_path2.to(device)
             targets2 = targets2.to(device)
 
-            vq_loss1, vq_loss2, data_recon1, data_recon2, perplexity1, perplexity2, classifier_outputs = model(data1,
-                                                                                                               data2)
+            vq_loss1, vq_loss2, data_recon1, data_recon2, perplexity1, perplexity2, classifier_outputs = model(
+                data_path1, data_path2)
 
-            data_variance1 = torch.var(data1)
-            recon_loss1 = F.mse_loss(data_recon1, data1) / data_variance1
+            data_variance1 = torch.var(data_path1)
+            recon_loss1 = F.mse_loss(data_recon1, data_path1) / data_variance1
 
             classifier_loss = criterion(targets1.view(-1, 1), classifier_outputs)
 
-            data_variance2 = torch.var(data2)
-            recon_loss2 = F.mse_loss(data_recon2, data2) / data_variance2
+            data_variance2 = torch.var(data_path2)
+            recon_loss2 = F.mse_loss(data_recon2, data_path2) / data_variance2
 
             total_loss = joint_loss_function(recon_loss1, recon_loss2, vq_loss1, vq_loss2, classifier_loss,
                                              lambda_recon1, lambda_recon2, lambda_vq1, lambda_vq2, lambda_classifier
