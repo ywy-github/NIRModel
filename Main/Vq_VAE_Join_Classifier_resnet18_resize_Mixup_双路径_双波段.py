@@ -242,10 +242,10 @@ class Classifier(nn.Module):
         self.path = nn.Sequential(
             nn.Linear(input_dim, hidden_dim),
             nn.ReLU(),
-            nn.Dropout(0.5),
+            nn.Dropout(0.6),
             nn.Linear(hidden_dim, hidden_dim // 2),
             nn.ReLU(),
-            nn.Dropout(0.5),
+            nn.Dropout(0.6),
             nn.Linear(hidden_dim // 2, num_classes),
             nn.Sigmoid()
         )
@@ -358,7 +358,7 @@ if __name__ == '__main__':
     torch.backends.cudnn.deterministic = True
     torch.backends.cudnn.benchmark = False
 
-    batch_size = 16
+    batch_size = 18
     epochs = 1000
 
     embedding_dim = 64
@@ -385,9 +385,9 @@ if __name__ == '__main__':
         transforms.ToTensor(),
         transforms.Normalize((0.3281,), (0.2366,))  # 设置均值和标准差
     ])
-
     train_benign_data_wave1 = MyData("../data/ti_二期双十+双十五wave1/train/benign", "benign", transform=transform)
-    train_malignat_data_wave1 = MyData("../data/ti_二期双十+双十五wave1/train/malignant", "malignant", transform=transform)
+    train_malignat_data_wave1 = MyData("../data/ti_二期双十+双十五wave1/train/malignant", "malignant",
+                                       transform=transform)
     train_data_wave1 = train_benign_data_wave1 + train_malignat_data_wave1
 
     val_benign_data_wave1 = MyData("../data/ti_二期双十wave1/val/benign", "benign", transform=transform)
@@ -395,41 +395,67 @@ if __name__ == '__main__':
     val_data_wave1 = val_benign_data_wave1 + val_malignat_data_wave1
 
     train_benign_data_wave2 = MyData("../data/ti_二期双十+双十五原始图/train/benign", "benign", transform=transform)
-    train_malignat_data_wave2 = MyData("../data/ti_二期双十+双十五原始图/train/malignant", "malignant", transform=transform)
+    train_malignat_data_wave2 = MyData("../data/ti_二期双十+双十五原始图/train/malignant", "malignant",
+                                       transform=transform)
     train_data_wave2 = train_benign_data_wave2 + train_malignat_data_wave2
 
     val_benign_data_wave2 = MyData("../data/ti_二期双十原始图/val/benign", "benign", transform=transform)
     val_malignat_data_wave2 = MyData("../data/ti_二期双十原始图/val/malignant", "malignant", transform=transform)
     val_data_wave2 = val_benign_data_wave2 + val_malignat_data_wave2
 
+    train_benign_data_wave3 = MyData("../data/ti_二期双十+双十五wave2/train/benign", "benign", transform=transform)
+    train_malignat_data_wave3 = MyData("../data/ti_二期双十+双十五wave2/train/malignant", "malignant",
+                                       transform=transform)
+    train_data_wave3 = train_benign_data_wave3 + train_malignat_data_wave3
+
+    val_benign_data_wave3 = MyData("../data/ti_二期双十wave2/val/benign", "benign", transform=transform)
+    val_malignat_data_wave3 = MyData("../data/ti_二期双十wave2/val/malignant", "malignant", transform=transform)
+    val_data_wave3 = val_benign_data_wave3 + val_malignat_data_wave3
+
     training_loader_wave1 = DataLoader(train_data_wave1,
-                                 batch_size=batch_size,
-                                 shuffle=True,
-                                 num_workers=4,
-                                 persistent_workers=True,
-                                 pin_memory=True
-                                 )
+                                       batch_size=batch_size,
+                                       shuffle=True,
+                                       num_workers=3,
+                                       persistent_workers=True,
+                                       pin_memory=True
+                                       )
 
     validation_loader_wave1 = DataLoader(val_data_wave1,
-                                   batch_size=batch_size,
-                                   shuffle=True,
-                                   num_workers=4,
-                                   persistent_workers=True,
-                                   pin_memory=True
-                                  )
+                                         batch_size=batch_size,
+                                         shuffle=True,
+                                         num_workers=3,
+                                         persistent_workers=True,
+                                         pin_memory=True
+                                         )
 
     training_loader_wave2 = DataLoader(train_data_wave2,
-                                 batch_size=batch_size,
-                                 shuffle=True,
-                                 num_workers=4,
-                                 persistent_workers=True,
-                                 pin_memory=True
-                                 )
+                                       batch_size=batch_size,
+                                       shuffle=True,
+                                       num_workers=3,
+                                       persistent_workers=True,
+                                       pin_memory=True
+                                       )
 
     validation_loader_wave2 = DataLoader(val_data_wave2,
                                          batch_size=batch_size,
                                          shuffle=True,
-                                         num_workers=4,
+                                         num_workers=3,
+                                         persistent_workers=True,
+                                         pin_memory=True
+                                         )
+
+    training_loader_wave3 = DataLoader(train_data_wave3,
+                                       batch_size=batch_size,
+                                       shuffle=True,
+                                       num_workers=3,
+                                       persistent_workers=True,
+                                       pin_memory=True
+                                       )
+
+    validation_loader_wave3 = DataLoader(val_data_wave3,
+                                         batch_size=batch_size,
+                                         shuffle=True,
+                                         num_workers=3,
                                          persistent_workers=True,
                                          pin_memory=True
                                          )
@@ -468,7 +494,7 @@ if __name__ == '__main__':
     model = Model(encoder1,encoder2,num_embeddings, embedding_dim, commitment_cost, decay).to(device)
 
 
-    criterion = WeightedBinaryCrossEntropyLoss(1)
+    criterion = WeightedBinaryCrossEntropyLoss(1.2)
     # criterion = WeightedBinaryCrossEntropyLossWithRegularization(2, 0.01)
     criterion.to(device)
     optimizer = optim.Adam(filter(lambda p: p.requires_grad, model.parameters()), lr=learning_rate, amsgrad=False)
@@ -490,16 +516,18 @@ if __name__ == '__main__':
         train_pred = []
         train_targets = []
         total_train_loss = 0.0
-        for batch_wave1,batch_wave2 in zip(training_loader_wave1,training_loader_wave2):
+        for batch_wave1,batch_wave2,batch_wave3 in zip(training_loader_wave1,training_loader_wave2,training_loader_wave3):
             data1, targets1, dcm_names1 = batch_wave1
             data_path1 = torch.cat([data1] * 3, dim=1)
             data_path1 = data_path1.to(device)
             targets1 = targets1.to(device)
 
             data2, targets2, dcm_names2 = batch_wave2
-            data_path2 = torch.cat([data1,data2,data1-data2], dim=1)
+            data3, targets3, dcm_names3 = batch_wave3
+            data_path2 = torch.cat([data1,data3,data2], dim=1)
             data_path2 = data_path2.to(device)
-            targets2 = targets2.to(device)
+
+
 
             optimizer.zero_grad()
 
@@ -534,16 +562,16 @@ if __name__ == '__main__':
         total_val_loss = 0.0
         model.eval()
         with torch.no_grad():
-            for batch_wave1, batch_wave2 in zip(validation_loader_wave1, validation_loader_wave2):
+            for batch_wave1, batch_wave2, batch_wave3 in zip(validation_loader_wave1, validation_loader_wave2, validation_loader_wave3):
                 data1, targets1, dcm_names1 = batch_wave1
                 data_path1 = torch.cat([data1] * 3, dim=1)
                 data_path1 = data_path1.to(device)
                 targets1 = targets1.to(device)
 
                 data2, targets2, dcm_names2 = batch_wave2
-                data_path2 = torch.cat([data1,data2,data1-data2] , dim=1)
+                data3, targets3, dcm_names3 = batch_wave3
+                data_path2 = torch.cat([data1, data3, data2], dim=1)
                 data_path2 = data_path2.to(device)
-                targets2 = targets2.to(device)
 
                 vq_loss1, vq_loss2, data_recon1, data_recon2, perplexity1, perplexity2, classifier_outputs = model(data_path1, data_path2)
 
@@ -568,8 +596,8 @@ if __name__ == '__main__':
 
         # writer.add_scalar('Loss/Val', total_val_loss, epoch)
 
-        if ((epoch + 1) == 48 or (epoch + 1) == 86):
-            torch.save(model.state_dict(), "../models/qc/resnet18-双路径-ti—增强图-原始图-{}.pth".format(epoch + 1))
+        # if ((epoch + 1) == 48 or (epoch + 1) == 86):
+        #     torch.save(model.state_dict(), "../models/qc/resnet18-双路径-ti—增强图-原始图-{}.pth".format(epoch + 1))
         print('%d epoch' % (epoch + 1))
 
         train_acc, train_sen, train_spe = all_metrics(train_targets, train_pred)

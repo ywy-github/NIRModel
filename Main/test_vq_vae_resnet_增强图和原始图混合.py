@@ -1,25 +1,28 @@
-from __future__ import print_function
 
-import os
 import time
 
-import pandas as pd
-
+import matplotlib.pyplot as plt
+from scipy.optimize import differential_evolution
+from six.moves import xrange
 
 import torch.nn as nn
 import torch.nn.functional as F
 from sklearn.metrics import roc_auc_score
-
+from torch.optim.lr_scheduler import ReduceLROnPlateau, StepLR
 from torch.utils.data import DataLoader
-
-from torchvision import transforms, models
+import torch.optim as optim
+from torch.utils.tensorboard import SummaryWriter
+from torchvision import transforms
 import torch
-
+import torch.utils.data as data
+from torchvision import models
 import numpy as np
+from PIL import Image
+import glob
+import random
 
-
+from Main.data_loader import MyData
 from Metrics import all_metrics
-from data_loader import MyData
 
 class VectorQuantizer(nn.Module):
     def __init__(self, num_embeddings, embedding_dim, commitment_cost):
@@ -282,6 +285,7 @@ def joint_loss_function(recon_loss,vq_loss,classifier_loss,lambda_recon,lambda_v
     total_loss = lambda_recon * recon_loss + lambda_vq*vq_loss + lambda_classifier * classifier_loss
 
     return total_loss
+
 # 定义自定义损失函数，加权二进制交叉熵
 class WeightedBinaryCrossEntropyLoss(nn.Module):
     def __init__(self, weight_positive):
@@ -292,10 +296,53 @@ class WeightedBinaryCrossEntropyLoss(nn.Module):
         y_true = y_true.to(dtype=torch.float32)
         loss = - (self.weight_positive * y_true * torch.log(y_pred + 1e-7) + (1 - y_true) * torch.log(1 - y_pred + 1e-7))
         return torch.mean(loss)
+
+# 定义 Focal Loss
+class WeightedBinaryCrossEntropyLossWithRegularization(nn.Module):
+    def __init__(self, weight_positive, lambda_reg):
+        super(WeightedBinaryCrossEntropyLossWithRegularization, self).__init__()
+        self.weight_positive = weight_positive
+        self.lambda_reg = lambda_reg  # 正则化系数
+
+    def forward(self, y_true, y_pred, model):
+        y_true = y_true.to(dtype=torch.float32)
+        bce_loss = - (self.weight_positive * y_true * torch.log(y_pred + 1e-7) + (1 - y_true) * torch.log(1 - y_pred + 1e-7))
+        bce_loss = torch.mean(bce_loss)
+
+        # 添加L2正则化项
+        reg_loss = 0.0
+        for param in model.parameters():
+            reg_loss += torch.norm(param, p=2)
+
+        total_loss = bce_loss + self.lambda_reg * reg_loss
+
+        return total_loss
+def mixup_data(x, y, alpha=1.0):
+    lam = np.random.beta(alpha, alpha)
+    batch_size = x.size()[0]
+    index = torch.randperm(batch_size)
+    mixed_x = lam * x + (1 - lam) * x[index, :]
+    y_a, y_b = y, y[index]
+    return mixed_x, y_a, y_b, lam
+
 if __name__ == '__main__':
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-    batch_size = 16
+    seed = 64
+
+    # 设置 Python 的随机种子
+    random.seed(seed)
+
+    # 设置 NumPy 的随机种子
+    np.random.seed(seed)
+
+    # 设置 PyTorch 的随机种子
+    torch.manual_seed(seed)
+    torch.cuda.manual_seed(seed)
+    torch.backends.cudnn.deterministic = True
+    torch.backends.cudnn.benchmark = False
+
+    batch_size = 1
     epochs = 1000
 
     embedding_dim = 64
@@ -313,7 +360,7 @@ if __name__ == '__main__':
 
     # 读取数据集
     transform = transforms.Compose([
-        transforms.Resize([448,448]),
+        transforms.Resize([448, 448]),
         transforms.ToTensor(),
         transforms.Normalize((0.3281,), (0.2366,))  # 设置均值和标准差
     ])
@@ -352,9 +399,9 @@ if __name__ == '__main__':
 
     model = Model(encoder, num_embeddings, embedding_dim, commitment_cost, decay).to(device)
 
-    model.load_state_dict(torch.load('../models/qc/单路径-增强图-原始图-227.pth'))
+    model.load_state_dict(torch.load('../models/qc/单路径-增强图-原始图.pth'))
 
-    criterion = WeightedBinaryCrossEntropyLoss(2)
+    criterion = WeightedBinaryCrossEntropyLoss(1)
     criterion.to(device)
 
     test_pred = []
@@ -404,7 +451,7 @@ if __name__ == '__main__':
         np.mean(total_test_loss[-10:])))
 
     # df = pd.DataFrame(test_results)
-    # filename = '../models/result/VQ-VAE-resnet18-二期双十+双十五.xlsx'
+    # filename = '../models/result/VQ-VAE-resnet18-单路径混合.xlsx'
     #
     # # 检查文件是否存在
     # if not os.path.isfile(filename):

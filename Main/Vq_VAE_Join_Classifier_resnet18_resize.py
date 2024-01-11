@@ -356,9 +356,9 @@ if __name__ == '__main__':
 
     learning_rate = 1e-5
 
-    lambda_recon = 0.2
-    lambda_vq = 0.2
-    lambda_classifier = 0.6
+    lambda_recon = 0.1
+    lambda_vq = 0.1
+    lambda_classifier = 0.8
 
     # 读取数据集
     transform = transforms.Compose([
@@ -367,12 +367,12 @@ if __name__ == '__main__':
         transforms.Normalize((0.3281,), (0.2366,))  # 设置均值和标准差
     ])
 
-    train_benign_data = MyData("../data/二期双15/train/benign", "benign", transform=transform)
-    train_malignat_data = MyData("../data/二期双15/train/malignant", "malignant", transform=transform)
+    train_benign_data = MyData("../data/ti_二期双十+双十五原始图/train/benign", "benign", transform=transform)
+    train_malignat_data = MyData("../data/ti_二期双十+双十五原始图/train/malignant", "malignant", transform=transform)
     train_data = train_benign_data + train_malignat_data
 
-    val_benign_data = MyData("../data/二期双15/val/benign", "benign", transform=transform)
-    val_malignat_data = MyData("../data/二期双15/val/malignant", "malignant", transform=transform)
+    val_benign_data = MyData("../data/ti_二期双十原始图/val/benign", "benign", transform=transform)
+    val_malignat_data = MyData("../data/ti_二期双十原始图/val/malignant", "malignant", transform=transform)
     val_data = val_benign_data + val_malignat_data
 
 
@@ -489,8 +489,8 @@ if __name__ == '__main__':
                 val_res_perplexity.append(perplexity.item())
         # writer.add_scalar('Loss/Val', total_val_loss, epoch)
 
-        if ((epoch + 1) == 61 or (epoch + 1) == 65 or (epoch + 1) == 67):
-            torch.save(model.state_dict(),"../models/qc/VQ-VAE-resnet18-qc-二期双十+双十五-{}.pth".format(epoch + 1))
+        # if ((epoch + 1) == 61 or (epoch + 1) == 65 or (epoch + 1) == 67):
+        #     torch.save(model.state_dict(),"../models/qc/VQ-VAE-resnet18-qc-二期双十+双十五-{}.pth".format(epoch + 1))
         print('%d epoch' % (epoch + 1))
 
         train_acc, train_sen, train_spe = all_metrics(train_targets, train_pred)

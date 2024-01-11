@@ -343,7 +343,7 @@ if __name__ == '__main__':
     torch.backends.cudnn.deterministic = True
     torch.backends.cudnn.benchmark = False
 
-    batch_size = 16
+    batch_size = 18
     epochs = 1000
 
     embedding_dim = 64
@@ -385,10 +385,19 @@ if __name__ == '__main__':
     val_malignat_data_wave2 = MyData("../data/ti_二期双十原始图/val/malignant", "malignant", transform=transform)
     val_data_wave2 = val_benign_data_wave2 + val_malignat_data_wave2
 
+    # train_benign_data_wave3 = MyData("../data/ti_二期双十+双十五wave2/train/benign", "benign", transform=transform)
+    # train_malignat_data_wave3 = MyData("../data/ti_二期双十+双十五wave2/train/malignant", "malignant",
+    #                                    transform=transform)
+    # train_data_wave3 = train_benign_data_wave3 + train_malignat_data_wave3
+    #
+    # val_benign_data_wave3 = MyData("../data/ti_二期双十wave2/val/benign", "benign", transform=transform)
+    # val_malignat_data_wave3 = MyData("../data/ti_二期双十wave2/val/malignant", "malignant", transform=transform)
+    # val_data_wave3 = val_benign_data_wave3 + val_malignat_data_wave3
+
     training_loader_wave1 = DataLoader(train_data_wave1,
                                        batch_size=batch_size,
                                        shuffle=True,
-                                       num_workers=4,
+                                       num_workers=3,
                                        persistent_workers=True,
                                        pin_memory=True
                                        )
@@ -396,7 +405,7 @@ if __name__ == '__main__':
     validation_loader_wave1 = DataLoader(val_data_wave1,
                                          batch_size=batch_size,
                                          shuffle=True,
-                                         num_workers=4,
+                                         num_workers=3,
                                          persistent_workers=True,
                                          pin_memory=True
                                          )
@@ -404,7 +413,7 @@ if __name__ == '__main__':
     training_loader_wave2 = DataLoader(train_data_wave2,
                                        batch_size=batch_size,
                                        shuffle=True,
-                                       num_workers=4,
+                                       num_workers=3,
                                        persistent_workers=True,
                                        pin_memory=True
                                        )
@@ -412,10 +421,26 @@ if __name__ == '__main__':
     validation_loader_wave2 = DataLoader(val_data_wave2,
                                          batch_size=batch_size,
                                          shuffle=True,
-                                         num_workers=4,
+                                         num_workers=3,
                                          persistent_workers=True,
                                          pin_memory=True
                                          )
+
+    # training_loader_wave3 = DataLoader(train_data_wave3,
+    #                                    batch_size=batch_size,
+    #                                    shuffle=True,
+    #                                    num_workers=3,
+    #                                    persistent_workers=True,
+    #                                    pin_memory=True
+    #                                    )
+    #
+    # validation_loader_wave3 = DataLoader(val_data_wave3,
+    #                                      batch_size=batch_size,
+    #                                      shuffle=True,
+    #                                      num_workers=3,
+    #                                      persistent_workers=True,
+    #                                      pin_memory=True
+    #                                      )
 
     #设置encoder
     encoder = models.resnet18(pretrained=True)
@@ -435,7 +460,7 @@ if __name__ == '__main__':
     model = Model(encoder,num_embeddings, embedding_dim, commitment_cost, decay).to(device)
 
 
-    criterion = WeightedBinaryCrossEntropyLoss(1.1)
+    criterion = WeightedBinaryCrossEntropyLoss(1)
     # criterion = WeightedBinaryCrossEntropyLossWithRegularization(2, 0.01)
     criterion.to(device)
     optimizer = optim.Adam(filter(lambda p: p.requires_grad, model.parameters()), lr=learning_rate, amsgrad=False)
@@ -498,7 +523,8 @@ if __name__ == '__main__':
                 data1, targets1, dcm_names1 = batch_wave1
                 data2, targets2, dcm_names2 = batch_wave2
 
-                data = torch.cat([data1, data2, data1 - data2], dim=1)
+
+                data = torch.cat([data1, data2, data1-data2], dim=1)
 
                 data = data.to(device)
                 targets1 = targets1.to(device)
@@ -520,7 +546,7 @@ if __name__ == '__main__':
                 val_res_perplexity.append(perplexity.item())
         # writer.add_scalar('Loss/Val', total_val_loss, epoch)
 
-        if ((epoch + 1) == 165 or (epoch + 1) == 225 or (epoch + 1) == 227):
+        if ((epoch + 1) == 154 or (epoch + 1) == 162 or (epoch + 1) == 165  or (epoch + 1) == 168 or (epoch + 1) == 224):
             torch.save(model.state_dict(),"../models/qc/单路径-增强图-原始图-{}.pth".format(epoch + 1))
         print('%d epoch' % (epoch + 1))
 
