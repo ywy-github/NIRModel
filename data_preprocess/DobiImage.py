@@ -50,6 +50,8 @@ class DubiImage:
     def getMainImgae2AndNum_light(self):
         return self.MainImage2,self.num_light
 
+    def getMainImgae1AndNum_light(self):
+        return self.MainImage,self.num_light
     def ana_img(self):
         for idx, img in enumerate(self.MainImage):
             if idx == self.num_light:

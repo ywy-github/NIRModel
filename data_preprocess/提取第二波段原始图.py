@@ -21,21 +21,21 @@ if __name__ == '__main__':
         file_path = os.path.join(fold_path, file_name)
         images = DubiImage(file_path)
         print(f"{file_name}")
-        mainImage2,num_light = images.getMainImgae2AndNum_light()
+        mainImage1,num_light = images.getMainImgae1AndNum_light()
 
-        if mainImage2 is not None:
+        if mainImage1 is not None:
             # 指定保存图片的文件夹路径
-            save_folder = "../data/第二波段原始图"
+            save_folder = "../data/第一波段原始图"
 
             # 确保保存文件夹存在，如果不存在则创建
             if not os.path.exists(save_folder):
                 os.makedirs(save_folder)
 
             # 将所有图像进行累加
-            total_sum = np.sum(mainImage2, axis=0)
+            total_sum = np.sum(mainImage1, axis=0)
 
             # 计算前num_light张图的累加值
-            first_n_sum = np.sum(mainImage2[:num_light], axis=0)
+            first_n_sum = np.sum(mainImage1[:num_light], axis=0)
 
             if num_light == 3:
                 # 计算结果
