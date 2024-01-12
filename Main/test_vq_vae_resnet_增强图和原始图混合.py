@@ -269,6 +269,7 @@ class Model(nn.Module):
         self.classifier = Classifier(512*14*14,512,1)
 
         self._decoder = Decoder()
+        nn.AdaptiveMaxPool2d
 
     def forward(self, x):
         z = self._encoder(x)
