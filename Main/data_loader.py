@@ -31,35 +31,66 @@ class TreeChannels(Dataset):
         self.path2 = path2
         self.label = label
         self.transform = transform
-        self.image_path_list1 = os.listdir(self.path1)
-        self.image_path_list2 = os.listdir(self.path2)
+        self.image_path_list = os.listdir(self.path1)
         self.label_mapping = {'benign': 0, 'malignant': 1}
 
     def __getitem__(self, idx):
-        name1 = self.image_path_list1[idx]
-        name2 = self.image_path_list2[idx]
-        self.image_path1 = os.path.join(self.path1, name1)
-        self.image_path2 = os.path.join(self.path2, name2)
+        name = self.image_path_list[idx]
+
+        self.image_path1 = os.path.join(self.path1, name)
+        self.image_path2 = os.path.join(self.path2, name)
         img1 = Image.open(self.image_path1)
         img2 = Image.open(self.image_path2)
-        img = img1-img2
+
         if self.transform:
             img1 = self.transform(img1)
-            imag2 = self.transform(img2)
-            img = self.transform(img)
+            img2 = self.transform(img2)
         label = self.label_mapping[self.label]
-        return img1, img2, img, label, name1
+        return img1, img2, label, name
+
+    def __len__(self):
+        return len(self.image_path_list)
+
+
+class DoubleTreeChannels(Dataset):
+    def __init__(self, path1, path2, path3, path4, label, transform=None):
+        self.path1 = path1
+        self.path2 = path2
+        self.path3 = path3
+        self.path4 = path4
+        self.label = label
+        self.transform = transform
+        self.image_path_list = os.listdir(self.path1)
+        self.label_mapping = {'benign': 0, 'malignant': 1}
+
+    def __getitem__(self, idx):
+        name = self.image_path_list[idx]
+
+        self.image_path1 = os.path.join(self.path1, name)
+        self.image_path2 = os.path.join(self.path2, name)
+        self.image_path3 = os.path.join(self.path3, name)
+        self.image_path4 = os.path.join(self.path4, name)
+        img1 = Image.open(self.image_path1)
+        img2 = Image.open(self.image_path2)
+        img3 = Image.open(self.image_path3)
+        img4 = Image.open(self.image_path4)
+
+        if self.transform:
+            img1 = self.transform(img1)
+            img2 = self.transform(img2)
+            img3 = self.transform(img3)
+            img4 = self.transform(img4)
+        label = self.label_mapping[self.label]
+        return img1, img2, img3, img4, label, name
 
     def __len__(self):
         return len(self.image_path_list)
 
 
 
-
 if __name__ =='__main__':
 
-    benign_dataset = MyData("../data/train/benign","benign")
-    malignat_dataset = MyData("../data/train/malignant","malignant")
-    train_dataset = benign_dataset + malignat_dataset
-    print(len(train_dataset))
+    train_benign_data_wave1 = TreeChannels("../data/ti_二期双十+双十五wave1/train/benign", "../data/ti_二期双十+双十五wave2原始图/train/benign" ,"benign")
+    train_malignat_data_wave1 = TreeChannels("../data/ti_二期双十+双十五wave1/train/malignant","../data/ti_二期双十+双十五wave2原始图/train/malignant"  ,"malignant")
+    train_data_wave1 = train_benign_data_wave1 + train_malignat_data_wave1
 

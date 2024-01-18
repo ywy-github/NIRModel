@@ -19,7 +19,8 @@ import numpy as np
 
 
 from Metrics import all_metrics
-from data_loader import MyData
+from data_loader import MyData, DoubleTreeChannels
+
 
 class VectorQuantizer(nn.Module):
     def __init__(self, num_embeddings, embedding_dim, commitment_cost):
@@ -268,10 +269,12 @@ class Model(nn.Module):
             self._vq_vae2 = VectorQuantizer(num_embeddings, embedding_dim,
                                             commitment_cost)
 
-        self.classifier = Classifier(1024*14*14,1024,1)
+        self.classifier = Classifier(1024,512,1)
 
         self._decoder1 = Decoder()
         self._decoder2 = Decoder()
+
+        self.Avg = nn.AdaptiveMaxPool2d(1)
 
     def forward(self, data1,data2):
         z1 = self._encoder1(data1)
@@ -281,7 +284,10 @@ class Model(nn.Module):
         loss1, quantized1, perplexity1, _ = self._vq_vae1(z1)
         loss2, quantized2, perplexity2, _ = self._vq_vae2(z2)
         quantized = torch.cat([quantized1, quantized2], dim=1)
-        classifier_outputs = self.classifier(quantized.view(quantized.size(0),-1))
+
+        features = self.Avg(quantized)
+        classifier_outputs = self.classifier(features.view(features.size(0),-1))
+
         x_recon1 = self._decoder1(quantized1)
         x_recon2 = self._decoder2(quantized2)
 
@@ -334,23 +340,26 @@ if __name__ == '__main__':
         transforms.Normalize((0.3281,), (0.2366,))  # 设置均值和标准差
     ])
 
-    test_benign_data_wave1 = MyData("../data/ti_二期双十wave1/test/benign", "benign", transform=transform)
-    test_malignat_data_wave1 = MyData("../data/ti_二期双十wave1/test/malignant", "malignant", transform=transform)
-    test_data_wave1 = test_benign_data_wave1 + test_malignat_data_wave1
+    test_benign_data = DoubleTreeChannels("../data/ti_二期双十+双十五wave1/train/benign",
+                                          "../data/ti_二期双十+双十五wave1原始图/train/benign",
+                                          "../data/ti_二期双十+双十五wave2/train/benign",
+                                          "../data/ti_二期双十+双十五wave2原始图/train/benign",
+                                          "benign",
+                                          transform=transform)
 
-    test_benign_data_wave2 = MyData("../data/ti_二期双十原始图/test/benign", "benign", transform=transform)
-    test_malignat_data_wave2 = MyData("../data/ti_二期双十原始图/test/malignant", "malignant", transform=transform)
-    test_data_wave2 = test_benign_data_wave2 + test_malignat_data_wave2
+    test_malignant_data = DoubleTreeChannels("../data/ti_二期双十+双十五wave1/train/malignant",
+                                             "../data/ti_二期双十+双十五wave1原始图/train/malignant",
+                                             "../data/ti_二期双十+双十五wave2/train/malignant",
+                                             "../data/ti_二期双十+双十五wave2原始图/train/malignant",
+                                             "malignant",
+                                             transform=transform)
 
-    test_loader_wave1 = DataLoader(test_data_wave1,
+    test_data = test_benign_data + test_malignant_data
+
+    test_loader = DataLoader(test_data,
                                    batch_size=batch_size,
-                                   shuffle=True,
-                                   pin_memory=True)
-
-    test_loader_wave2 = DataLoader(test_data_wave2,
-                             batch_size=batch_size,
-                             shuffle=True,
-                             pin_memory=True)
+                                   shuffle=True
+                                   )
 
     # 设置encoder
     encoder1 = models.resnet18(pretrained=True)
@@ -383,7 +392,7 @@ if __name__ == '__main__':
 
     model = Model(encoder1, encoder2, num_embeddings, embedding_dim, commitment_cost, decay).to(device)
 
-    model.load_state_dict(torch.load('../models/qc/resnet18-双路径-ti—增强图-原始图-86.pth'))
+    model.load_state_dict(torch.load('../models/qc/resnet18-双路径-增-增-相减-原-原-相减-70.pth'))
 
     criterion = WeightedBinaryCrossEntropyLoss(2)
     criterion.to(device)
@@ -395,16 +404,13 @@ if __name__ == '__main__':
     total_test_loss = []
     model.eval()
     with torch.no_grad():
-        for batch_wave1, batch_wave2 in zip(test_loader_wave1, test_loader_wave2):
-            data1, targets1, dcm_names1 = batch_wave1
-            data_path1 = torch.cat([data1] * 3, dim=1)
+        for batch in test_loader:
+            data1, data2, data3, data4, targets, dcm_names = batch
+            data_path1 = torch.cat([data1, data3, data1 - data3], dim=1)
+            data_path2 = torch.cat([data2, data4, data2 - data4], dim=1)
             data_path1 = data_path1.to(device)
-            targets1 = targets1.to(device)
-
-            data2, targets2, dcm_names2 = batch_wave2
-            data_path2 = torch.cat([data1, data2, data1 - data2], dim=1)
             data_path2 = data_path2.to(device)
-            targets2 = targets2.to(device)
+            targets = targets.to(device)
 
             vq_loss1, vq_loss2, data_recon1, data_recon2, perplexity1, perplexity2, classifier_outputs = model(
                 data_path1, data_path2)
@@ -412,7 +418,7 @@ if __name__ == '__main__':
             data_variance1 = torch.var(data_path1)
             recon_loss1 = F.mse_loss(data_recon1, data_path1) / data_variance1
 
-            classifier_loss = criterion(targets1.view(-1, 1), classifier_outputs)
+            classifier_loss = criterion(targets.view(-1, 1), classifier_outputs)
 
             data_variance2 = torch.var(data_path2)
             recon_loss2 = F.mse_loss(data_recon2, data_path2) / data_variance2
@@ -423,11 +429,11 @@ if __name__ == '__main__':
 
             predicted_labels =  (classifier_outputs >= 0.5).int().view(-1)
             # 记录每个样本的dcm_name、预测概率值和标签
-            for i in range(len(dcm_names1)):
-                test_results.append({'dcm_name': dcm_names1[i], 'pred': classifier_outputs[i].item(),
-                                     'prob': predicted_labels[i].item(), 'label': targets1[i].item()})
+            for i in range(len(dcm_names)):
+                test_results.append({'dcm_name': dcm_names[i], 'pred': classifier_outputs[i].item(),
+                                     'prob': predicted_labels[i].item(), 'label': targets[i].item()})
             test_predictions.extend(predicted_labels.cpu().numpy())
-            test_targets.extend(targets1.cpu().numpy())
+            test_targets.extend(targets.cpu().numpy())
             total_test_loss.append(total_loss.item())
             test_pred.append(classifier_outputs.flatten().cpu().numpy())
             # concat = torch.cat((data[0].view(128, 128),
@@ -445,15 +451,15 @@ if __name__ == '__main__':
           "spe: {:.4f}".format(test_spe) + " auc: {:.4f}".format(test_auc) + "loss: {:.4f}".format(
         np.mean(total_test_loss[-10:])))
 
-    # df = pd.DataFrame(test_results)
-    # filename = '../models/result/VQ-VAE-resnet18-二期双十+双十五.xlsx'
-    #
-    # # 检查文件是否存在
-    # if not os.path.isfile(filename):
-    #     # 如果文件不存在，创建新文件并保存数据到 Sheet1
-    #     df.to_excel(filename, sheet_name='train', index=False)
-    # else:
-    #     # 如果文件已经存在，打开现有文件并保存数据到 Sheet2
-    #     with pd.ExcelWriter(filename, engine='openpyxl', mode='a') as writer:
-    #         df.to_excel(writer, sheet_name='train', index=False)
+    df = pd.DataFrame(test_results)
+    filename = '../models/result/VQ-VAE-resnet18-二期双路径.xlsx'
+
+    # 检查文件是否存在
+    if not os.path.isfile(filename):
+        # 如果文件不存在，创建新文件并保存数据到 Sheet1
+        df.to_excel(filename, sheet_name='train', index=False)
+    else:
+        # 如果文件已经存在，打开现有文件并保存数据到 Sheet2
+        with pd.ExcelWriter(filename, engine='openpyxl', mode='a') as writer:
+            df.to_excel(writer, sheet_name='train', index=False)
 

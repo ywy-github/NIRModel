@@ -267,15 +267,19 @@ class Model(nn.Module):
             self._vq_vae = VectorQuantizer(num_embeddings, embedding_dim,
                                            commitment_cost)
 
-        self.classifier = Classifier(512*14*14,512,1)
+        self.classifier = Classifier(512,256,1)
 
         self._decoder = Decoder()
+
+        self.Avg = nn.AdaptiveMaxPool2d(1)
 
     def forward(self, x):
         z = self._encoder(x)
         # z = self._pre_vq_conv(z)
         loss, quantized, perplexity, _ = self._vq_vae(z)
-        classifier_outputs = self.classifier(quantized.view(quantized.size(0),-1))
+
+        features = self.Avg(quantized)
+        classifier_outputs = self.classifier(features.view(features.size(0),-1))
         x_recon = self._decoder(quantized)
 
         return loss, x_recon, perplexity, classifier_outputs
@@ -367,19 +371,23 @@ if __name__ == '__main__':
         transforms.Normalize((0.3281,), (0.2366,))  # 设置均值和标准差
     ])
 
-    train_benign_data = MyData("../data/ti_二期双十+双十五原始图/train/benign", "benign", transform=transform)
-    train_malignat_data = MyData("../data/ti_二期双十+双十五原始图/train/malignant", "malignant", transform=transform)
+    train_benign_data = MyData("../data/ti_二期双十+双十五wave2/train/benign", "benign", transform=transform)
+    train_malignat_data = MyData("../data/ti_二期双十+双十五wave2/train/malignant", "malignant", transform=transform)
     train_data = train_benign_data + train_malignat_data
 
-    val_benign_data = MyData("../data/ti_二期双十原始图/val/benign", "benign", transform=transform)
-    val_malignat_data = MyData("../data/ti_二期双十原始图/val/malignant", "malignant", transform=transform)
+    val_benign_data = MyData("../data/ti_二期双十wave2/val/benign", "benign", transform=transform)
+    val_malignat_data = MyData("../data/ti_二期双十wave2/val/malignant", "malignant", transform=transform)
     val_data = val_benign_data + val_malignat_data
+
+    test_benign_data = MyData("../data/ti_二期双十wave2/test/benign", "benign", transform=transform)
+    test_malignat_data = MyData("../data/ti_二期双十wave2/test/malignant", "malignant", transform=transform)
+    test_data = test_benign_data + test_malignat_data
 
 
     training_loader = DataLoader(train_data,
                                  batch_size=batch_size,
                                  shuffle=True,
-                                 num_workers=8,
+                                 num_workers=5,
                                  persistent_workers=True,
                                  pin_memory=True
                                  )
@@ -387,10 +395,18 @@ if __name__ == '__main__':
     validation_loader = DataLoader(val_data,
                                    batch_size=batch_size,
                                    shuffle=True,
-                                   num_workers=8,
+                                   num_workers=5,
                                    persistent_workers=True,
                                    pin_memory=True
                                   )
+
+    test_loader = DataLoader(test_data,
+                                   batch_size=batch_size,
+                                   shuffle=True,
+                                   num_workers=5,
+                                   persistent_workers=True,
+                                   pin_memory=True
+                                   )
 
 
     #设置encoder
@@ -411,7 +427,7 @@ if __name__ == '__main__':
     model = Model(encoder,num_embeddings, embedding_dim, commitment_cost, decay).to(device)
 
 
-    criterion = WeightedBinaryCrossEntropyLoss(1.2)
+    criterion = WeightedBinaryCrossEntropyLoss(1.1)
     # criterion = WeightedBinaryCrossEntropyLossWithRegularization(2, 0.01)
     criterion.to(device)
     optimizer = optim.Adam(filter(lambda p: p.requires_grad, model.parameters()), lr=learning_rate, amsgrad=False)
@@ -421,6 +437,9 @@ if __name__ == '__main__':
 
     val_res_recon_error = []
     val_res_perplexity = []
+
+    test_res_recon_error = []
+    test_res_perplexity = []
 
     start_time = time.time()  # 记录训练开始时间
     # writer = SummaryWriter("../Logs")
@@ -488,10 +507,37 @@ if __name__ == '__main__':
                 total_val_loss += total_loss
                 val_res_recon_error.append(recon_loss.item())
                 val_res_perplexity.append(perplexity.item())
+
+        test_score = []
+        test_pred = []
+        test_targets = []
+        total_test_loss = 0.0
+        model.eval()
+        with torch.no_grad():
+            for batch in test_loader:
+                data, targets, names = batch
+                data = torch.cat([data] * 3, dim=1)
+                data = data.to(device)
+                targets = targets.to(device)
+                vq_loss, data_recon, perplexity, classifier_outputs = model(data)
+                data_variance = torch.var(data)
+                recon_loss = F.mse_loss(data_recon, data) / data_variance
+                classifier_loss = criterion(targets.view(-1, 1), classifier_outputs)
+                total_loss = joint_loss_function(recon_loss, vq_loss, classifier_loss, lambda_recon, lambda_vq,
+                                                 lambda_classifier)
+
+                predicted_labels = (classifier_outputs >= 0.5).int().view(-1)
+                test_score.append(classifier_outputs.flatten().cpu().numpy())
+                test_pred.extend(predicted_labels.cpu().numpy())
+                test_targets.extend(targets.cpu().numpy())
+
+                total_test_loss += total_loss
+                test_res_recon_error.append(recon_loss.item())
+                test_res_perplexity.append(perplexity.item())
         # writer.add_scalar('Loss/Val', total_val_loss, epoch)
         #
-        # if ((epoch + 1) == 63 or (epoch + 1) == 65):
-        #     torch.save(model.state_dict(), "../models/qc/VQ-VAE-resnet18-qc-二期双十-{}.pth".format(epoch + 1))
+        if ((epoch + 1) == 167):
+            torch.save(model.state_dict(), "../models/qc/VQ-VAE-resnet18-qc-第二波段增强图-{}.pth".format(epoch + 1))
         print('%d epoch' % (epoch + 1))
 
         train_acc, train_sen, train_spe = all_metrics(train_targets, train_pred)
@@ -513,6 +559,16 @@ if __name__ == '__main__':
         print("验证集 acc: {:.4f}".format(val_acc) + " sen: {:.4f}".format(val_sen) +
               " spe: {:.4f}".format(val_spe) + " auc: {:.4f}".format(val_auc) +
               " loss: {:.4f}".format(total_val_loss))
+
+        test_acc, test_sen, test_spe = all_metrics(test_targets, test_pred)
+
+        test_score = np.concatenate(test_score)  # 将列表转换为NumPy数组
+        test_targets = np.array(test_targets)
+        test_auc = roc_auc_score(test_targets, test_score)
+
+        print("测试集 acc: {:.4f}".format(test_acc) + " sen: {:.4f}".format(test_sen) +
+              " spe: {:.4f}".format(test_spe) + " auc: {:.4f}".format(test_auc) +
+              " loss: {:.4f}".format(total_test_loss))
 
         print('train_recon_error: %.3f' % np.mean(train_res_recon_error[-10:]))
         print('train_perplexity: %.3f' % np.mean(train_res_perplexity[-10:]))

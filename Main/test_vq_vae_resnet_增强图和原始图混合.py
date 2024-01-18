@@ -1,3 +1,4 @@
+from __future__ import print_function
 
 import time
 
@@ -21,7 +22,7 @@ from PIL import Image
 import glob
 import random
 
-from Main.data_loader import MyData
+from Main.data_loader import MyData, TreeChannels
 from Metrics import all_metrics
 
 class VectorQuantizer(nn.Module):
@@ -266,16 +267,21 @@ class Model(nn.Module):
             self._vq_vae = VectorQuantizer(num_embeddings, embedding_dim,
                                            commitment_cost)
 
-        self.classifier = Classifier(512*14*14,512,1)
+        self.classifier = Classifier(512,256,1)
 
         self._decoder = Decoder()
         nn.AdaptiveMaxPool2d
+
+        self.Avg = nn.AdaptiveMaxPool2d(1)
 
     def forward(self, x):
         z = self._encoder(x)
         # z = self._pre_vq_conv(z)
         loss, quantized, perplexity, _ = self._vq_vae(z)
-        classifier_outputs = self.classifier(quantized.view(quantized.size(0),-1))
+
+        featurs = self.Avg(quantized)
+
+        classifier_outputs = self.classifier(featurs.view(featurs.size(0),-1))
         x_recon = self._decoder(quantized)
 
         return loss, x_recon, perplexity, classifier_outputs
@@ -297,53 +303,10 @@ class WeightedBinaryCrossEntropyLoss(nn.Module):
         y_true = y_true.to(dtype=torch.float32)
         loss = - (self.weight_positive * y_true * torch.log(y_pred + 1e-7) + (1 - y_true) * torch.log(1 - y_pred + 1e-7))
         return torch.mean(loss)
-
-# 定义 Focal Loss
-class WeightedBinaryCrossEntropyLossWithRegularization(nn.Module):
-    def __init__(self, weight_positive, lambda_reg):
-        super(WeightedBinaryCrossEntropyLossWithRegularization, self).__init__()
-        self.weight_positive = weight_positive
-        self.lambda_reg = lambda_reg  # 正则化系数
-
-    def forward(self, y_true, y_pred, model):
-        y_true = y_true.to(dtype=torch.float32)
-        bce_loss = - (self.weight_positive * y_true * torch.log(y_pred + 1e-7) + (1 - y_true) * torch.log(1 - y_pred + 1e-7))
-        bce_loss = torch.mean(bce_loss)
-
-        # 添加L2正则化项
-        reg_loss = 0.0
-        for param in model.parameters():
-            reg_loss += torch.norm(param, p=2)
-
-        total_loss = bce_loss + self.lambda_reg * reg_loss
-
-        return total_loss
-def mixup_data(x, y, alpha=1.0):
-    lam = np.random.beta(alpha, alpha)
-    batch_size = x.size()[0]
-    index = torch.randperm(batch_size)
-    mixed_x = lam * x + (1 - lam) * x[index, :]
-    y_a, y_b = y, y[index]
-    return mixed_x, y_a, y_b, lam
-
 if __name__ == '__main__':
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-    seed = 64
-
-    # 设置 Python 的随机种子
-    random.seed(seed)
-
-    # 设置 NumPy 的随机种子
-    np.random.seed(seed)
-
-    # 设置 PyTorch 的随机种子
-    torch.manual_seed(seed)
-    torch.cuda.manual_seed(seed)
-    torch.backends.cudnn.deterministic = True
-    torch.backends.cudnn.benchmark = False
-
-    batch_size = 1
+    batch_size = 16
     epochs = 1000
 
     embedding_dim = 64
@@ -353,11 +316,12 @@ if __name__ == '__main__':
 
     decay = 0.99
 
+
     learning_rate = 1e-5
 
-    lambda_recon = 0.1
-    lambda_vq = 0.1
-    lambda_classifier = 0.8
+    lambda_recon = 0.2
+    lambda_vq = 0.2
+    lambda_classifier = 0.6
 
     # 读取数据集
     transform = transforms.Compose([
@@ -366,23 +330,19 @@ if __name__ == '__main__':
         transforms.Normalize((0.3281,), (0.2366,))  # 设置均值和标准差
     ])
 
-    test_benign_data_wave1 = MyData("../data/ti_二期双十wave1/test/benign", "benign", transform=transform)
-    test_malignat_data_wave1 = MyData("../data/ti_二期双十wave1/test/malignant", "malignant", transform=transform)
-    test_data_wave1 = test_benign_data_wave1 + test_malignat_data_wave1
+    test_benign_data = TreeChannels("../data/ti_二期双十wave1原始图/val/benign",
+                                     "../data/ti_二期双十wave2原始图/val/benign", "benign",
+                                     transform=transform)
+    test_malignat_data = TreeChannels("../data/ti_二期双十wave1原始图/val/malignant",
+                                       "../data/ti_二期双十wave2原始图/val/malignant", "malignant",
+                                       transform=transform)
+    test_data = test_benign_data + test_malignat_data
 
-    test_benign_data_wave2 = MyData("../data/ti_二期双十原始图/test/benign", "benign", transform=transform)
-    test_malignat_data_wave2 = MyData("../data/ti_二期双十原始图/test/malignant", "malignant", transform=transform)
-    test_data_wave2 = test_benign_data_wave2 + test_malignat_data_wave2
 
-    test_loader_wave1 = DataLoader(test_data_wave1,
+    test_loader = DataLoader(test_data,
                                    batch_size=batch_size,
                                    shuffle=True,
                                    pin_memory=True)
-
-    test_loader_wave2 = DataLoader(test_data_wave2,
-                             batch_size=batch_size,
-                             shuffle=True,
-                             pin_memory=True)
 
     encoder = models.resnet18(pretrained=True)
     for param in encoder.parameters():
@@ -400,9 +360,13 @@ if __name__ == '__main__':
 
     model = Model(encoder, num_embeddings, embedding_dim, commitment_cost, decay).to(device)
 
-    model.load_state_dict(torch.load('../models/qc/单路径-增强图-原始图.pth'))
+    model.load_state_dict(torch.load('../models/qc/单路径-原始图相减-37.pth'))
+
+    for param in model.parameters():
+        param.requires_grad = False
 
     criterion = WeightedBinaryCrossEntropyLoss(1)
+    # criterion = WeightedBinaryCrossEntropyLossWithRegularization(2, 0.01)
     criterion.to(device)
 
     test_pred = []
@@ -412,28 +376,25 @@ if __name__ == '__main__':
     total_test_loss = []
     model.eval()
     with torch.no_grad():
-        for batch_wave1, batch_wave2 in zip(test_loader_wave1, test_loader_wave2):
-            data1, targets1, dcm_names1 = batch_wave1
-            data2, targets2, dcm_names2 = batch_wave2
-
-            data = torch.cat([data1, data2, data1 - data2], dim=1)
+        for batch in test_loader:
+            data1, data2, targets, dcm_names = batch
+            data = torch.cat([data1-data2, data1-data2, data1-data2], dim=1)
             data = data.to(device)
-            targets1 = targets1.to(device)
+            targets = targets.to(device)
 
             vq_loss, data_recon, perplexity, classifier_outputs = model(data)
             data_variance = torch.var(data)
             recon_loss = F.mse_loss(data_recon, data) / data_variance
-            classifier_loss = criterion(targets1.view(-1, 1), classifier_outputs)
+            classifier_loss = criterion(targets.view(-1, 1), classifier_outputs)
             total_loss = joint_loss_function(recon_loss, vq_loss, classifier_loss, lambda_recon, lambda_vq,
                                              lambda_classifier)
-
-            predicted_labels =  (classifier_outputs >= 0.5).int().view(-1)
+            predicted_labels = (classifier_outputs >= 0.5).int().view(-1)
             # 记录每个样本的dcm_name、预测概率值和标签
-            for i in range(len(dcm_names1)):
-                test_results.append({'dcm_name': dcm_names1[i], 'pred': classifier_outputs[i].item(),
-                                     'prob': predicted_labels[i].item(), 'label': targets1[i].item()})
+            for i in range(len(dcm_names)):
+                test_results.append({'dcm_name': dcm_names[i], 'pred': classifier_outputs[i].item(),
+                                     'prob': predicted_labels[i].item(), 'label': targets[i].item()})
             test_predictions.extend(predicted_labels.cpu().numpy())
-            test_targets.extend(targets1.cpu().numpy())
+            test_targets.extend(targets.cpu().numpy())
             total_test_loss.append(total_loss.item())
             test_pred.append(classifier_outputs.flatten().cpu().numpy())
             # concat = torch.cat((data[0].view(128, 128),
@@ -452,7 +413,7 @@ if __name__ == '__main__':
         np.mean(total_test_loss[-10:])))
 
     # df = pd.DataFrame(test_results)
-    # filename = '../models/result/VQ-VAE-resnet18-单路径混合.xlsx'
+    # filename = '../models/result/VQ-VAE-resnet18-二期双十+双十五.xlsx'
     #
     # # 检查文件是否存在
     # if not os.path.isfile(filename):
@@ -462,4 +423,3 @@ if __name__ == '__main__':
     #     # 如果文件已经存在，打开现有文件并保存数据到 Sheet2
     #     with pd.ExcelWriter(filename, engine='openpyxl', mode='a') as writer:
     #         df.to_excel(writer, sheet_name='train', index=False)
-
