@@ -392,7 +392,7 @@ if __name__ == '__main__':
 
     model = Model(encoder1, encoder2, num_embeddings, embedding_dim, commitment_cost, decay).to(device)
 
-    model.load_state_dict(torch.load('../models/qc/resnet18-双路径-增-增-相减-原-原-相减-70.pth'))
+    model.load_state_dict(torch.load('../models/qc/resnet18-双路径-增-增-相减-原-原-相减-57.pth'))
 
     criterion = WeightedBinaryCrossEntropyLoss(2)
     criterion.to(device)
@@ -452,7 +452,7 @@ if __name__ == '__main__':
         np.mean(total_test_loss[-10:])))
 
     df = pd.DataFrame(test_results)
-    filename = '../models/result/VQ-VAE-resnet18-二期双路径.xlsx'
+    filename = '../models/result/resnet18-双路径-增-增-相减-原-原-相减.xlsx'
 
     # 检查文件是否存在
     if not os.path.isfile(filename):

@@ -22,7 +22,7 @@ from PIL import Image
 import glob
 import random
 
-from Main.data_loader import MyData, TreeChannels
+from Main.data_loader import MyData, TreeChannels, DoubleTreeChannels
 from Metrics import all_metrics
 
 class VectorQuantizer(nn.Module):
@@ -372,44 +372,77 @@ if __name__ == '__main__':
         transforms.Normalize((0.3281,), (0.2366,))  # 设置均值和标准差
     ])
 
-    train_benign_data = TreeChannels("../data/ti_二期双十+双十五wave1/train/benign", "../data/ti_二期双十+双十五wave2/train/benign" ,"benign",transform=transform)
-    train_malignat_data = TreeChannels("../data/ti_二期双十+双十五wave1/train/malignant","../data/ti_二期双十+双十五wave2/train/malignant"  ,"malignant",transform=transform)
-    train_data = train_benign_data + train_malignat_data
+    train_benign_data = DoubleTreeChannels("../data/ti_二期双十+双十五wave1/train/benign",
+                                           "../data/ti_二期双十+双十五wave1原始图/train/benign",
+                                           "../data/ti_二期双十+双十五wave2/train/benign",
+                                           "../data/ti_二期双十+双十五wave2原始图/train/benign",
+                                           "benign",
+                                           transform=transform)
 
-    val_benign_data = TreeChannels("../data/ti_二期双十wave1/val/benign", "../data/ti_二期双十wave2/val/benign" ,"benign",transform=transform)
-    val_malignat_data = TreeChannels("../data/ti_二期双十wave1/val/malignant", "../data/ti_二期双十wave2/val/malignant" ,"malignant",transform=transform)
-    val_data = val_benign_data + val_malignat_data
+    train_malignant_data = DoubleTreeChannels("../data/ti_二期双十+双十五wave1/train/malignant",
+                                              "../data/ti_二期双十+双十五wave1原始图/train/malignant",
+                                              "../data/ti_二期双十+双十五wave2/train/malignant",
+                                              "../data/ti_二期双十+双十五wave2原始图/train/malignant",
+                                              "malignant",
+                                              transform=transform)
 
-    test_benign_data = TreeChannels("../data/ti_二期双十wave1/test/benign", "../data/ti_二期双十wave2/test/benign",
-                                   "benign", transform=transform)
-    test_malignat_data = TreeChannels("../data/ti_二期双十wave1/test/malignant", "../data/ti_二期双十wave2/test/malignant",
-                                     "malignant", transform=transform)
-    test_data = test_benign_data + test_malignat_data
+    train_data = train_benign_data + train_malignant_data
 
+    val_benign_data = DoubleTreeChannels("../data/ti_二期双十wave1/val/benign",
+                                         "../data/ti_二期双十wave1原始图/val/benign",
+                                         "../data/ti_二期双十wave2/val/benign",
+                                         "../data/ti_二期双十wave2原始图/val/benign",
+                                         "benign",
+                                         transform=transform)
+
+    val_malignant_data = DoubleTreeChannels("../data/ti_二期双十wave1/val/malignant",
+                                            "../data/ti_二期双十wave1原始图/val/malignant",
+                                            "../data/ti_二期双十wave2/val/malignant",
+                                            "../data/ti_二期双十wave2原始图/val/malignant",
+                                            "malignant",
+                                            transform=transform)
+
+    val_data = val_benign_data + val_malignant_data
+
+    test_benign_data = DoubleTreeChannels("../data/ti_二期双十wave1/test/benign",
+                                          "../data/ti_二期双十wave1原始图/test/benign",
+                                          "../data/ti_二期双十wave2/test/benign",
+                                          "../data/ti_二期双十wave2原始图/test/benign",
+                                          "benign",
+                                          transform=transform)
+
+    test_malignant_data = DoubleTreeChannels("../data/ti_二期双十wave1/test/malignant",
+                                             "../data/ti_二期双十wave1原始图/test/malignant",
+                                             "../data/ti_二期双十wave2/test/malignant",
+                                             "../data/ti_二期双十wave2原始图/test/malignant",
+                                             "malignant",
+                                             transform=transform)
+
+    test_data = test_benign_data + test_malignant_data
 
     training_loader = DataLoader(train_data,
-                                       batch_size=batch_size,
-                                       shuffle=True,
-                                       num_workers=5,
-                                       persistent_workers=True,
-                                       pin_memory=True
-                                       )
+                                 batch_size=batch_size,
+                                 shuffle=True,
+                                 num_workers=5,
+                                 persistent_workers=True,
+                                 pin_memory=True
+                                 )
 
     validation_loader = DataLoader(val_data,
-                                         batch_size=batch_size,
-                                         shuffle=True,
-                                         num_workers=5,
-                                         persistent_workers=True,
-                                         pin_memory=True
-                                         )
-
-    test_loader = DataLoader(test_data,
                                    batch_size=batch_size,
                                    shuffle=True,
                                    num_workers=5,
                                    persistent_workers=True,
                                    pin_memory=True
                                    )
+
+    test_loader = DataLoader(test_data,
+                             batch_size=batch_size,
+                             shuffle=True,
+                             num_workers=5,
+                             persistent_workers=True,
+                             pin_memory=True
+                             )
 
     #设置encoder
     encoder = models.resnet18(pretrained=True)
@@ -455,8 +488,8 @@ if __name__ == '__main__':
         train_targets = []
         total_train_loss = 0.0
         for batch in training_loader:
-            data1,data2,targets, dcm_names = batch
-            data = torch.cat([data1, data2, data1-data2], dim=1)
+            data1, data2, data3, data4, targets, dcm_names = batch
+            data = torch.cat([data2, data3, data2-data3], dim=1)
             data = data.to(device)
             targets = targets.to(device)
 
@@ -490,8 +523,8 @@ if __name__ == '__main__':
         model.eval()
         with torch.no_grad():
             for batch in validation_loader:
-                data1, data2, targets, dcm_names = batch
-                data = torch.cat([data1, data2, data1 - data2], dim=1)
+                data1, data2, data3, data4, targets, dcm_names = batch
+                data = torch.cat([data2, data3, data2 - data3], dim=1)
                 data = data.to(device)
                 targets = targets.to(device)
 
@@ -519,8 +552,8 @@ if __name__ == '__main__':
         model.eval()
         with torch.no_grad():
             for batch in test_loader:
-                data1, data2, targets, dcm_names = batch
-                data = torch.cat([data1, data2, data1-data2], dim=1)
+                data1, data2, data3, data4, targets, dcm_names = batch
+                data = torch.cat([data2, data3, data2 - data3], dim=1)
                 data = data.to(device)
                 targets = targets.to(device)
 
@@ -540,8 +573,8 @@ if __name__ == '__main__':
                 test_res_recon_error.append(recon_loss.item())
                 test_res_perplexity.append(perplexity.item())
 
-        if ((epoch + 1) == 37):
-            torch.save(model.state_dict(),"../models/qc/单路径-增强图-增强图-相减-{}.pth".format(epoch + 1))
+        # if ((epoch + 1) == 74):
+        #     torch.save(model.state_dict(),"../models/qc/单路径-1增强图-2原始-相减-{}.pth".format(epoch + 1))
         print('%d epoch' % (epoch + 1))
 
         train_acc, train_sen, train_spe = all_metrics(train_targets, train_pred)

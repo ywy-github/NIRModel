@@ -49,8 +49,8 @@ def apply_clahe_to_folder(input_folder, output_folder):
 
 if __name__ == '__main__':
     # 指定原始图像文件夹和保存增强图像的文件夹
-    input_folder = "../data/筛查有病理数据_一期_52例/ti_test"
-    output_folder = "../data/筛查有病理数据_一期_52例/ti_test_clahe"
+    input_folder = "../data/一期数据/test"
+    output_folder = "../data/一期数据/test2"
 
     # 应用CLAHE增强
     apply_clahe_to_folder(input_folder, output_folder)

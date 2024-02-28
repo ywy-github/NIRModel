@@ -1,26 +1,23 @@
-import os
+from __future__ import print_function
 
+import os
 import time
 
-import matplotlib.pyplot as plt
 import pandas as pd
-from six.moves import xrange
+
 
 import torch.nn as nn
 import torch.nn.functional as F
+from PIL import Image
 from sklearn.metrics import roc_auc_score
-from torch.optim.lr_scheduler import ReduceLROnPlateau, StepLR
+
 from torch.utils.data import DataLoader
-import torch.optim as optim
-from torch.utils.tensorboard import SummaryWriter
+
 from torchvision import transforms
 import torch
-import torch.utils.data as data
-from torchvision import models
+
 import numpy as np
-from PIL import Image
-import glob
-import random
+
 
 from Metrics import all_metrics
 from data_loader import MyData
@@ -267,7 +264,7 @@ class Model(nn.Module):
             self._vq_vae = VectorQuantizer(num_embeddings, embedding_dim,
                                            commitment_cost)
 
-        self.classifier = Classifier(512*16*16,512,1)
+        self.classifier = Classifier(512*14*14,512,1)
 
         self._decoder = Decoder()
 
@@ -301,12 +298,12 @@ class WeightedBinaryCrossEntropyLoss(nn.Module):
 if __name__ == '__main__':
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-    model = torch.load("../models/VQ-Resnet/VQ-VAE-resnet18-data2-双十-11.27.pth", map_location=device)
+    model = torch.load("../models/argument/VQ-VAE-resnet18-resize448+clahe+加入训练集-20.pth", map_location=device)
 
-    image = Image.open("../data/二期双十/test/malignant/KBMK3AH1.bmp")
+    image = Image.open("../data/一期数据/test2/benign/clahe_0531-SDZL-00113-YR-202008251559-D.bmp")
 
     transform = transforms.Compose([
-        transforms.Resize([512,512]),
+        transforms.Resize([448,448]),
         transforms.ToTensor(),
         transforms.Normalize((0.3281,), (0.2366,))  # 设置均值和标准差
     ])
