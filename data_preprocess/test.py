@@ -1,60 +1,32 @@
 import os
-import shutil
-
-import cv2
-import numpy as np
-import pandas as pd
-import torch
 from PIL import Image
 
-from data_preprocess.DobiImage import DubiImage
+def find_different_images(folder1, folder2):
+    # 获取两个文件夹中的文件列表
+    files1 = set(os.listdir(folder1))
+    files2 = set(os.listdir(folder2))
 
-if __name__ == '__main__':
+    # 找到文件名不相同的图片
+    different_images = files1.symmetric_difference(files2)
 
-    fold_path = "G:\\all_dcm"
-    for file_name in os.listdir(fold_path):
-        if file_name == "029-XAJD-00115-YXF-201807091046-D.dcm" or\
-                file_name == "0571-ZKYZL-S376-ZEHU-202310101624-双波段10-R.dcm" or\
-                 file_name == "0571-ZKYZL-S367-SSFE-202309221041-双波段10-L.dcm" or\
-                 file_name == "0571-ZKYZL-S149-XCJU-202209191631-双波段15-R.dcm":
-           continue
-        file_path = os.path.join(fold_path, file_name)
-        images = DubiImage(file_path)
-        print(f"{file_name}")
-        mainImage2,num_light = images.getMainImgae2AndNum_light()
+    # 输出不同的图片文件名
+    if different_images:
+        print("文件名不相同的图片:")
+        for image_name in different_images:
+            print(f"- {image_name}")
+    else:
+        print("两个文件夹中的图片文件名完全相同。")
 
-        if mainImage2 is not None:
-            # 指定保存图片的文件夹路径
-            save_folder = "../data/第二波段原始图"
+def main():
+    # 替换为你的文件夹路径
+    folder1_path = "../data/省肿瘤493wave1"
+    folder2_path = "../data/省肿瘤493wave1原始图"
 
-            # 确保保存文件夹存在，如果不存在则创建
-            if not os.path.exists(save_folder):
-                os.makedirs(save_folder)
+    if not os.path.exists(folder1_path) or not os.path.exists(folder2_path):
+        print("指定的文件夹路径不存在。请检查路径并重新运行程序。")
+        return
 
-            # 将所有图像进行累加
-            total_sum = np.sum(mainImage2, axis=0)
+    find_different_images(folder1_path, folder2_path)
 
-            # 计算前num_light张图的累加值
-            first_n_sum = np.sum(mainImage2[:num_light], axis=0)
-
-            if num_light == 3:
-                # 计算结果
-                result = total_sum - 23 * first_n_sum
-
-            elif num_light == 5:
-                result = total_sum - 13 * first_n_sum
-
-            else: print("没有这个灯")
-
-            # 将 result 映射到 [0, 255] 范围，并转换为 uint8 类型
-            result = (result - result.min()) / (result.max() - result.min()) * 255
-            result = result.astype(np.uint8)
-
-            # 将 result 保存为 BMP 图像
-            result_image = Image.fromarray(result)
-
-            bmp_file_name = os.path.splitext(file_name)[0] + ".bmp"
-
-            bmp_file_path = os.path.join(save_folder, bmp_file_name)
-            result_image.save(bmp_file_path)
-
+if __name__ == "__main__":
+    main()
