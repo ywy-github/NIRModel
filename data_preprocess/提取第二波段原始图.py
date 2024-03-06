@@ -11,21 +11,21 @@ from data_preprocess.DobiImage import DubiImage
 
 if __name__ == '__main__':
 
-    fold_path = "G:\\all_dcm"
+    fold_path = "../data/省肿瘤493dcm"
     for file_name in os.listdir(fold_path):
-        if file_name == "029-XAJD-00115-YXF-201807091046-D.dcm" or\
-                file_name == "0571-ZKYZL-S376-ZEHU-202310101624-双波段10-R.dcm" or\
-                 file_name == "0571-ZKYZL-S367-SSFE-202309221041-双波段10-L.dcm" or\
-                 file_name == "0571-ZKYZL-S149-XCJU-202209191631-双波段15-R.dcm":
-           continue
+        # if file_name == "029-XAJD-00115-YXF-201807091046-D.dcm" or\
+        #         file_name == "0571-ZKYZL-S376-ZEHU-202310101624-双波段10-R.dcm" or\
+        #          file_name == "0571-ZKYZL-S367-SSFE-202309221041-双波段10-L.dcm" or\
+        #          file_name == "0571-ZKYZL-S149-XCJU-202209191631-双波段15-R.dcm":
+        #    continue
         file_path = os.path.join(fold_path, file_name)
         images = DubiImage(file_path)
         print(f"{file_name}")
-        mainImage1,num_light = images.getMainImgae1AndNum_light()
+        mainImage1,num_light = images.getMainImgae2AndNum_light()
 
         if mainImage1 is not None:
             # 指定保存图片的文件夹路径
-            save_folder = "../data/第一波段原始图"
+            save_folder = "../data/省肿瘤493wave2原始图"
 
             # 确保保存文件夹存在，如果不存在则创建
             if not os.path.exists(save_folder):
