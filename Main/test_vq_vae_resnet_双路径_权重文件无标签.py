@@ -19,7 +19,7 @@ import numpy as np
 
 
 from Metrics import all_metrics
-from data_loader import MyData, DoubleTreeChannels
+from data_loader import MyData, DoubleTreeChannels, DoubleTreeChannelsNoLabel
 
 
 class VectorQuantizer(nn.Module):
@@ -340,7 +340,7 @@ if __name__ == '__main__':
         transforms.Normalize((0.3281,), (0.2366,))  # 设置均值和标准差
     ])
 
-    test_benign_data = DoubleTreeChannels("../data/省肿瘤493wave1",
+    test_benign_data = DoubleTreeChannelsNoLabel("../data/省肿瘤493wave1",
                                           "../data/省肿瘤493wave1原始图",
                                           "../data/省肿瘤493wave2",
                                           "../data/省肿瘤493wave2原始图",
@@ -403,61 +403,34 @@ if __name__ == '__main__':
     model.eval()
     with torch.no_grad():
         for batch in test_loader:
-            data1, data2, data3, data4, targets, dcm_names = batch
+            data1, data2, data3, data4, dcm_names = batch
             data_path1 = torch.cat([data1, data3, data1 - data3], dim=1)
             data_path2 = torch.cat([data2, data4, data2 - data4], dim=1)
             data_path1 = data_path1.to(device)
             data_path2 = data_path2.to(device)
-            targets = targets.to(device)
 
             vq_loss1, vq_loss2, data_recon1, data_recon2, perplexity1, perplexity2, classifier_outputs = model(
                 data_path1, data_path2)
 
-            data_variance1 = torch.var(data_path1)
-            recon_loss1 = F.mse_loss(data_recon1, data_path1) / data_variance1
-
-            classifier_loss = criterion(targets.view(-1, 1), classifier_outputs)
-
-            data_variance2 = torch.var(data_path2)
-            recon_loss2 = F.mse_loss(data_recon2, data_path2) / data_variance2
-
-            total_loss = joint_loss_function(recon_loss1, recon_loss2, vq_loss1, vq_loss2, classifier_loss,
-                                             lambda_recon1, lambda_recon2, lambda_vq1, lambda_vq2, lambda_classifier
-                                             )
-
-            predicted_labels =  (classifier_outputs >= 0.5).int().view(-1)
             # 记录每个样本的dcm_name、预测概率值和标签
             for i in range(len(dcm_names)):
-                test_results.append({'dcm_name': dcm_names[i], 'pred': classifier_outputs[i].item(),
-                                     'prob': predicted_labels[i].item(), 'label': targets[i].item()})
-            test_predictions.extend(predicted_labels.cpu().numpy())
-            test_targets.extend(targets.cpu().numpy())
-            total_test_loss.append(total_loss.item())
+                test_results.append({'dcm_name': dcm_names[i], 'prob': classifier_outputs[i].item()})
             test_pred.append(classifier_outputs.flatten().cpu().numpy())
             # concat = torch.cat((data[0].view(128, 128),
             #                     data_recon[0].view(128, 128)), 1)
             # plt.matshow(concat.cpu().detach().numpy())
             # plt.show()
 
-    test_acc, test_sen, test_spe = all_metrics(test_targets, test_predictions)
-
-    test_pred = np.concatenate(test_pred)  # 将列表转换为NumPy数组
-    test_targets = np.array(test_targets)
-    test_auc = roc_auc_score(test_targets, test_pred)
-
-    print("测试集 acc: {:.4f}".format(test_acc) + "sen: {:.4f}".format(test_sen) +
-          "spe: {:.4f}".format(test_spe) + " auc: {:.4f}".format(test_auc) + "loss: {:.4f}".format(
-        np.mean(total_test_loss[-10:])))
 
     df = pd.DataFrame(test_results)
-    filename = '../models/result/resnet18-双路径-增-增-相减-原-原-相减.xlsx'
+    filename = '../models/result/ywy-resnet18-省肿瘤493.xlsx'
 
-    # # 检查文件是否存在
-    # if not os.path.isfile(filename):
-    #     # 如果文件不存在，创建新文件并保存数据到 Sheet1
-    #     df.to_excel(filename, sheet_name='train', index=False)
-    # else:
-    #     # 如果文件已经存在，打开现有文件并保存数据到 Sheet2
-    #     with pd.ExcelWriter(filename, engine='openpyxl', mode='a') as writer:
-    #         df.to_excel(writer, sheet_name='train', index=False)
+    # 检查文件是否存在
+    if not os.path.isfile(filename):
+        # 如果文件不存在，创建新文件并保存数据到 Sheet1
+        df.to_excel(filename, sheet_name='train', index=False)
+    else:
+        # 如果文件已经存在，打开现有文件并保存数据到 Sheet2
+        with pd.ExcelWriter(filename, engine='openpyxl', mode='a') as writer:
+            df.to_excel(writer, sheet_name='train', index=False)
 
