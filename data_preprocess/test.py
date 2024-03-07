@@ -1,32 +1,38 @@
 import os
 from PIL import Image
+from openpyxl import Workbook
 
-def find_different_images(folder1, folder2):
-    # 获取两个文件夹中的文件列表
-    files1 = set(os.listdir(folder1))
-    files2 = set(os.listdir(folder2))
+def get_bmp_filenames(folder_path):
+    bmp_filenames = []
+    for filename in os.listdir(folder_path):
+        filepath = os.path.join(folder_path, filename)
+        if os.path.isfile(filepath):
+            try:
+                # 使用PIL库检查文件是否是BMP格式
+                with Image.open(filepath) as img:
+                    if img.format == 'BMP':
+                        bmp_filenames.append(filename)
+            except Exception as e:
+                # 如果文件不是图像或者无法打开，忽略错误
+                pass
+    return bmp_filenames
 
-    # 找到文件名不相同的图片
-    different_images = files1.symmetric_difference(files2)
+def save_to_excel(bmp_filenames, excel_filename='bmp_filenames.xlsx'):
+    wb = Workbook()
+    ws = wb.active
+    ws.append(['BMP Filenames'])
 
-    # 输出不同的图片文件名
-    if different_images:
-        print("文件名不相同的图片:")
-        for image_name in different_images:
-            print(f"- {image_name}")
-    else:
-        print("两个文件夹中的图片文件名完全相同。")
+    for bmp_filename in bmp_filenames:
+        ws.append([bmp_filename])
 
-def main():
-    # 替换为你的文件夹路径
-    folder1_path = "../data/省肿瘤493wave1"
-    folder2_path = "../data/省肿瘤493wave1原始图"
-
-    if not os.path.exists(folder1_path) or not os.path.exists(folder2_path):
-        print("指定的文件夹路径不存在。请检查路径并重新运行程序。")
-        return
-
-    find_different_images(folder1_path, folder2_path)
+    wb.save(excel_filename)
 
 if __name__ == "__main__":
-    main()
+    folder_path = '../data/ti_二期双十wave1/val/benign'  # 将'/path/to/your/folder'替换为你的文件夹路径
+    bmp_filenames = get_bmp_filenames(folder_path)
+
+    if bmp_filenames:
+        save_to_excel(bmp_filenames)
+        print(f'BMP filenames saved to excel file: bmp_filenames.xlsx')
+    else:
+        print('No BMP files found in the specified folder.')
