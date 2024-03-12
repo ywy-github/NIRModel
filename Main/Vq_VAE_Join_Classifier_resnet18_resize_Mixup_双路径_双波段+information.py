@@ -243,10 +243,8 @@ class Classifier(nn.Module):
         self.path = nn.Sequential(
             nn.Linear(input_dim, hidden_dim),
             nn.ReLU(),
-            nn.Dropout(0.5),
             nn.Linear(hidden_dim, hidden_dim // 2),
             nn.ReLU(),
-            nn.Dropout(0.5),
             nn.Linear(hidden_dim // 2, num_classes),
             nn.Sigmoid()
         )
@@ -275,14 +273,14 @@ class Model(nn.Module):
             self._vq_vae2 = VectorQuantizer(num_embeddings, embedding_dim,
                                             commitment_cost)
 
-        self.classifier = Classifier(1024,512,1)
+        self.classifier = Classifier(200705,512,1)
 
         self._decoder1 = Decoder()
         self._decoder2 = Decoder()
 
         self.Avg = nn.AdaptiveMaxPool2d(1)
 
-    def forward(self, data1,data2):
+    def forward(self, data1,data2,information_dict):
         z1 = self._encoder1(data1)
         z2 = self._encoder2(data2)
 
@@ -291,8 +289,41 @@ class Model(nn.Module):
         loss2, quantized2, perplexity2, _ = self._vq_vae2(z2)
         quantized = torch.cat([quantized1, quantized2], dim=1)
 
-        features = self.Avg(quantized)
-        classifier_outputs = self.classifier(features.view(features.size(0),-1))
+        feature = quantized.view(quantized.size(0), -1)
+
+        #处理辅助信息
+        age = information_dict['age']
+
+        normalized_ages = (age - 0) / (100 - 0)
+        normalized_ages = normalized_ages.view(-1, 1).float()
+        normalized_ages = normalized_ages.to('cuda')
+
+        cup_sizes = information_dict['cup_size']
+        cup_size_mapping = {'A': 0, 'B': 1, 'C': 2, 'D': 3}
+        one_hot_cup_sizes = torch.zeros((len(cup_sizes), len(cup_size_mapping)))
+        for i, cup_size in enumerate(cup_sizes):
+            one_hot_cup_sizes[i, cup_size_mapping[cup_size]] = 1
+        one_hot_cup_sizes = one_hot_cup_sizes.to('cuda')
+
+        H_lso3 = information_dict['H_lso3']
+        dnirs_L1max = information_dict['dnirs_L1max'].to('cuda')
+        H_Bsc1 = information_dict['H_Bsc1'].to('cuda')
+
+        H_lso3 =  H_lso3.to('cuda')
+        dnirs_L1max = dnirs_L1max.to('cuda')
+        H_Bsc1 = H_Bsc1.to('cuda')
+
+
+        H_lso3 = H_lso3.view(-1, 1).float()
+        dnirs_L1max = dnirs_L1max.view(-1, 1).float()
+        H_Bsc1 = H_Bsc1.view(-1, 1).float()
+
+
+
+        # 拼接到展平后的特征上
+        combined_features = torch.cat((feature, normalized_ages), dim=1)
+
+        classifier_outputs = self.classifier(combined_features)
 
         x_recon1 = self._decoder1(quantized1)
         x_recon2 = self._decoder2(quantized2)
@@ -396,7 +427,7 @@ if __name__ == '__main__':
                                            "../data/ti_二期双十+双十五wave1原始图/train/benign",
                                            "../data/ti_二期双十+双十五wave2/train/benign",
                                            "../data/ti_二期双十+双十五wave2原始图/train/benign",
-                                           "../data/ti_二期双十+双十五wave1/train/bengin.xlsx"                
+                                           "../data/ti_二期双十+双十五wave1/train/benign.xlsx",
                                            "benign",
                                            transform=transform)
 
@@ -404,6 +435,7 @@ if __name__ == '__main__':
                                            "../data/ti_二期双十+双十五wave1原始图/train/malignant",
                                            "../data/ti_二期双十+双十五wave2/train/malignant",
                                            "../data/ti_二期双十+双十五wave2原始图/train/malignant",
+                                           "../data/ti_二期双十+双十五wave1/train/malignant.xlsx",
                                            "malignant",
                                            transform=transform)
 
@@ -413,6 +445,7 @@ if __name__ == '__main__':
                                            "../data/ti_二期双十wave1原始图/val/benign",
                                            "../data/ti_二期双十wave2/val/benign",
                                            "../data/ti_二期双十wave2原始图/val/benign",
+                                           "../data/ti_二期双十wave1/val/benign.xlsx",
                                            "benign",
                                            transform=transform)
 
@@ -420,6 +453,7 @@ if __name__ == '__main__':
                                               "../data/ti_二期双十wave1原始图/val/malignant",
                                               "../data/ti_二期双十wave2/val/malignant",
                                               "../data/ti_二期双十wave2原始图/val/malignant",
+                                              "../data/ti_二期双十wave1/val/malignant.xlsx",
                                               "malignant",
                                               transform=transform)
 
@@ -429,6 +463,7 @@ if __name__ == '__main__':
                                          "../data/ti_二期双十wave1原始图/test/benign",
                                          "../data/ti_二期双十wave2/test/benign",
                                          "../data/ti_二期双十wave2原始图/test/benign",
+                                         "../data/ti_二期双十wave1/test/benign.xlsx",
                                          "benign",
                                          transform=transform)
 
@@ -436,6 +471,7 @@ if __name__ == '__main__':
                                             "../data/ti_二期双十wave1原始图/test/malignant",
                                             "../data/ti_二期双十wave2/test/malignant",
                                             "../data/ti_二期双十wave2原始图/test/malignant",
+                                            "../data/ti_二期双十wave1/test/malignant.xlsx",
                                             "malignant",
                                             transform=transform)
 
@@ -522,16 +558,17 @@ if __name__ == '__main__':
         train_targets = []
         total_train_loss = 0.0
         for batch in training_loader:
-            data1, data2, data3, data4,targets, dcm_names = batch
-            data_path1 = torch.cat([data1, data4, data1-data4], dim=1)
-            data_path2 = torch.cat([data2-data4, data2-data4, data2-data4],dim=1)
+            data1, data2, data3, data4, targets, name, information_dict = batch
+
+            data_path1 = torch.cat([data1, data3, data1-data3], dim=1)
+            data_path2 = torch.cat([data2, data4, data2-data4],dim=1)
             data_path1 = data_path1.to(device)
             data_path2 = data_path2.to(device)
             targets = targets.to(device)
 
             optimizer.zero_grad()
 
-            vq_loss1,vq_loss2,data_recon1, data_recon2,perplexity1, perplexity2,classifier_outputs = model(data_path1,data_path2)
+            vq_loss1,vq_loss2,data_recon1, data_recon2,perplexity1, perplexity2,classifier_outputs = model(data_path1,data_path2,information_dict)
 
             data_variance1 = torch.var(data_path1)
             recon_loss1 = F.mse_loss(data_recon1, data_path1) / data_variance1
@@ -564,14 +601,15 @@ if __name__ == '__main__':
         model.eval()
         with torch.no_grad():
             for batch in validation_loader:
-                data1, data2, data3, data4, targets, dcm_names = batch
-                data_path1 = torch.cat([data1, data4, data1 - data4], dim=1)
-                data_path2 = torch.cat([data2 - data4, data2 - data4, data2 - data4], dim=1)
+                data1, data2, data3, data4, targets, name, information_dict = batch
+
+                data_path1 = torch.cat([data1, data3, data1 - data3], dim=1)
+                data_path2 = torch.cat([data2, data4, data2 - data4], dim=1)
                 data_path1 = data_path1.to(device)
                 data_path2 = data_path2.to(device)
                 targets = targets.to(device)
 
-                vq_loss1, vq_loss2, data_recon1, data_recon2, perplexity1, perplexity2, classifier_outputs = model(data_path1, data_path2)
+                vq_loss1, vq_loss2, data_recon1, data_recon2, perplexity1, perplexity2, classifier_outputs = model(data_path1, data_path2,information_dict)
 
                 data_variance1 = torch.var(data_path1)
                 recon_loss1 = F.mse_loss(data_recon1, data_path1) / data_variance1
@@ -599,15 +637,15 @@ if __name__ == '__main__':
         model.eval()
         with torch.no_grad():
             for batch in test_loader:
-                data1, data2, data3, data4, targets, dcm_names = batch
-                data_path1 = torch.cat([data1, data4, data1 - data4], dim=1)
-                data_path2 = torch.cat([data2 - data4, data2 - data4, data2 - data4], dim=1)
+                data1, data2, data3, data4, targets, name, information_dict = batch
+
+                data_path1 = torch.cat([data1, data3, data1 - data3], dim=1)
+                data_path2 = torch.cat([data2, data4, data2 - data4], dim=1)
                 data_path1 = data_path1.to(device)
                 data_path2 = data_path2.to(device)
                 targets = targets.to(device)
 
-                vq_loss1, vq_loss2, data_recon1, data_recon2, perplexity1, perplexity2, classifier_outputs = model(
-                    data_path1, data_path2)
+                vq_loss1, vq_loss2, data_recon1, data_recon2, perplexity1, perplexity2, classifier_outputs = model(data_path1, data_path2,information_dict)
 
                 data_variance1 = torch.var(data_path1)
                 recon_loss1 = F.mse_loss(data_recon1, data_path1) / data_variance1
@@ -631,8 +669,8 @@ if __name__ == '__main__':
 
         # writer.add_scalar('Loss/Val', total_val_loss, epoch)
 
-        # if ((epoch + 1) == 34):
-        #     torch.save(model.state_dict(), "../models/qc/resnet18-双路径-增-增3-原-原3-{}.pth".format(epoch + 1))
+        # if ((epoch + 1) == 10 or (epoch + 1) == 11):
+        #     torch.save(model.state_dict(), "../models/qc_2/resnet18-双路径-增-增-相减-原-原-相减-年龄-{}.pth".format(epoch + 1))
         print('%d epoch' % (epoch + 1))
 
         train_acc, train_sen, train_spe = all_metrics(train_targets, train_pred)

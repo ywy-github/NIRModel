@@ -340,21 +340,24 @@ if __name__ == '__main__':
         transforms.Normalize((0.3281,), (0.2366,))  # 设置均值和标准差
     ])
 
-    test_benign_data = DoubleTreeChannels("../data/省肿瘤493wave1",
-                                          "../data/省肿瘤493wave1原始图",
-                                          "../data/省肿瘤493wave2",
-                                          "../data/省肿瘤493wave2原始图",
-                                          transform=transform)
+    train_benign_data = DoubleTreeChannels("../data/ti_二期双十+双十五wave1/train/benign",
+                                           "../data/ti_二期双十+双十五wave1原始图/train/benign",
+                                           "../data/ti_二期双十+双十五wave2/train/benign",
+                                           "../data/ti_二期双十+双十五wave2原始图/train/benign",
+                                           "benign",
+                                           transform=transform)
 
-    # test_malignant_data = DoubleTreeChannels("../data/ti_二期双十+双十五wave1/train/malignant",
-    #                                          "../data/ti_二期双十+双十五wave1原始图/train/malignant",
-    #                                          "../data/ti_二期双十+双十五wave2/train/malignant",
-    #                                          "../data/ti_二期双十+双十五wave2原始图/train/malignant",
-    #                                          transform=transform)
+    train_malignant_data = DoubleTreeChannels("../data/ti_二期双十+双十五wave1/train/malignant",
+                                              "../data/ti_二期双十+双十五wave1原始图/train/malignant",
+                                              "../data/ti_二期双十+双十五wave2/train/malignant",
+                                              "../data/ti_二期双十+双十五wave2原始图/train/malignant",
+                                              "malignant",
+                                              transform=transform)
 
-    # test_data = test_benign_data + test_malignant_data
+    train_data = train_benign_data + train_malignant_data
 
-    test_loader = DataLoader(test_benign_data,
+
+    test_loader = DataLoader(train_data,
                                    batch_size=batch_size,
                                    shuffle=True
                                    )
@@ -390,7 +393,7 @@ if __name__ == '__main__':
 
     model = Model(encoder1, encoder2, num_embeddings, embedding_dim, commitment_cost, decay).to(device)
 
-    model.load_state_dict(torch.load('../models/qc/resnet18-双路径-增-增-相减-原-原-相减-57.pth'))
+    model.load_state_dict(torch.load('../models/qc_2/resnet18-双路径-增-增-相减-原-原-相减-32.pth'))
 
     criterion = WeightedBinaryCrossEntropyLoss(2)
     criterion.to(device)
@@ -404,8 +407,8 @@ if __name__ == '__main__':
     with torch.no_grad():
         for batch in test_loader:
             data1, data2, data3, data4, targets, dcm_names = batch
-            data_path1 = torch.cat([data1, data3, data1 - data3], dim=1)
-            data_path2 = torch.cat([data2, data4, data2 - data4], dim=1)
+            data_path1 = torch.cat([data1 - data3, data1 - data3, data1 - data3], dim=1)
+            data_path2 = torch.cat([data2 - data4, data2 - data4, data2 - data4], dim=1)
             data_path1 = data_path1.to(device)
             data_path2 = data_path2.to(device)
             targets = targets.to(device)
@@ -450,14 +453,14 @@ if __name__ == '__main__':
         np.mean(total_test_loss[-10:])))
 
     df = pd.DataFrame(test_results)
-    filename = '../models/result/resnet18-双路径-增-增-相减-原-原-相减.xlsx'
+    filename = '../models/result/ywy_resnet18_多尺度信息.xlsx'
 
     # # 检查文件是否存在
-    # if not os.path.isfile(filename):
-    #     # 如果文件不存在，创建新文件并保存数据到 Sheet1
-    #     df.to_excel(filename, sheet_name='train', index=False)
-    # else:
-    #     # 如果文件已经存在，打开现有文件并保存数据到 Sheet2
-    #     with pd.ExcelWriter(filename, engine='openpyxl', mode='a') as writer:
-    #         df.to_excel(writer, sheet_name='train', index=False)
+    if not os.path.isfile(filename):
+        # 如果文件不存在，创建新文件并保存数据到 Sheet1
+        df.to_excel(filename, sheet_name='train', index=False)
+    else:
+        # 如果文件已经存在，打开现有文件并保存数据到 Sheet2
+        with pd.ExcelWriter(filename, engine='openpyxl', mode='a') as writer:
+            df.to_excel(writer, sheet_name='train', index=False)
 

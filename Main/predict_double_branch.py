@@ -382,11 +382,13 @@ if __name__ == '__main__':
     model = Model(encoder1, encoder2, num_embeddings, embedding_dim, commitment_cost, decay).to(device)
     model.load_state_dict(torch.load('../models/qc/resnet18-双路径-增-增-相减-原-原-相减-57.pth'))
 
+    image_name = "020-ZSSYX-02087-LILI-202308181107-R-D.bmp"
+
     # 读取四种图片，分别是第一波段增强图，第一波段原始图，第二波段增强图，第二波段原始图
-    image1 = Image.open("../data/ti_二期双十wave1/test/malignant/020-ZSSYX-00583-CXE-202205090924双波段-L-D.bmp")
-    image2 = Image.open("../data/ti_二期双十wave1原始图/test/malignant/020-ZSSYX-00583-CXE-202205090924双波段-L-D.bmp")
-    image3 = Image.open("../data/ti_二期双十wave2/test/malignant/020-ZSSYX-00583-CXE-202205090924双波段-L-D.bmp")
-    image4 = Image.open("../data/ti_二期双十wave2原始图/test/malignant/020-ZSSYX-00583-CXE-202205090924双波段-L-D.bmp")
+    image1 = Image.open("../data/ti_二期双十wave1/test/malignant/"+image_name)
+    image2 = Image.open("../data/ti_二期双十wave1原始图/test/malignant/"+image_name)
+    image3 = Image.open("../data/ti_二期双十wave2/test/malignant/"+image_name)
+    image4 = Image.open("../data/ti_二期双十wave2原始图/test/malignant/"+image_name)
 
     transform = transforms.Compose([
         transforms.Resize([448,448]),
