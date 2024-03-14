@@ -342,6 +342,16 @@ def mixup_data(x, y, alpha=1.0):
     mixed_x = lam * x + (1 - lam) * x[index, :]
     y_a, y_b = y, y[index]
     return mixed_x, y_a, y_b, lam
+
+
+def pred(image1,image2,image3,image4):
+    with torch.no_grad():
+        model.eval()  # 确保模型处于评估模式
+        data_path1 = torch.cat([image1,image3,image1 - image3], dim=1)
+        data_path2 = torch.cat([image2, image4, image2 - image4], dim=1)
+        _,_,_, _,_, _,classifier_outputs = model(data_path1,data_path2)
+        return classifier_outputs
+
 if __name__ == '__main__':
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
@@ -401,9 +411,5 @@ if __name__ == '__main__':
     image3 = transform(image3).unsqueeze(0).to(device)
     image4 = transform(image4).unsqueeze(0).to(device)
 
-    with torch.no_grad():
-        model.eval()  # 确保模型处于评估模式
-        data_path1 = torch.cat([image1,image3,image1 - image3], dim=1)
-        data_path2 = torch.cat([image2, image4, image2 - image4], dim=1)
-        _,_,_, _,_, _,classifier_outputs = model(data_path1,data_path2)
-        print("Predicted Probability:", "{:.6f}".format(classifier_outputs.item()))
+    classifier_outputs = pred(image1,image2,image3,image4)
+    print("Predicted Probability:", "{:.6f}".format(classifier_outputs.item()))
