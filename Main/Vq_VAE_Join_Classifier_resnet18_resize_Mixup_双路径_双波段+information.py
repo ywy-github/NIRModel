@@ -273,7 +273,7 @@ class Model(nn.Module):
             self._vq_vae2 = VectorQuantizer(num_embeddings, embedding_dim,
                                             commitment_cost)
 
-        self.classifier = Classifier(200705,512,1)
+        self.classifier = Classifier(200708,512,1)
 
         self._decoder1 = Decoder()
         self._decoder2 = Decoder()
@@ -305,23 +305,23 @@ class Model(nn.Module):
             one_hot_cup_sizes[i, cup_size_mapping[cup_size]] = 1
         one_hot_cup_sizes = one_hot_cup_sizes.to('cuda')
 
-        H_lso3 = information_dict['H_lso3']
-        dnirs_L1max = information_dict['dnirs_L1max'].to('cuda')
-        H_Bsc1 = information_dict['H_Bsc1'].to('cuda')
-
-        H_lso3 =  H_lso3.to('cuda')
-        dnirs_L1max = dnirs_L1max.to('cuda')
-        H_Bsc1 = H_Bsc1.to('cuda')
-
-
-        H_lso3 = H_lso3.view(-1, 1).float()
-        dnirs_L1max = dnirs_L1max.view(-1, 1).float()
-        H_Bsc1 = H_Bsc1.view(-1, 1).float()
+        # H_lso3 = information_dict['H_lso3']
+        # dnirs_L1max = information_dict['dnirs_L1max'].to('cuda')
+        # H_Bsc1 = information_dict['H_Bsc1'].to('cuda')
+        #
+        # H_lso3 =  H_lso3.to('cuda')
+        # dnirs_L1max = dnirs_L1max.to('cuda')
+        # H_Bsc1 = H_Bsc1.to('cuda')
+        #
+        #
+        # H_lso3 = H_lso3.view(-1, 1).float()
+        # dnirs_L1max = dnirs_L1max.view(-1, 1).float()
+        # H_Bsc1 = H_Bsc1.view(-1, 1).float()
 
 
 
         # 拼接到展平后的特征上
-        combined_features = torch.cat((feature, normalized_ages), dim=1)
+        combined_features = torch.cat((feature,one_hot_cup_sizes), dim=1)
 
         classifier_outputs = self.classifier(combined_features)
 
@@ -480,7 +480,7 @@ if __name__ == '__main__':
     training_loader = DataLoader(train_data,
                                  batch_size=batch_size,
                                  shuffle=True,
-                                 num_workers=5,
+                                 num_workers=4,
                                  persistent_workers=True,
                                  pin_memory=True
                                  )
@@ -488,7 +488,7 @@ if __name__ == '__main__':
     validation_loader = DataLoader(val_data,
                                    batch_size=batch_size,
                                    shuffle=True,
-                                   num_workers=5,
+                                   num_workers=4,
                                    persistent_workers=True,
                                    pin_memory=True
                                    )
@@ -496,7 +496,7 @@ if __name__ == '__main__':
     test_loader = DataLoader(test_data,
                                    batch_size=batch_size,
                                    shuffle=True,
-                                   num_workers=5,
+                                   num_workers=4,
                                    persistent_workers=True,
                                    pin_memory=True
                                    )
@@ -669,8 +669,8 @@ if __name__ == '__main__':
 
         # writer.add_scalar('Loss/Val', total_val_loss, epoch)
 
-        # if ((epoch + 1) == 10 or (epoch + 1) == 11):
-        #     torch.save(model.state_dict(), "../models/qc_2/resnet18-双路径-增-增-相减-原-原-相减-年龄-{}.pth".format(epoch + 1))
+        if ((epoch + 1) == 35):
+            torch.save(model.state_dict(), "../models/qc_2/qc-罩杯-{}.pth".format(epoch + 1))
         print('%d epoch' % (epoch + 1))
 
         train_acc, train_sen, train_spe = all_metrics(train_targets, train_pred)

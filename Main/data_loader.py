@@ -108,10 +108,10 @@ class DoubleTreeChannelsOtherInformation(Dataset):
         self.image_path2 = os.path.join(self.path2, name)
         self.image_path3 = os.path.join(self.path3, name)
         self.image_path4 = os.path.join(self.path4, name)
-        img1 = Image.open(self.image_path1)
-        img2 = Image.open(self.image_path2)
-        img3 = Image.open(self.image_path3)
-        img4 = Image.open(self.image_path4)
+        img1 = Image.open(self.image_path1).convert('L')
+        img2 = Image.open(self.image_path2).convert('L')
+        img3 = Image.open(self.image_path3).convert('L')
+        img4 = Image.open(self.image_path4).convert('L')
 
         if self.transform:
             img1 = self.transform(img1)
@@ -122,10 +122,10 @@ class DoubleTreeChannelsOtherInformation(Dataset):
         #辅助信息
         information_dict = {
             'age' : float(self.df.loc[idx, 'age']),
-            'cup_size' : self.df.loc[idx, 'cup_size'],
-            'H_lso3' : self.df.loc[idx, 'H_lso3'],
-            'dnirs_L1max' : float(self.df.loc[idx, 'dnirs_L1max']),
-            'H_Bsc1' : float(self.df.loc[idx, 'H_Bsc1']),
+             'cup_size' : self.df.loc[idx, 'cup_size']
+            # 'H_lso3' : self.df.loc[idx, 'H_lso3'],
+            # 'dnirs_L1max' : float(self.df.loc[idx, 'dnirs_L1max']),
+            # 'H_Bsc1' : float(self.df.loc[idx, 'H_Bsc1']),
            #  'dnirs_L1min' : float(self.df.loc[idx, 'dnirs_L1min']),
            #  'std_HomH_L0_L1' : float(self.df.loc[idx, 'std_HomH_L0_L1']),
            #  'HistDiffH_L1_6' : float(self.df.loc[idx, 'HistDiffH-L1_6']),
