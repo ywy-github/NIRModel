@@ -377,8 +377,8 @@ if __name__ == '__main__':
     ])
 
     # test_benign_data = DoubleTreeChannelsOtherInformation("../data/NIR-lincls-D10-wave/val/wave1/benign/images",
-    #                                                       "../data/NIR-lincls-D10-wave/val/wave3/benign/images",
     #                                                       "../data/NIR-lincls-D10-wave/val/wave2/benign/images",
+    #                                                       "../data/NIR-lincls-D10-wave/val/wave3/benign/images",
     #                                                       "../data/NIR-lincls-D10-wave/val/wave4/benign/images",
     #                                                       "../data/NIR-lincls-D10-wave/val/benign.xlsx",
     #                                                       "benign",
@@ -386,8 +386,8 @@ if __name__ == '__main__':
     #
     # test_malignant_data = DoubleTreeChannelsOtherInformation(
     #     "../data/NIR-lincls-D10-wave/val/wave1/malignant/images",
-    #     "../data/NIR-lincls-D10-wave/val/wave3/malignant/images",
     #     "../data/NIR-lincls-D10-wave/val/wave2/malignant/images",
+    #     "../data/NIR-lincls-D10-wave/val/wave3/malignant/images",
     #     "../data/NIR-lincls-D10-wave/val/wave4/malignant/images",
     #     "../data/NIR-lincls-D10-wave/val/malignant.xlsx",
     #     "malignant",

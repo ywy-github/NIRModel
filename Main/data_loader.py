@@ -104,6 +104,12 @@ class DoubleTreeChannelsOtherInformation(Dataset):
     def __getitem__(self, idx):
         name = self.image_path_list[idx]
 
+        # 使用文件名中的唯一标识符从Excel中获取对应的年龄和罩杯信息
+
+        row = self.df[self.df['dcm_name'] == name].iloc[0]
+        age = float(row['age'])
+        cup_size = row['cup_size']
+
         self.image_path1 = os.path.join(self.path1, name)
         self.image_path2 = os.path.join(self.path2, name)
         self.image_path3 = os.path.join(self.path3, name)
@@ -121,8 +127,8 @@ class DoubleTreeChannelsOtherInformation(Dataset):
         label = self.label_mapping[self.label]
         #辅助信息
         information_dict = {
-            'age' : float(self.df.loc[idx, 'age']),
-             'cup_size' : self.df.loc[idx, 'cup_size']
+            'age' : float(age),
+             'cup_size' : cup_size
             # 'H_lso3' : self.df.loc[idx, 'H_lso3'],
             # 'dnirs_L1max' : float(self.df.loc[idx, 'dnirs_L1max']),
             # 'H_Bsc1' : float(self.df.loc[idx, 'H_Bsc1']),

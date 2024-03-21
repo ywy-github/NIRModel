@@ -98,7 +98,7 @@ def comfortproc(ds):
     #         # Pre-process for wave 2
     #         ds = ds2mxds_TwoWaveSub(ds, ds2)
     #     elif ds['ProcessingModeds']['twowaveDcm'] == 3:
-    #         # Wave1 sub wave3
+    #         # Wave1 sub wave2
     #         ds = ds2mxds_SubBeforeGRecon(ds, ds2)
     #     elif ds['ProcessingModeds']['twowaveDcm'] == 6:
     #         # PCA fusion
