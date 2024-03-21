@@ -240,16 +240,20 @@ class Decoder(nn.Module):
 class Classifier(nn.Module):
     def __init__(self, input_dim, hidden_dim, num_classes):
         super(Classifier, self).__init__()
-        self.path = nn.Sequential(
+        self.path1 = nn.Sequential(
             nn.Linear(input_dim, hidden_dim),
             nn.ReLU(),
             nn.Linear(hidden_dim, hidden_dim // 2),
-            nn.ReLU(),
-            nn.Linear(hidden_dim // 2, num_classes),
+            nn.ReLU()
+        )
+        self.path2 = nn.Sequential(
+            nn.Linear(261, num_classes),
             nn.Sigmoid()
         )
-    def forward(self, x):
-        x = self.path(x)
+    def forward(self, x,normalized_ages,one_hot_cup_sizes):
+        x = self.path1(x)
+        combined_features = torch.cat((x, normalized_ages, one_hot_cup_sizes), dim=1)
+        x = self.path2(combined_features)
         return x
 
 class Model(nn.Module):
@@ -273,7 +277,7 @@ class Model(nn.Module):
             self._vq_vae2 = VectorQuantizer(num_embeddings, embedding_dim,
                                             commitment_cost)
 
-        self.classifier = Classifier(200708,512,1)
+        self.classifier = Classifier(200704,512,1)
 
         self._decoder1 = Decoder()
         self._decoder2 = Decoder()
@@ -321,9 +325,9 @@ class Model(nn.Module):
 
 
         # 拼接到展平后的特征上
-        combined_features = torch.cat((feature,one_hot_cup_sizes), dim=1)
+        # combined_features = torch.cat((feature,one_hot_cup_sizes), dim=1)
 
-        classifier_outputs = self.classifier(combined_features)
+        classifier_outputs = self.classifier(feature,normalized_ages,one_hot_cup_sizes)
 
         x_recon1 = self._decoder1(quantized1)
         x_recon2 = self._decoder2(quantized2)
@@ -669,8 +673,8 @@ if __name__ == '__main__':
 
         # writer.add_scalar('Loss/Val', total_val_loss, epoch)
 
-        if ((epoch + 1) == 35):
-            torch.save(model.state_dict(), "../models/qc_2/qc-罩杯-{}.pth".format(epoch + 1))
+        if ((epoch + 1) == 22 or (epoch + 1) == 23):
+            torch.save(model.state_dict(), "../models/qc_2/qc-年龄罩杯-256+5-{}.pth".format(epoch + 1))
         print('%d epoch' % (epoch + 1))
 
         train_acc, train_sen, train_spe = all_metrics(train_targets, train_pred)

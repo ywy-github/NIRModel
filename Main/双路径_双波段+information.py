@@ -3,6 +3,7 @@ from __future__ import print_function
 import time
 
 import matplotlib.pyplot as plt
+import pandas as pd
 from scipy.optimize import differential_evolution
 from six.moves import xrange
 
@@ -273,7 +274,7 @@ class Model(nn.Module):
             self._vq_vae2 = VectorQuantizer(num_embeddings, embedding_dim,
                                             commitment_cost)
 
-        self.classifier = Classifier(200709,512,1)
+        self.classifier = Classifier(200704,512,1)
 
         self._decoder1 = Decoder()
         self._decoder2 = Decoder()
@@ -320,10 +321,10 @@ class Model(nn.Module):
 
 
 
-        # 拼接到展平后的特征上
-        combined_features = torch.cat((feature,normalized_ages ,one_hot_cup_sizes), dim=1)
+        # # 拼接到展平后的特征上
+        # combined_features = torch.cat((feature,normalized_ages ,one_hot_cup_sizes), dim=1)
 
-        classifier_outputs = self.classifier(combined_features)
+        classifier_outputs = self.classifier(feature)
 
         x_recon1 = self._decoder1(quantized1)
         x_recon2 = self._decoder2(quantized2)
@@ -548,6 +549,16 @@ if __name__ == '__main__':
     val_res_recon_error = []
     val_res_perplexity = []
 
+    train_exclude = pd.read_excel("../data/NIR-lincls-D10-wave/train/exclude大于60岁.xlsx")
+    train_exclude_list = train_exclude["dcm_name"].tolist()
+
+    val_exclude = pd.read_excel("../data/NIR-lincls-D10-wave/val/exclude大于60岁.xlsx")
+    val_exclude_list = train_exclude["dcm_name"].tolist()
+
+    train_exclude = pd.read_excel("../data/NIR-lincls-D10-wave/test/exclude大于60岁.xlsx")
+    test_exclude_list = train_exclude["dcm_name"].tolist()
+
+
     start_time = time.time()  # 记录训练开始时间
     # writer = SummaryWriter("../Logs")
     for epoch in range(epochs):
@@ -562,6 +573,8 @@ if __name__ == '__main__':
         for batch in training_loader:
             data1, data2, data3, data4, targets, name, information_dict = batch
 
+            if name in train_exclude_list:
+                continue
             data_path1 = torch.cat([data1, data3, data1-data3], dim=1)
             data_path2 = torch.cat([data2, data4, data2-data4],dim=1)
             data_path1 = data_path1.to(device)
@@ -605,6 +618,9 @@ if __name__ == '__main__':
             for batch in validation_loader:
                 data1, data2, data3, data4, targets, name, information_dict = batch
 
+                if name in val_exclude_list:
+                    continue
+
                 data_path1 = torch.cat([data1, data3, data1 - data3], dim=1)
                 data_path2 = torch.cat([data2, data4, data2 - data4], dim=1)
                 data_path1 = data_path1.to(device)
@@ -640,7 +656,8 @@ if __name__ == '__main__':
         with torch.no_grad():
             for batch in test_loader:
                 data1, data2, data3, data4, targets, name, information_dict = batch
-
+                if name in test_exclude_list:
+                    continue
                 data_path1 = torch.cat([data1, data3, data1 - data3], dim=1)
                 data_path2 = torch.cat([data2, data4, data2 - data4], dim=1)
                 data_path1 = data_path1.to(device)
@@ -671,8 +688,8 @@ if __name__ == '__main__':
 
         # writer.add_scalar('Loss/Val', total_val_loss, epoch)
 
-        if ((epoch + 1) == 10):
-            torch.save(model.state_dict(), "../models/qc_2/全双十+年龄罩杯-{}.pth".format(epoch + 1))
+        # if ((epoch + 1) == 10):
+        #     torch.save(model.state_dict(), "../models/qc_2/全双十+年龄罩杯-{}.pth".format(epoch + 1))
         print('%d epoch' % (epoch + 1))
 
         train_acc, train_sen, train_spe = all_metrics(train_targets, train_pred)

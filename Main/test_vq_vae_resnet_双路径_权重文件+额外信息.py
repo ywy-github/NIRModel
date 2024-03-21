@@ -234,16 +234,20 @@ class Decoder(nn.Module):
 class Classifier(nn.Module):
     def __init__(self, input_dim, hidden_dim, num_classes):
         super(Classifier, self).__init__()
-        self.path = nn.Sequential(
+        self.path1 = nn.Sequential(
             nn.Linear(input_dim, hidden_dim),
             nn.ReLU(),
             nn.Linear(hidden_dim, hidden_dim // 2),
-            nn.ReLU(),
-            nn.Linear(hidden_dim // 2, num_classes),
+            nn.ReLU()
+        )
+        self.path2 = nn.Sequential(
+            nn.Linear(261, num_classes),
             nn.Sigmoid()
         )
-    def forward(self, x):
-        x = self.path(x)
+    def forward(self, x,normalized_ages,one_hot_cup_sizes):
+        x = self.path1(x)
+        combined_features = torch.cat((x, normalized_ages, one_hot_cup_sizes), dim=1)
+        x = self.path2(combined_features)
         return x
 
 class Model(nn.Module):
@@ -267,7 +271,7 @@ class Model(nn.Module):
             self._vq_vae2 = VectorQuantizer(num_embeddings, embedding_dim,
                                             commitment_cost)
 
-        self.classifier = Classifier(200709,512,1)
+        self.classifier = Classifier(200704,512,1)
 
         self._decoder1 = Decoder()
         self._decoder2 = Decoder()
@@ -315,14 +319,15 @@ class Model(nn.Module):
 
 
         # 拼接到展平后的特征上
-        combined_features = torch.cat((feature,normalized_ages,one_hot_cup_sizes), dim=1)
+        # combined_features = torch.cat((feature,one_hot_cup_sizes), dim=1)
 
-        classifier_outputs = self.classifier(combined_features)
+        classifier_outputs = self.classifier(feature,normalized_ages,one_hot_cup_sizes)
 
         x_recon1 = self._decoder1(quantized1)
         x_recon2 = self._decoder2(quantized2)
 
         return loss1,loss2,x_recon1,x_recon2,perplexity1,perplexity2,classifier_outputs
+
 
 
 def joint_loss_function(recon_loss1,recon_loss2, vq_loss1,vq_loss2, classifier_loss,
@@ -371,22 +376,41 @@ if __name__ == '__main__':
         transforms.Normalize((0.3281,), (0.2366,))  # 设置均值和标准差
     ])
 
-    test_benign_data = DoubleTreeChannelsOtherInformation("../data/NIR-lincls-D10-wave/val/wave1/benign/images",
-                                                          "../data/NIR-lincls-D10-wave/val/wave3/benign/images",
-                                                          "../data/NIR-lincls-D10-wave/val/wave2/benign/images",
-                                                          "../data/NIR-lincls-D10-wave/val/wave4/benign/images",
-                                                          "../data/NIR-lincls-D10-wave/val/benign.xlsx",
+    # test_benign_data = DoubleTreeChannelsOtherInformation("../data/NIR-lincls-D10-wave/val/wave1/benign/images",
+    #                                                       "../data/NIR-lincls-D10-wave/val/wave3/benign/images",
+    #                                                       "../data/NIR-lincls-D10-wave/val/wave2/benign/images",
+    #                                                       "../data/NIR-lincls-D10-wave/val/wave4/benign/images",
+    #                                                       "../data/NIR-lincls-D10-wave/val/benign.xlsx",
+    #                                                       "benign",
+    #                                                       transform=transform)
+    #
+    # test_malignant_data = DoubleTreeChannelsOtherInformation(
+    #     "../data/NIR-lincls-D10-wave/val/wave1/malignant/images",
+    #     "../data/NIR-lincls-D10-wave/val/wave3/malignant/images",
+    #     "../data/NIR-lincls-D10-wave/val/wave2/malignant/images",
+    #     "../data/NIR-lincls-D10-wave/val/wave4/malignant/images",
+    #     "../data/NIR-lincls-D10-wave/val/malignant.xlsx",
+    #     "malignant",
+    #     transform=transform)
+    #
+    #
+    # test_data = test_benign_data + test_malignant_data
+
+    test_benign_data = DoubleTreeChannelsOtherInformation("../data/ti_二期双十+双十五wave1/train/benign",
+                                                          "../data/ti_二期双十+双十五wave1原始图/train/benign",
+                                                          "../data/ti_二期双十+双十五wave2/train/benign",
+                                                          "../data/ti_二期双十+双十五wave2原始图/train/benign",
+                                                          "../data/ti_二期双十+双十五wave1/train/benign.xlsx",
                                                           "benign",
                                                           transform=transform)
 
-    test_malignant_data = DoubleTreeChannelsOtherInformation(
-        "../data/NIR-lincls-D10-wave/val/wave1/malignant/images",
-        "../data/NIR-lincls-D10-wave/val/wave3/malignant/images",
-        "../data/NIR-lincls-D10-wave/val/wave2/malignant/images",
-        "../data/NIR-lincls-D10-wave/val/wave4/malignant/images",
-        "../data/NIR-lincls-D10-wave/val/malignant.xlsx",
-        "malignant",
-        transform=transform)
+    test_malignant_data = DoubleTreeChannelsOtherInformation("../data/ti_二期双十+双十五wave1/train/malignant",
+                                                             "../data/ti_二期双十+双十五wave1原始图/train/malignant",
+                                                             "../data/ti_二期双十+双十五wave2/train/malignant",
+                                                             "../data/ti_二期双十+双十五wave2原始图/train/malignant",
+                                                             "../data/ti_二期双十+双十五wave1/train/malignant.xlsx",
+                                                             "malignant",
+                                                             transform=transform)
 
     test_data = test_benign_data + test_malignant_data
 
@@ -427,7 +451,7 @@ if __name__ == '__main__':
 
     model = Model(encoder1, encoder2, num_embeddings, embedding_dim, commitment_cost, decay).to(device)
 
-    model.load_state_dict(torch.load('../models/qc_2/全双十+年龄罩杯-10.pth'))
+    model.load_state_dict(torch.load('../models/qc_2/qc-年龄罩杯-256+5-22.pth'))
 
     criterion = WeightedBinaryCrossEntropyLoss(2)
     criterion.to(device)
@@ -487,14 +511,14 @@ if __name__ == '__main__':
         np.mean(total_test_loss[-10:])))
 
     df = pd.DataFrame(test_results)
-    filename = '../models/result/全双十+年龄罩杯.xlsx'
+    filename = '../models/result/qc+年龄罩杯-256-5.xlsx'
 
     # # 检查文件是否存在
     if not os.path.isfile(filename):
         # 如果文件不存在，创建新文件并保存数据到 Sheet1
-        df.to_excel(filename, sheet_name='val', index=False)
+        df.to_excel(filename, sheet_name='train', index=False)
     else:
         # 如果文件已经存在，打开现有文件并保存数据到 Sheet2
         with pd.ExcelWriter(filename, engine='openpyxl', mode='a') as writer:
-            df.to_excel(writer, sheet_name='val', index=False)
+            df.to_excel(writer, sheet_name='train', index=False)
 
