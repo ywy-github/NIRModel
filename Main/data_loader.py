@@ -109,7 +109,9 @@ class DoubleTreeChannelsOtherInformation(Dataset):
         row = self.df[self.df['dcm_name'] == name].iloc[0]
         age = float(row['age'])
         cup_size = row['cup_size']
-
+        H_lso3 = row['H_lso3']
+        dnirs_L1max = row['dnirs_L1max']
+        H_Bsc1 = row['H_Bsc1']
         self.image_path1 = os.path.join(self.path1, name)
         self.image_path2 = os.path.join(self.path2, name)
         self.image_path3 = os.path.join(self.path3, name)
@@ -128,10 +130,10 @@ class DoubleTreeChannelsOtherInformation(Dataset):
         #辅助信息
         information_dict = {
             'age' : float(age),
-             'cup_size' : cup_size
-            # 'H_lso3' : self.df.loc[idx, 'H_lso3'],
-            # 'dnirs_L1max' : float(self.df.loc[idx, 'dnirs_L1max']),
-            # 'H_Bsc1' : float(self.df.loc[idx, 'H_Bsc1']),
+             'cup_size' : cup_size,
+            'H_lso3' : H_lso3,
+            'dnirs_L1max' : float(dnirs_L1max),
+            'H_Bsc1' : float(H_Bsc1)
            #  'dnirs_L1min' : float(self.df.loc[idx, 'dnirs_L1min']),
            #  'std_HomH_L0_L1' : float(self.df.loc[idx, 'std_HomH_L0_L1']),
            #  'HistDiffH_L1_6' : float(self.df.loc[idx, 'HistDiffH-L1_6']),
