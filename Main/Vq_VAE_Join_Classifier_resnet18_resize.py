@@ -367,12 +367,12 @@ if __name__ == '__main__':
         transforms.Normalize((0.3281,), (0.2366,))  # 设置均值和标准差
     ])
 
-    train_benign_data = MyData("../data/ti_二期双十+双十五原始图/train/benign", "benign", transform=transform)
-    train_malignat_data = MyData("../data/ti_二期双十+双十五原始图/train/malignant", "malignant", transform=transform)
+    train_benign_data = MyData("../data/一期数据/train+clahe/benign", "benign", transform=transform)
+    train_malignat_data = MyData("../data/一期数据/train+clahe/malignant", "malignant", transform=transform)
     train_data = train_benign_data + train_malignat_data
 
-    val_benign_data = MyData("../data/ti_二期双十原始图/val/benign", "benign", transform=transform)
-    val_malignat_data = MyData("../data/ti_二期双十原始图/val/malignant", "malignant", transform=transform)
+    val_benign_data = MyData("../data/一期数据/new_val/benign", "benign", transform=transform)
+    val_malignat_data = MyData("../data/一期数据/new_val/malignant", "malignant", transform=transform)
     val_data = val_benign_data + val_malignat_data
 
 
@@ -411,7 +411,7 @@ if __name__ == '__main__':
     model = Model(encoder,num_embeddings, embedding_dim, commitment_cost, decay).to(device)
 
 
-    criterion = WeightedBinaryCrossEntropyLoss(1)
+    criterion = WeightedBinaryCrossEntropyLoss(2)
     # criterion = WeightedBinaryCrossEntropyLossWithRegularization(2, 0.01)
     criterion.to(device)
     optimizer = optim.Adam(filter(lambda p: p.requires_grad, model.parameters()), lr=learning_rate, amsgrad=False)

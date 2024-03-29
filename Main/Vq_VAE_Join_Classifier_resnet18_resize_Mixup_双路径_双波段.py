@@ -522,8 +522,8 @@ if __name__ == '__main__':
         total_train_loss = 0.0
         for batch in training_loader:
             data1, data2, data3, data4,targets, dcm_names = batch
-            data_path1 = torch.cat([data1-data3, data1-data3, data1 - data3], dim=1)
-            data_path2 = torch.cat([data2-data4, data2-data4, data2 - data4], dim=1)
+            data_path1 = torch.cat([data1, data3, data1 - data3], dim=1)
+            data_path2 = torch.cat([data2, data4, data2 - data4], dim=1)
             data_path1 = data_path1.to(device)
             data_path2 = data_path2.to(device)
             targets = targets.to(device)
@@ -564,8 +564,8 @@ if __name__ == '__main__':
         with torch.no_grad():
             for batch in validation_loader:
                 data1, data2, data3, data4, targets, dcm_names = batch
-                data_path1 = torch.cat([data1 - data3, data1 - data3, data1 - data3], dim=1)
-                data_path2 = torch.cat([data2 - data4, data2 - data4, data2 - data4], dim=1)
+                data_path1 = torch.cat([data1, data3, data1 - data3], dim=1)
+                data_path2 = torch.cat([data2, data4, data2 - data4], dim=1)
                 data_path1 = data_path1.to(device)
                 data_path2 = data_path2.to(device)
                 targets = targets.to(device)
@@ -599,8 +599,8 @@ if __name__ == '__main__':
         with torch.no_grad():
             for batch in test_loader:
                 data1, data2, data3, data4, targets, dcm_names = batch
-                data_path1 = torch.cat([data1 - data3, data1 - data3, data1 - data3], dim=1)
-                data_path2 = torch.cat([data2 - data4, data2 - data4, data2 - data4], dim=1)
+                data_path1 = torch.cat([data1, data3, data1 - data3], dim=1)
+                data_path2 = torch.cat([data2, data4, data2 - data4], dim=1)
                 data_path1 = data_path1.to(device)
                 data_path2 = data_path2.to(device)
                 targets = targets.to(device)
@@ -630,8 +630,8 @@ if __name__ == '__main__':
 
         # writer.add_scalar('Loss/Val', total_val_loss, epoch)
 
-        if ((epoch + 1) == 31 or (epoch + 1) == 32 or (epoch + 1) == 33):
-            torch.save(model.state_dict(), "../models/qc_2/resnet18-双路径-增-增-相减-原-原-相减-{}.pth".format(epoch + 1))
+        # if ((epoch + 1) == 31 or (epoch + 1) == 32 or (epoch + 1) == 33):
+        #     torch.save(model.state_dict(), "../models/qc_2/resnet18-双路径-增-增-相减-原-原-相减-{}.pth".format(epoch + 1))
         print('%d epoch' % (epoch + 1))
 
         train_acc, train_sen, train_spe = all_metrics(train_targets, train_pred)

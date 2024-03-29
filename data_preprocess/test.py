@@ -1,4 +1,5 @@
 import os
+import shutil
 
 import pandas as pd
 from PIL import Image
@@ -9,35 +10,35 @@ from openpyxl import Workbook
 if __name__ == "__main__":
 
     # 读取Excel文件
-    df = pd.read_excel('../data/qc后样本判断情况.xlsx',sheet_name="test")
+    excel_file = "../data/info.xlsx"
+    df_train = pd.read_excel(excel_file, sheet_name="train")
+    df_val = pd.read_excel(excel_file, sheet_name="val")
+    df_test = pd.read_excel(excel_file, sheet_name="test")
 
-    # 过滤年龄在60-70的样本
-    filtered_df = df[(df['age'] >= 40) & (df['age'] < 50)]
+    # 获取所有常规灯板的图片名字
+    all_images = set(df_train['dcm_name']).union(set(df_val['dcm_name']), set(df_test['dcm_name']))
 
-    # 按照罩杯分组计算预测正确和预测错误的样本数量
-    result = filtered_df.groupby(['cup_size', 'prob']).size().unstack(fill_value=0).reset_index()
+    # 原始文件夹路径
+    original_folder_path = "../data/qc后二期数据常规灯板"
 
-    # 绘制直方图
-    fig, ax = plt.subplots(figsize=(10, 6))
+    # 遍历qc后二期数据文件夹
+    for folder_name in ["train", "val", "test"]:
+        folder_path = os.path.join(original_folder_path, folder_name)
+        if os.path.exists(folder_path):
+            for wave_folder in os.listdir(folder_path):
+                wave_folder_path = os.path.join(folder_path, wave_folder)
+                if os.path.isdir(wave_folder_path):
+                    for label_folder in os.listdir(wave_folder_path):
+                        label_folder_path = os.path.join(wave_folder_path, label_folder)
+                        if os.path.isdir(label_folder_path):
+                            for image_name in os.listdir(label_folder_path):
+                                # 检查图片是否为常规灯板的图片，如果不是则删除
+                                if image_name not in all_images:
+                                    image_path = os.path.join(label_folder_path, image_name)
+                                    os.remove(image_path)
+                                    print(f"Deleted {image_path}")
 
-    cup_sizes = result['cup_size'].unique()
-    num_cup_sizes = len(cup_sizes)
-    bar_width = 0.35
-    index = range(num_cup_sizes)
 
-    for i, cup_size in enumerate(cup_sizes):
-        correct_count = result[result['cup_size'] == cup_size][0].values[0]
-        incorrect_count = result[result['cup_size'] == cup_size][1].values[0]
-        ax.bar(i, correct_count, color='green', width=bar_width, label=f'{cup_size} Correct')
-        ax.bar(i + bar_width, incorrect_count, color='red', width=bar_width, label=f'{cup_size} Incorrect')
-
-    ax.set_xlabel('Cup Size')
-    ax.set_ylabel('Count')
-    ax.set_title('Prediction Distribution by Cup Size (Age 40-50)')
-    ax.set_xticks([i + bar_width / 2 for i in range(num_cup_sizes)])
-    ax.set_xticklabels(cup_sizes)
-    ax.legend()
-    plt.show()
 
 
 
