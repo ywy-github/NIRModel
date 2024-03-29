@@ -247,12 +247,12 @@ class Classifier(nn.Module):
             nn.ReLU()
         )
         self.path2 = nn.Sequential(
-            nn.Linear(264, num_classes),
+            nn.Linear(261, num_classes),
             nn.Sigmoid()
         )
-    def forward(self, x,normalized_ages,one_hot_cup_sizes,H_lso3,dnirs_L1max,H_Bsc1):
+    def forward(self, x,normalized_ages,one_hot_cup_sizes):
         x = self.path1(x)
-        combined_features = torch.cat((x, normalized_ages, one_hot_cup_sizes,H_lso3,dnirs_L1max,H_Bsc1), dim=1)
+        combined_features = torch.cat((x, normalized_ages, one_hot_cup_sizes), dim=1)
         x = self.path2(combined_features)
         return x
 
@@ -309,25 +309,25 @@ class Model(nn.Module):
             one_hot_cup_sizes[i, cup_size_mapping[cup_size]] = 1
         one_hot_cup_sizes = one_hot_cup_sizes.to('cuda')
 
-        H_lso3 = information_dict['H_lso3']
-        dnirs_L1max = information_dict['dnirs_L1max'].to('cuda')
-        H_Bsc1 = information_dict['H_Bsc1'].to('cuda')
-
-        H_lso3 =  H_lso3.to('cuda')
-        dnirs_L1max = dnirs_L1max.to('cuda')
-        H_Bsc1 = H_Bsc1.to('cuda')
-
-
-        H_lso3 = H_lso3.view(-1, 1).float()
-        dnirs_L1max = dnirs_L1max.view(-1, 1).float()
-        H_Bsc1 = H_Bsc1.view(-1, 1).float()
+        # H_lso3 = information_dict['H_lso3']
+        # dnirs_L1max = information_dict['dnirs_L1max'].to('cuda')
+        # H_Bsc1 = information_dict['H_Bsc1'].to('cuda')
+        #
+        # H_lso3 =  H_lso3.to('cuda')
+        # dnirs_L1max = dnirs_L1max.to('cuda')
+        # H_Bsc1 = H_Bsc1.to('cuda')
+        #
+        #
+        # H_lso3 = H_lso3.view(-1, 1).float()
+        # dnirs_L1max = dnirs_L1max.view(-1, 1).float()
+        # H_Bsc1 = H_Bsc1.view(-1, 1).float()
 
 
 
         # 拼接到展平后的特征上
         # combined_features = torch.cat((feature,one_hot_cup_sizes), dim=1)
 
-        classifier_outputs = self.classifier(feature,normalized_ages,one_hot_cup_sizes,H_lso3,dnirs_L1max,H_Bsc1)
+        classifier_outputs = self.classifier(feature,normalized_ages,one_hot_cup_sizes)
 
         x_recon1 = self._decoder1(quantized1)
         x_recon2 = self._decoder2(quantized2)
@@ -427,58 +427,58 @@ if __name__ == '__main__':
         transforms.Normalize((0.3281,), (0.2366,))  # 设置均值和标准差
     ])
 
-    train_benign_data = DoubleTreeChannelsOtherInformation("../data/qc后二期数据/train/wave1/benign",
-                                                           "../data/qc后二期数据/train/wave2/benign",
-                                                           "../data/qc后二期数据/train/wave3/benign",
-                                                           "../data/qc后二期数据/train/wave4/benign",
-                                                           "../data/qc后二期数据/train/benign.xlsx",
+    train_benign_data = DoubleTreeChannelsOtherInformation("../data/qc后二期数据常规灯板/train/wave1/benign",
+                                                           "../data/qc后二期数据常规灯板/train/wave2/benign",
+                                                           "../data/qc后二期数据常规灯板/train/wave3/benign",
+                                                           "../data/qc后二期数据常规灯板/train/wave4/benign",
+                                                           "../data/qc后二期数据常规灯板/train/benign.xlsx",
                                                            "benign",
                                                            transform=transform)
 
     train_malignant_data = DoubleTreeChannelsOtherInformation(
-        "../data/qc后二期数据/train/wave1/malignant",
-        "../data/qc后二期数据/train/wave2/malignant",
-        "../data/qc后二期数据/train/wave3/malignant",
-        "../data/qc后二期数据/train/wave4/malignant",
-        "../data/qc后二期数据/train/malignant.xlsx",
+        "../data/qc后二期数据常规灯板/train/wave1/malignant",
+        "../data/qc后二期数据常规灯板/train/wave2/malignant",
+        "../data/qc后二期数据常规灯板/train/wave3/malignant",
+        "../data/qc后二期数据常规灯板/train/wave4/malignant",
+        "../data/qc后二期数据常规灯板/train/malignant.xlsx",
         "malignant",
         transform=transform)
 
     train_data = train_benign_data + train_malignant_data
 
-    val_benign_data = DoubleTreeChannelsOtherInformation("../data/qc后二期数据/val/wave1/benign",
-                                                         "../data/qc后二期数据/val/wave2/benign",
-                                                         "../data/qc后二期数据/val/wave3/benign",
-                                                         "../data/qc后二期数据/val/wave4/benign",
-                                                         "../data/qc后二期数据/val/benign.xlsx",
+    val_benign_data = DoubleTreeChannelsOtherInformation("../data/qc后二期数据常规灯板/val/wave1/benign",
+                                                         "../data/qc后二期数据常规灯板/val/wave2/benign",
+                                                         "../data/qc后二期数据常规灯板/val/wave3/benign",
+                                                         "../data/qc后二期数据常规灯板/val/wave4/benign",
+                                                         "../data/qc后二期数据常规灯板/val/benign.xlsx",
                                                          "benign",
                                                          transform=transform)
 
     val_malignant_data = DoubleTreeChannelsOtherInformation(
-        "../data/qc后二期数据/val/wave1/malignant",
-        "../data/qc后二期数据/val/wave2/malignant",
-        "../data/qc后二期数据/val/wave3/malignant",
-        "../data/qc后二期数据/val/wave4/malignant",
-        "../data/qc后二期数据/val/malignant.xlsx",
+        "../data/qc后二期数据常规灯板/val/wave1/malignant",
+        "../data/qc后二期数据常规灯板/val/wave2/malignant",
+        "../data/qc后二期数据常规灯板/val/wave3/malignant",
+        "../data/qc后二期数据常规灯板/val/wave4/malignant",
+        "../data/qc后二期数据常规灯板/val/malignant.xlsx",
         "malignant",
         transform=transform)
 
     val_data = val_benign_data + val_malignant_data
 
-    test_benign_data = DoubleTreeChannelsOtherInformation("../data/qc后二期数据/test/wave1/benign",
-                                                          "../data/qc后二期数据/test/wave2/benign",
-                                                          "../data/qc后二期数据/test/wave3/benign",
-                                                          "../data/qc后二期数据/test/wave4/benign",
-                                                          "../data/qc后二期数据/test/benign.xlsx",
+    test_benign_data = DoubleTreeChannelsOtherInformation("../data/qc后二期数据常规灯板/test/wave1/benign",
+                                                          "../data/qc后二期数据常规灯板/test/wave2/benign",
+                                                          "../data/qc后二期数据常规灯板/test/wave3/benign",
+                                                          "../data/qc后二期数据常规灯板/test/wave4/benign",
+                                                          "../data/qc后二期数据常规灯板/test/benign.xlsx",
                                                           "benign",
                                                           transform=transform)
 
     test_malignant_data = DoubleTreeChannelsOtherInformation(
-        "../data/qc后二期数据/test/wave1/malignant",
-        "../data/qc后二期数据/test/wave2/malignant",
-        "../data/qc后二期数据/test/wave3/malignant",
-        "../data/qc后二期数据/test/wave4/malignant",
-        "../data/qc后二期数据/test/malignant.xlsx",
+        "../data/qc后二期数据常规灯板/test/wave1/malignant",
+        "../data/qc后二期数据常规灯板/test/wave2/malignant",
+        "../data/qc后二期数据常规灯板/test/wave3/malignant",
+        "../data/qc后二期数据常规灯板/test/wave4/malignant",
+        "../data/qc后二期数据常规灯板/test/malignant.xlsx",
         "malignant",
         transform=transform)
 
