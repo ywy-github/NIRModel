@@ -19,7 +19,7 @@ if __name__ == "__main__":
     all_images = set(df_train['dcm_name']).union(set(df_val['dcm_name']), set(df_test['dcm_name']))
 
     # 原始文件夹路径
-    original_folder_path = "../data/qc后二期数据常规灯板"
+    original_folder_path = "../data/qc前二期双十常规灯板"
 
     # 遍历qc后二期数据文件夹
     for folder_name in ["train", "val", "test"]:
