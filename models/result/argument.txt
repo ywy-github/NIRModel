@@ -53,7 +53,7 @@ VQ-VAE-resnet18-resize448+全增强+训练集加入未增强的良性数据
 
 
 Mixup:
-66 epoch
+66 epoch   未剔数据
 训练集 acc: 0.6801 sen: 0.6840 spe: 0.6782 auc: 0.7129 loss: 51.7398
 验证集 acc: 0.7587 sen: 0.6832 spe: 0.7944 auc: 0.7902 loss: 16.8578
 测试集 acc: 0.7410sen: 0.6552  spe: 0.7801 auc: 0.7781loss: 0.8151

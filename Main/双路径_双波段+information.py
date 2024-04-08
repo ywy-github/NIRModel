@@ -427,58 +427,60 @@ if __name__ == '__main__':
         transforms.Normalize((0.3281,), (0.2366,))  # 设置均值和标准差
     ])
 
-    train_benign_data = DoubleTreeChannelsOtherInformation("../data/qc后二期数据常规灯板/train/wave1/benign",
-                                                           "../data/qc后二期数据常规灯板/train/wave2/benign",
-                                                           "../data/qc后二期数据常规灯板/train/wave3/benign",
-                                                           "../data/qc后二期数据常规灯板/train/wave4/benign",
-                                                           "../data/qc后二期数据常规灯板/train/benign.xlsx",
+    fold_data = "qc前二期双十常规灯板"
+
+    train_benign_data = DoubleTreeChannelsOtherInformation("../data/"+fold_data+"/train/wave1/benign",
+                                                           "../data/"+fold_data+"/train/wave2/benign",
+                                                           "../data/"+fold_data+"/train/wave3/benign",
+                                                           "../data/"+fold_data+"/train/wave4/benign",
+                                                           "../data/"+fold_data+"/train/benign.xlsx",
                                                            "benign",
                                                            transform=transform)
 
     train_malignant_data = DoubleTreeChannelsOtherInformation(
-        "../data/qc后二期数据常规灯板/train/wave1/malignant",
-        "../data/qc后二期数据常规灯板/train/wave2/malignant",
-        "../data/qc后二期数据常规灯板/train/wave3/malignant",
-        "../data/qc后二期数据常规灯板/train/wave4/malignant",
-        "../data/qc后二期数据常规灯板/train/malignant.xlsx",
+        "../data/"+fold_data+"/train/wave1/malignant",
+        "../data/"+fold_data+"/train/wave2/malignant",
+        "../data/"+fold_data+"/train/wave3/malignant",
+        "../data/"+fold_data+"/train/wave4/malignant",
+        "../data/"+fold_data+"/train/malignant.xlsx",
         "malignant",
         transform=transform)
 
     train_data = train_benign_data + train_malignant_data
 
-    val_benign_data = DoubleTreeChannelsOtherInformation("../data/qc后二期数据常规灯板/val/wave1/benign",
-                                                         "../data/qc后二期数据常规灯板/val/wave2/benign",
-                                                         "../data/qc后二期数据常规灯板/val/wave3/benign",
-                                                         "../data/qc后二期数据常规灯板/val/wave4/benign",
-                                                         "../data/qc后二期数据常规灯板/val/benign.xlsx",
+    val_benign_data = DoubleTreeChannelsOtherInformation("../data/"+fold_data+"/val/wave1/benign",
+                                                         "../data/"+fold_data+"/val/wave2/benign",
+                                                         "../data/"+fold_data+"/val/wave3/benign",
+                                                         "../data/"+fold_data+"/val/wave4/benign",
+                                                         "../data/"+fold_data+"/val/benign.xlsx",
                                                          "benign",
                                                          transform=transform)
 
     val_malignant_data = DoubleTreeChannelsOtherInformation(
-        "../data/qc后二期数据常规灯板/val/wave1/malignant",
-        "../data/qc后二期数据常规灯板/val/wave2/malignant",
-        "../data/qc后二期数据常规灯板/val/wave3/malignant",
-        "../data/qc后二期数据常规灯板/val/wave4/malignant",
-        "../data/qc后二期数据常规灯板/val/malignant.xlsx",
+        "../data/"+fold_data+"/val/wave1/malignant",
+        "../data/"+fold_data+"/val/wave2/malignant",
+        "../data/"+fold_data+"/val/wave3/malignant",
+        "../data/"+fold_data+"/val/wave4/malignant",
+        "../data/"+fold_data+"/val/malignant.xlsx",
         "malignant",
         transform=transform)
 
     val_data = val_benign_data + val_malignant_data
 
-    test_benign_data = DoubleTreeChannelsOtherInformation("../data/qc后二期数据常规灯板/test/wave1/benign",
-                                                          "../data/qc后二期数据常规灯板/test/wave2/benign",
-                                                          "../data/qc后二期数据常规灯板/test/wave3/benign",
-                                                          "../data/qc后二期数据常规灯板/test/wave4/benign",
-                                                          "../data/qc后二期数据常规灯板/test/benign.xlsx",
+    test_benign_data = DoubleTreeChannelsOtherInformation("../data/"+fold_data+"/test/wave1/benign",
+                                                          "../data/"+fold_data+"/test/wave2/benign",
+                                                          "../data/"+fold_data+"/test/wave3/benign",
+                                                          "../data/"+fold_data+"/test/wave4/benign",
+                                                          "../data/"+fold_data+"/test/benign.xlsx",
                                                           "benign",
                                                           transform=transform)
 
     test_malignant_data = DoubleTreeChannelsOtherInformation(
-        "../data/qc后二期数据常规灯板/test/wave1/malignant",
-        "../data/qc后二期数据常规灯板/test/wave2/malignant",
-        "../data/qc后二期数据常规灯板/test/wave3/malignant",
-        "../data/qc后二期数据常规灯板/test/wave4/malignant",
-        "../data/qc后二期数据常规灯板/test/malignant.xlsx",
+        "../data/"+fold_data+"/test/wave1/malignant",
+        "../data/"+fold_data+"/test/wave2/malignant",
+        "../data/"+fold_data+"/test/wave3/malignant",
+        "../data/"+fold_data+"/test/wave4/malignant",
+        "../data/"+fold_data+"/test/malignant.xlsx",
         "malignant",
         transform=transform)
 
@@ -676,8 +678,8 @@ if __name__ == '__main__':
 
         # writer.add_scalar('Loss/Val', total_val_loss, epoch)
 
-        # if ((epoch + 1) == 22 or (epoch + 1) == 23):
-        #     torch.save(model.state_dict(), "../models/qc_2/qc-年龄罩杯-256+5-{}.pth".format(epoch + 1))
+        # if ((epoch + 1) == 19):
+        #     torch.save(model.state_dict(), "../models/qc_2/qc前二期双十小灯板-{}.pth".format(epoch + 1))
         print('%d epoch' % (epoch + 1))
 
         train_acc, train_sen, train_spe = all_metrics(train_targets, train_pred)
