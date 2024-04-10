@@ -396,21 +396,24 @@ if __name__ == '__main__':
     #
     # test_data = test_benign_data + test_malignant_data
 
-    test_benign_data = DoubleTreeChannelsOtherInformation("../data/ti_二期双十+双十五wave1/train/benign",
-                                                          "../data/ti_二期双十+双十五wave1原始图/train/benign",
-                                                          "../data/ti_二期双十+双十五wave2/train/benign",
-                                                          "../data/ti_二期双十+双十五wave2原始图/train/benign",
-                                                          "../data/ti_二期双十+双十五wave1/train/benign.xlsx",
+    fold_name = "qc前二期双十常规灯板/val"
+
+    test_benign_data = DoubleTreeChannelsOtherInformation("../data/" + fold_name + "/wave1/benign",
+                                                          "../data/" + fold_name + "/wave2/benign",
+                                                          "../data/" + fold_name + "/wave3/benign",
+                                                          "../data/" + fold_name + "/wave4/benign",
+                                                          "../data/" + fold_name + "/benign.xlsx",
                                                           "benign",
                                                           transform=transform)
 
-    test_malignant_data = DoubleTreeChannelsOtherInformation("../data/ti_二期双十+双十五wave1/train/malignant",
-                                                             "../data/ti_二期双十+双十五wave1原始图/train/malignant",
-                                                             "../data/ti_二期双十+双十五wave2/train/malignant",
-                                                             "../data/ti_二期双十+双十五wave2原始图/train/malignant",
-                                                             "../data/ti_二期双十+双十五wave1/train/malignant.xlsx",
-                                                             "malignant",
-                                                             transform=transform)
+    test_malignant_data = DoubleTreeChannelsOtherInformation(
+        "../data/" + fold_name + "/wave1/malignant",
+        "../data/" + fold_name + "/wave2/malignant",
+        "../data/" + fold_name + "/wave3/malignant",
+        "../data/" + fold_name + "/wave4/malignant",
+        "../data/" + fold_name + "/malignant.xlsx",
+        "malignant",
+        transform=transform)
 
     test_data = test_benign_data + test_malignant_data
 
@@ -451,7 +454,7 @@ if __name__ == '__main__':
 
     model = Model(encoder1, encoder2, num_embeddings, embedding_dim, commitment_cost, decay).to(device)
 
-    model.load_state_dict(torch.load('../models/qc_2/qc-年龄罩杯-256+5-22.pth'))
+    model.load_state_dict(torch.load('../models/qc_2/qc后二期常规灯板-10.pth'))
 
     criterion = WeightedBinaryCrossEntropyLoss(2)
     criterion.to(device)
@@ -513,12 +516,12 @@ if __name__ == '__main__':
     df = pd.DataFrame(test_results)
     filename = '../models/result/qc+年龄罩杯-256-5.xlsx'
 
-    # # 检查文件是否存在
-    if not os.path.isfile(filename):
-        # 如果文件不存在，创建新文件并保存数据到 Sheet1
-        df.to_excel(filename, sheet_name='train', index=False)
-    else:
-        # 如果文件已经存在，打开现有文件并保存数据到 Sheet2
-        with pd.ExcelWriter(filename, engine='openpyxl', mode='a') as writer:
-            df.to_excel(writer, sheet_name='train', index=False)
+    # # # 检查文件是否存在
+    # if not os.path.isfile(filename):
+    #     # 如果文件不存在，创建新文件并保存数据到 Sheet1
+    #     df.to_excel(filename, sheet_name='train', index=False)
+    # else:
+    #     # 如果文件已经存在，打开现有文件并保存数据到 Sheet2
+    #     with pd.ExcelWriter(filename, engine='openpyxl', mode='a') as writer:
+    #         df.to_excel(writer, sheet_name='train', index=False)
 
