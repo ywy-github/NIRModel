@@ -22,8 +22,8 @@ from PIL import Image
 import glob
 import random
 
-from Main.new_data_loader import MyData
 from Metrics import all_metrics
+from data_loader import MyData, TreeChannels, DoubleTreeChannels, DoubleTreeChannelsOtherInformation
 
 
 class VectorQuantizer(nn.Module):
@@ -235,62 +235,111 @@ class Decoder(nn.Module):
         x = self.deconv5(x)
         return x
 
+
+
 class Classifier(nn.Module):
     def __init__(self, input_dim, hidden_dim, num_classes):
         super(Classifier, self).__init__()
-        self.path = nn.Sequential(
+        self.path1 = nn.Sequential(
             nn.Linear(input_dim, hidden_dim),
             nn.ReLU(),
-            nn.Dropout(0.5),
             nn.Linear(hidden_dim, hidden_dim // 2),
-            nn.ReLU(),
-            nn.Dropout(0.5),
-            nn.Linear(hidden_dim // 2, num_classes),
+            nn.ReLU()
+        )
+        self.path2 = nn.Sequential(
+            nn.Linear(261, num_classes),
             nn.Sigmoid()
         )
-    def forward(self, x):
-        x = self.path(x)
+    def forward(self, x,normalized_ages,one_hot_cup_sizes):
+        x = self.path1(x)
+        combined_features = torch.cat((x, normalized_ages, one_hot_cup_sizes), dim=1)
+        x = self.path2(combined_features)
         return x
 
 class Model(nn.Module):
-    def __init__(self,encoder,num_embeddings, embedding_dim, commitment_cost, decay=0):
+    def __init__(self,encoder1,encoder2,num_embeddings, embedding_dim, commitment_cost, decay=0):
         super(Model, self).__init__()
 
-        self._encoder = encoder
+        self._encoder1 = encoder1
+        self._encoder2 = encoder2
         # self._pre_vq_conv = nn.Conv2d(in_channels=num_hiddens,
         #                               out_channels=embedding_dim,
         #                               kernel_size=1,
         #                               stride=1)
         if decay > 0.0:
-            self._vq_vae = VectorQuantizerEMA(num_embeddings, embedding_dim,
+            self._vq_vae1 = VectorQuantizerEMA(num_embeddings, embedding_dim,
+                                              commitment_cost, decay)
+            self._vq_vae2 = VectorQuantizerEMA(num_embeddings, embedding_dim,
                                               commitment_cost, decay)
         else:
-            self._vq_vae = VectorQuantizer(num_embeddings, embedding_dim,
+            self._vq_vae1 = VectorQuantizer(num_embeddings, embedding_dim,
                                            commitment_cost)
+            self._vq_vae2 = VectorQuantizer(num_embeddings, embedding_dim,
+                                            commitment_cost)
 
-        self.classifier = Classifier(100357,512,1)
+        self.classifier = Classifier(200704,512,1)
 
-        self._decoder = Decoder()
+        self._decoder1 = Decoder()
+        self._decoder2 = Decoder()
 
-    def forward(self, x, ages, cup_sizes):
-        z = self._encoder(x)
+        self.Avg = nn.AdaptiveMaxPool2d(1)
+
+    def forward(self, data1,data2,information_dict):
+        z1 = self._encoder1(data1)
+        z2 = self._encoder2(data2)
+
         # z = self._pre_vq_conv(z)
-        loss, quantized, perplexity, _ = self._vq_vae(z)
-        feature = quantized.view(quantized.size(0),-1) # (6, 512 * 14 * 14)
+        loss1, quantized1, perplexity1, _ = self._vq_vae1(z1)
+        loss2, quantized2, perplexity2, _ = self._vq_vae2(z2)
+        quantized = torch.cat([quantized1, quantized2], dim=1)
 
-        # 将 ages 和 cup_sizes 拼接到展平后的特征上
-        ages_expanded = ages.view(-1, 1).float()  # 将 ages 扩展为与特征维度相同
-        combined_features = torch.cat((feature, ages_expanded, cup_sizes), dim=1)
+        feature = quantized.view(quantized.size(0), -1)
 
-        classifier_outputs = self.classifier(combined_features)
-        x_recon = self._decoder(quantized)
+        #处理辅助信息
+        age = information_dict['age']
 
-        return loss, x_recon, perplexity, classifier_outputs
+        normalized_ages = (age - 0) / (100 - 0)
+        normalized_ages = normalized_ages.view(-1, 1).float()
+        normalized_ages = normalized_ages.to('cuda')
+
+        cup_sizes = information_dict['cup_size']
+        cup_size_mapping = {'A': 0, 'B': 1, 'C': 2, 'D': 3}
+        one_hot_cup_sizes = torch.zeros((len(cup_sizes), len(cup_size_mapping)))
+        for i, cup_size in enumerate(cup_sizes):
+            one_hot_cup_sizes[i, cup_size_mapping[cup_size]] = 1
+        one_hot_cup_sizes = one_hot_cup_sizes.to('cuda')
+
+        # H_lso3 = information_dict['H_lso3']
+        # dnirs_L1max = information_dict['dnirs_L1max'].to('cuda')
+        # H_Bsc1 = information_dict['H_Bsc1'].to('cuda')
+        #
+        # H_lso3 =  H_lso3.to('cuda')
+        # dnirs_L1max = dnirs_L1max.to('cuda')
+        # H_Bsc1 = H_Bsc1.to('cuda')
+        #
+        #
+        # H_lso3 = H_lso3.view(-1, 1).float()
+        # dnirs_L1max = dnirs_L1max.view(-1, 1).float()
+        # H_Bsc1 = H_Bsc1.view(-1, 1).float()
+
+
+
+        # 拼接到展平后的特征上
+        # combined_features = torch.cat((feature,one_hot_cup_sizes), dim=1)
+
+        classifier_outputs = self.classifier(feature,normalized_ages,one_hot_cup_sizes)
+
+        x_recon1 = self._decoder1(quantized1)
+        x_recon2 = self._decoder2(quantized2)
+
+        return loss1,loss2,x_recon1,x_recon2,perplexity1,perplexity2,classifier_outputs
 
 # 定义联合模型的损失函数
-def joint_loss_function(recon_loss,vq_loss,classifier_loss,lambda_recon,lambda_vq,lambda_classifier):
+def joint_loss_function(recon_loss1,recon_loss2, vq_loss1,vq_loss2, classifier_loss_path1,classifier_loss_path2,
+                        lambda_recon1,lambda_recon2, lambda_vq1,lambda_vq2,lambda_classifier_path1,lambda_classifier_path2):
     # 总损失
-    total_loss = lambda_recon * recon_loss + lambda_vq*vq_loss + lambda_classifier * classifier_loss
+    total_loss = lambda_recon1 * recon_loss1 + lambda_vq1 * vq_loss1 + lambda_classifier_path1 * classifier_loss_path1 + \
+                 lambda_recon2 * recon_loss2 + lambda_vq2 * vq_loss2 + lambda_classifier_path2 * classifier_loss_path2
 
     return total_loss
 
@@ -350,7 +399,7 @@ if __name__ == '__main__':
     torch.backends.cudnn.deterministic = True
     torch.backends.cudnn.benchmark = False
 
-    batch_size = 6
+    batch_size = 16
     epochs = 1000
 
     embedding_dim = 64
@@ -363,12 +412,15 @@ if __name__ == '__main__':
 
     learning_rate = 1e-5
 
-    lambda_recon = 0.2
-    lambda_vq = 0.2
-    lambda_classifier = 0.6
+    lambda_recon1 = 0.1
+    lambda_vq1 = 0.1
 
-    age_column = 'age'
-    cup_size_column = 'cup_size'
+    lambda_classifier_path1 = 0.3
+    lambda_classifier_path2 = 0.3
+
+    lambda_recon2 = 0.1
+    lambda_vq2 = 0.1
+
 
     # 读取数据集
     transform = transforms.Compose([
@@ -377,38 +429,97 @@ if __name__ == '__main__':
         transforms.Normalize((0.3281,), (0.2366,))  # 设置均值和标准差
     ])
 
-    train_benign_data = MyData("../data/一期age_cupsize/train/benign", "benign",age_column,cup_size_column, transform=transform)
-    train_malignat_data = MyData("../data/一期age_cupsize/train/malignant", "malignant",age_column,cup_size_column, transform=transform)
-    train_data = train_benign_data + train_malignat_data
+    fold_data = "qc后二期数据常规灯板"
 
-    val_benign_data = MyData("../data/一期age_cupsize/val/benign", "benign",age_column,cup_size_column,transform=transform)
-    val_malignat_data = MyData("../data/一期age_cupsize/val/malignant", "malignant",age_column,cup_size_column,transform=transform)
-    val_data = val_benign_data + val_malignat_data
+    train_benign_data = DoubleTreeChannelsOtherInformation("../data/"+fold_data+"/train/wave1/benign",
+                                                           "../data/"+fold_data+"/train/wave2/benign",
+                                                           "../data/"+fold_data+"/train/wave3/benign",
+                                                           "../data/"+fold_data+"/train/wave4/benign",
+                                                           "../data/"+fold_data+"/train/benign.xlsx",
+                                                           "benign",
+                                                           transform=transform)
 
+    train_malignant_data = DoubleTreeChannelsOtherInformation(
+        "../data/"+fold_data+"/train/wave1/malignant",
+        "../data/"+fold_data+"/train/wave2/malignant",
+        "../data/"+fold_data+"/train/wave3/malignant",
+        "../data/"+fold_data+"/train/wave4/malignant",
+        "../data/"+fold_data+"/train/malignant.xlsx",
+        "malignant",
+        transform=transform)
+
+    train_data = train_benign_data + train_malignant_data
+
+    val_benign_data = DoubleTreeChannelsOtherInformation("../data/"+fold_data+"/val/wave1/benign",
+                                                         "../data/"+fold_data+"/val/wave2/benign",
+                                                         "../data/"+fold_data+"/val/wave3/benign",
+                                                         "../data/"+fold_data+"/val/wave4/benign",
+                                                         "../data/"+fold_data+"/val/benign.xlsx",
+                                                         "benign",
+                                                         transform=transform)
+
+    val_malignant_data = DoubleTreeChannelsOtherInformation(
+        "../data/"+fold_data+"/val/wave1/malignant",
+        "../data/"+fold_data+"/val/wave2/malignant",
+        "../data/"+fold_data+"/val/wave3/malignant",
+        "../data/"+fold_data+"/val/wave4/malignant",
+        "../data/"+fold_data+"/val/malignant.xlsx",
+        "malignant",
+        transform=transform)
+
+    val_data = val_benign_data + val_malignant_data
+
+    test_benign_data = DoubleTreeChannelsOtherInformation("../data/"+fold_data+"/test/wave1/benign",
+                                                          "../data/"+fold_data+"/test/wave2/benign",
+                                                          "../data/"+fold_data+"/test/wave3/benign",
+                                                          "../data/"+fold_data+"/test/wave4/benign",
+                                                          "../data/"+fold_data+"/test/benign.xlsx",
+                                                          "benign",
+                                                          transform=transform)
+
+    test_malignant_data = DoubleTreeChannelsOtherInformation(
+        "../data/"+fold_data+"/test/wave1/malignant",
+        "../data/"+fold_data+"/test/wave2/malignant",
+        "../data/"+fold_data+"/test/wave3/malignant",
+        "../data/"+fold_data+"/test/wave4/malignant",
+        "../data/"+fold_data+"/test/malignant.xlsx",
+        "malignant",
+        transform=transform)
+
+    test_data = test_benign_data + test_malignant_data
 
     training_loader = DataLoader(train_data,
-                                   batch_size=batch_size,
-                                   shuffle=True,
-                                   num_workers=8,
-                                   persistent_workers=True,
-                                   pin_memory=True
-                                  )
+                                 batch_size=batch_size,
+                                 shuffle=True,
+                                 num_workers=4,
+                                 persistent_workers=True,
+                                 pin_memory=True
+                                 )
 
     validation_loader = DataLoader(val_data,
                                    batch_size=batch_size,
                                    shuffle=True,
-                                   num_workers=8,
+                                   num_workers=4,
                                    persistent_workers=True,
                                    pin_memory=True
-                                  )
+                                   )
+
+    test_loader = DataLoader(test_data,
+                                   batch_size=batch_size,
+                                   shuffle=True,
+                                   num_workers=4,
+                                   persistent_workers=True,
+                                   pin_memory=True
+                                   )
+
 
 
     #设置encoder
-    encoder = models.resnet18(pretrained=True)
-    for param in encoder.parameters():
+    encoder1 = models.resnet18(pretrained=True)
+    for param in encoder1.parameters():
         param.requires_grad = False
 
-    for name, param in encoder.named_parameters():
+    for name, param in encoder1.named_parameters():
         if "layer3" in name:
             param.requires_grad = True
         if "layer4" in name:
@@ -416,12 +527,26 @@ if __name__ == '__main__':
         if "fc" in name:
             param.requires_grad = True
 
-    encoder = nn.Sequential(*list(encoder.children())[:-2])
+    encoder1 = nn.Sequential(*list(encoder1.children())[:-2])
 
-    model = Model(encoder,num_embeddings, embedding_dim, commitment_cost, decay).to(device)
+    encoder2 = models.resnet18(pretrained=True)
+    for param in encoder2.parameters():
+        param.requires_grad = False
+
+    for name, param in encoder2.named_parameters():
+        if "layer3" in name:
+            param.requires_grad = True
+        if "layer4" in name:
+            param.requires_grad = True
+        if "fc" in name:
+            param.requires_grad = True
+
+    encoder2 = nn.Sequential(*list(encoder2.children())[:-2])
+
+    model = Model(encoder1,encoder2,num_embeddings, embedding_dim, commitment_cost, decay).to(device)
 
 
-    criterion = WeightedBinaryCrossEntropyLoss(2.1)
+    criterion = WeightedBinaryCrossEntropyLoss(1.1)
     # criterion = WeightedBinaryCrossEntropyLossWithRegularization(2, 0.01)
     criterion.to(device)
     optimizer = optim.Adam(filter(lambda p: p.requires_grad, model.parameters()), lr=learning_rate, amsgrad=False)
@@ -443,33 +568,37 @@ if __name__ == '__main__':
         train_pred = []
         train_targets = []
         total_train_loss = 0.0
-        min_age = 0
-        max_age = 100
         for batch in training_loader:
-            data, targets, ages, cup_sizes, names= batch
-            data = torch.cat([data] * 3, dim=1)
-            data = data.to(device)
+            data1, data2, data3, data4, targets, name, information_dict = batch
+
+            data_path1 = torch.cat([data1, data3, data1-data3], dim=1)
+            data_path2 = torch.cat([data2, data4, data2-data4],dim=1)
+            data_path1 = data_path1.to(device)
+            data_path2 = data_path2.to(device)
             targets = targets.to(device)
-            ages = ages.to(device)
 
-            data, target_a, target_b, lam = mixup_data(data, targets)
-
-            normalized_ages = (ages - min_age) / (max_age - min_age)
-
-            cup_size_mapping = {'A': 0, 'B': 1, 'C': 2, 'D': 3}
-            one_hot_cup_sizes = torch.zeros((len(cup_sizes), len(cup_size_mapping)))
-            for i, cup_size in enumerate(cup_sizes):
-                one_hot_cup_sizes[i, cup_size_mapping[cup_size]] = 1
+            data_path1, target_a_path1, target_b_path1, lam_path1 = mixup_data(data_path1, targets)
+            data_path2, target_a_path2, target_b_path2, lam_path2 = mixup_data(data_path2, targets)
 
             optimizer.zero_grad()
 
-            vq_loss, data_recon, perplexity, classifier_outputs = model(data,normalized_ages,one_hot_cup_sizes.to(device))
+            vq_loss1,vq_loss2,data_recon1, data_recon2,perplexity1, perplexity2,classifier_outputs = model(data_path1,data_path2,information_dict)
 
-            data_variance = torch.var(data)
-            recon_loss = F.mse_loss(data_recon, data) / data_variance
-            classifier_loss = lam * criterion(target_a.view(-1, 1), classifier_outputs)+ (1 - lam) * criterion(target_b.view(-1, 1), classifier_outputs)
-            total_loss = joint_loss_function(recon_loss, vq_loss, classifier_loss, lambda_recon, lambda_vq,
-                                             lambda_classifier)
+            data_variance1 = torch.var(data_path1)
+            recon_loss1 = F.mse_loss(data_recon1, data_path1) / data_variance1
+
+            classifier_loss_path1 = lam_path1 * criterion(target_a_path1.view(-1, 1), classifier_outputs)+ \
+                                    (1 - lam_path1) * criterion(target_b_path1.view(-1, 1), classifier_outputs)
+            classifier_loss_path2 = lam_path2 * criterion(target_a_path2.view(-1, 1), classifier_outputs) + \
+                                    (1 - lam_path2) * criterion(target_b_path2.view(-1, 1), classifier_outputs)
+
+            data_variance2 = torch.var(data_path2)
+            recon_loss2 = F.mse_loss(data_recon2, data_path2) / data_variance2
+
+
+            total_loss = joint_loss_function(recon_loss1,recon_loss2, vq_loss1,vq_loss2, classifier_loss_path1,classifier_loss_path2,
+                                             lambda_recon1,lambda_recon2, lambda_vq1,lambda_vq2,lambda_classifier_path1,lambda_classifier_path2
+                                             )
             total_loss.backward()
             optimizer.step()
             # scheduler.step()
@@ -480,8 +609,7 @@ if __name__ == '__main__':
             train_targets.extend(targets.cpu().numpy())
 
             total_train_loss += total_loss
-            train_res_recon_error.append(recon_loss.item())
-            train_res_perplexity.append(perplexity.item())
+
         # writer.add_scalar('Loss/Train', total_train_loss, epoch)
         val_score = []
         val_pred = []
@@ -490,29 +618,15 @@ if __name__ == '__main__':
         model.eval()
         with torch.no_grad():
             for batch in validation_loader:
-                data, targets, ages, cup_sizes, names = batch
-                data = torch.cat([data] * 3, dim=1)
-                data = data.to(device)
+                data1, data2, data3, data4, targets, name, information_dict = batch
+
+                data_path1 = torch.cat([data1, data3, data1 - data3], dim=1)
+                data_path2 = torch.cat([data2, data4, data2 - data4], dim=1)
+                data_path1 = data_path1.to(device)
+                data_path2 = data_path2.to(device)
                 targets = targets.to(device)
-                ages = ages.to(device)
 
-                normalized_ages = (ages - min_age) / (max_age - min_age)
-
-                cup_size_mapping = {'A': 0, 'B': 1, 'C': 2, 'D': 3}
-                one_hot_cup_sizes = torch.zeros((len(cup_sizes), len(cup_size_mapping)))
-                for i, cup_size in enumerate(cup_sizes):
-                    one_hot_cup_sizes[i, cup_size_mapping[cup_size]] = 1
-
-                optimizer.zero_grad()
-
-                vq_loss, data_recon, perplexity, classifier_outputs = model(data, normalized_ages,
-                                                                            one_hot_cup_sizes.to(device))
-
-                data_variance = torch.var(data)
-                recon_loss = F.mse_loss(data_recon, data) / data_variance
-                classifier_loss = criterion(targets.view(-1, 1), classifier_outputs)
-                total_loss = joint_loss_function(recon_loss, vq_loss, classifier_loss, lambda_recon, lambda_vq,
-                                                 lambda_classifier)
+                vq_loss1, vq_loss2, data_recon1, data_recon2, perplexity1, perplexity2, classifier_outputs = model(data_path1, data_path2,information_dict)
 
                 predicted_labels = (classifier_outputs >= 0.5).int().view(-1)
                 val_score.append(classifier_outputs.flatten().cpu().numpy())
@@ -520,12 +634,36 @@ if __name__ == '__main__':
                 val_targets.extend(targets.cpu().numpy())
 
                 total_val_loss += total_loss
-                val_res_recon_error.append(recon_loss.item())
-                val_res_perplexity.append(perplexity.item())
+
+        test_score = []
+        test_pred = []
+        test_targets = []
+        total_test_loss = 0.0
+        model.eval()
+        with torch.no_grad():
+            for batch in test_loader:
+                data1, data2, data3, data4, targets, name, information_dict = batch
+
+                data_path1 = torch.cat([data1, data3, data1 - data3], dim=1)
+                data_path2 = torch.cat([data2, data4, data2 - data4], dim=1)
+                data_path1 = data_path1.to(device)
+                data_path2 = data_path2.to(device)
+                targets = targets.to(device)
+
+                vq_loss1, vq_loss2, data_recon1, data_recon2, perplexity1, perplexity2, classifier_outputs = model(data_path1, data_path2,information_dict)
+
+                predicted_labels = (classifier_outputs >= 0.5).int().view(-1)
+                test_score.append(classifier_outputs.flatten().cpu().numpy())
+                test_pred.extend(predicted_labels.cpu().numpy())
+                test_targets.extend(targets.cpu().numpy())
+
+                total_test_loss += total_loss
+
+
         # writer.add_scalar('Loss/Val', total_val_loss, epoch)
-        #
-        # if ((epoch + 1) == 63 or (epoch + 1) == 65):
-        #     torch.save(model.state_dict(), "../models/qc/VQ-VAE-resnet18-qc-二期双十-{}.pth".format(epoch + 1))
+
+        # if ((epoch + 1) == 21):
+        #     torch.save(model.state_dict(), "../models/qc_2/qc前二期双十常规灯板-{}.pth".format(epoch + 1))
         print('%d epoch' % (epoch + 1))
 
         train_acc, train_sen, train_spe = all_metrics(train_targets, train_pred)
@@ -548,10 +686,16 @@ if __name__ == '__main__':
               " spe: {:.4f}".format(val_spe) + " auc: {:.4f}".format(val_auc) +
               " loss: {:.4f}".format(total_val_loss))
 
-        print('train_recon_error: %.3f' % np.mean(train_res_recon_error[-10:]))
-        print('train_perplexity: %.3f' % np.mean(train_res_perplexity[-10:]))
-        print('val_recon_error: %.3f' % np.mean(val_res_recon_error[-10:]))
-        print('val_perplexity: %.3f' % np.mean(val_res_perplexity[-10:]))
+        test_acc, test_sen, test_spe = all_metrics(test_targets, test_pred)
+
+        test_score = np.concatenate(test_score)  # 将列表转换为NumPy数组
+        test_targets = np.array(test_targets)
+        test_auc = roc_auc_score(test_targets, test_score)
+
+        print("测试集 acc: {:.4f}".format(test_acc) + " sen: {:.4f}".format(test_sen) +
+              " spe: {:.4f}".format(test_spe) + " auc: {:.4f}".format(test_auc) +
+              " loss: {:.4f}".format(total_test_loss))
+
 
     # writer.close()
     # 结束训练时间

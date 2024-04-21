@@ -277,7 +277,7 @@ class Model(nn.Module):
             self._vq_vae2 = VectorQuantizer(num_embeddings, embedding_dim,
                                             commitment_cost)
 
-        self.classifier = Classifier(200704,512,1)
+        self.classifier = Classifier(100352,512,1)
 
         self._decoder1 = Decoder()
         self._decoder2 = Decoder()
@@ -288,10 +288,7 @@ class Model(nn.Module):
         z1 = self._encoder1(data1)
         z2 = self._encoder2(data2)
 
-        # z = self._pre_vq_conv(z)
-        loss1, quantized1, perplexity1, _ = self._vq_vae1(z1)
-        loss2, quantized2, perplexity2, _ = self._vq_vae2(z2)
-        quantized = torch.cat([quantized1, quantized2], dim=1)
+        quantized = torch.cat([z1, z2], dim=1)
 
         feature = quantized.view(quantized.size(0), -1)
 
@@ -329,17 +326,15 @@ class Model(nn.Module):
 
         classifier_outputs = self.classifier(feature,normalized_ages,one_hot_cup_sizes)
 
-        x_recon1 = self._decoder1(quantized1)
-        x_recon2 = self._decoder2(quantized2)
+        # x_recon1 = self._decoder1(quantized1)
+        # x_recon2 = self._decoder2(quantized2)
 
-        return loss1,loss2,x_recon1,x_recon2,perplexity1,perplexity2,classifier_outputs
+        return classifier_outputs
 
 # 定义联合模型的损失函数
-def joint_loss_function(recon_loss1,recon_loss2, vq_loss1,vq_loss2, classifier_loss,
-                        lambda_recon1,lambda_recon2, lambda_vq1,lambda_vq2,lambda_classifier):
+def joint_loss_function(vq_loss1,vq_loss2,classifier_loss,lambda_vq1,lambda_vq2,lambda_classifier):
     # 总损失
-    total_loss = lambda_recon1 * recon_loss1 + lambda_vq1 * vq_loss1 + lambda_classifier * classifier_loss + \
-                 lambda_recon2 * recon_loss2 + lambda_vq2 * vq_loss2
+    total_loss = lambda_vq1 * vq_loss1 + lambda_classifier * classifier_loss + lambda_vq2 * vq_loss2
 
     return total_loss
 
@@ -412,22 +407,21 @@ if __name__ == '__main__':
 
     learning_rate = 1e-5
 
-    lambda_recon1 = 0.1
-    lambda_vq1 = 0.1
+
+    lambda_vq1 = 0.2
     lambda_classifier = 0.6
 
-    lambda_recon2 = 0.1
-    lambda_vq2 = 0.1
+    lambda_vq2 = 0.2
 
 
     # 读取数据集
     transform = transforms.Compose([
-        transforms.Resize([448, 448]),
+        transforms.Resize([224, 224]),
         transforms.ToTensor(),
         transforms.Normalize((0.3281,), (0.2366,))  # 设置均值和标准差
     ])
 
-    fold_data = "qc后二期数据"
+    fold_data = "qc前二期双十数据"
 
     train_benign_data = DoubleTreeChannelsOtherInformation("../data/"+fold_data+"/train/wave1/benign",
                                                            "../data/"+fold_data+"/train/wave2/benign",
@@ -515,31 +509,15 @@ if __name__ == '__main__':
     #设置encoder
     encoder1 = models.resnet18(pretrained=True)
     for param in encoder1.parameters():
-        param.requires_grad = False
+        param.requires_grad = True
 
-    for name, param in encoder1.named_parameters():
-        if "layer3" in name:
-            param.requires_grad = True
-        if "layer4" in name:
-            param.requires_grad = True
-        if "fc" in name:
-            param.requires_grad = True
-
-    encoder1 = nn.Sequential(*list(encoder1.children())[:-2])
+    encoder1 = nn.Sequential(*list(encoder1.children())[:-3])
 
     encoder2 = models.resnet18(pretrained=True)
     for param in encoder2.parameters():
-        param.requires_grad = False
+        param.requires_grad = True
 
-    for name, param in encoder2.named_parameters():
-        if "layer3" in name:
-            param.requires_grad = True
-        if "layer4" in name:
-            param.requires_grad = True
-        if "fc" in name:
-            param.requires_grad = True
-
-    encoder2 = nn.Sequential(*list(encoder2.children())[:-2])
+    encoder2 = nn.Sequential(*list(encoder2.children())[:-3])
 
     model = Model(encoder1,encoder2,num_embeddings, embedding_dim, commitment_cost, decay).to(device)
 
@@ -577,21 +555,11 @@ if __name__ == '__main__':
 
             optimizer.zero_grad()
 
-            vq_loss1,vq_loss2,data_recon1, data_recon2,perplexity1, perplexity2,classifier_outputs = model(data_path1,data_path2,information_dict)
-
-            data_variance1 = torch.var(data_path1)
-            recon_loss1 = F.mse_loss(data_recon1, data_path1) / data_variance1
+            classifier_outputs = model(data_path1,data_path2,information_dict)
 
             classifier_loss = criterion(targets.view(-1, 1), classifier_outputs)
 
-            data_variance2 = torch.var(data_path2)
-            recon_loss2 = F.mse_loss(data_recon2, data_path2) / data_variance2
-
-
-            total_loss = joint_loss_function(recon_loss1,recon_loss2, vq_loss1,vq_loss2, classifier_loss,
-                                             lambda_recon1,lambda_recon2, lambda_vq1,lambda_vq2,lambda_classifier
-                                             )
-            total_loss.backward()
+            classifier_loss.backward()
             optimizer.step()
             # scheduler.step()
 
@@ -600,7 +568,7 @@ if __name__ == '__main__':
             train_pred.extend(predicted_labels.cpu().numpy())
             train_targets.extend(targets.cpu().numpy())
 
-            total_train_loss += total_loss
+            total_train_loss += classifier_loss
 
         # writer.add_scalar('Loss/Train', total_train_loss, epoch)
         val_score = []
@@ -618,26 +586,13 @@ if __name__ == '__main__':
                 data_path2 = data_path2.to(device)
                 targets = targets.to(device)
 
-                vq_loss1, vq_loss2, data_recon1, data_recon2, perplexity1, perplexity2, classifier_outputs = model(data_path1, data_path2,information_dict)
+                classifier_outputs = model(data_path1,data_path2,information_dict)
 
-                data_variance1 = torch.var(data_path1)
-                recon_loss1 = F.mse_loss(data_recon1, data_path1) / data_variance1
-
-                classifier_loss = criterion(targets.view(-1, 1), classifier_outputs)
-
-                data_variance2 = torch.var(data_path2)
-                recon_loss2 = F.mse_loss(data_recon2, data_path2) / data_variance2
-
-                total_loss = joint_loss_function(recon_loss1, recon_loss2, vq_loss1, vq_loss2, classifier_loss,
-                                                 lambda_recon1, lambda_recon2, lambda_vq1, lambda_vq2, lambda_classifier
-                                                 )
 
                 predicted_labels = (classifier_outputs >= 0.5).int().view(-1)
                 val_score.append(classifier_outputs.flatten().cpu().numpy())
                 val_pred.extend(predicted_labels.cpu().numpy())
                 val_targets.extend(targets.cpu().numpy())
-
-                total_val_loss += total_loss
 
         test_score = []
         test_pred = []
@@ -654,32 +609,19 @@ if __name__ == '__main__':
                 data_path2 = data_path2.to(device)
                 targets = targets.to(device)
 
-                vq_loss1, vq_loss2, data_recon1, data_recon2, perplexity1, perplexity2, classifier_outputs = model(data_path1, data_path2,information_dict)
-
-                data_variance1 = torch.var(data_path1)
-                recon_loss1 = F.mse_loss(data_recon1, data_path1) / data_variance1
-
-                classifier_loss = criterion(targets.view(-1, 1), classifier_outputs)
-
-                data_variance2 = torch.var(data_path2)
-                recon_loss2 = F.mse_loss(data_recon2, data_path2) / data_variance2
-
-                total_loss = joint_loss_function(recon_loss1, recon_loss2, vq_loss1, vq_loss2, classifier_loss,
-                                                 lambda_recon1, lambda_recon2, lambda_vq1, lambda_vq2, lambda_classifier
-                                                 )
+                classifier_outputs = model(data_path1,data_path2,information_dict)
 
                 predicted_labels = (classifier_outputs >= 0.5).int().view(-1)
                 test_score.append(classifier_outputs.flatten().cpu().numpy())
                 test_pred.extend(predicted_labels.cpu().numpy())
                 test_targets.extend(targets.cpu().numpy())
 
-                total_test_loss += total_loss
 
 
         # writer.add_scalar('Loss/Val', total_val_loss, epoch)
 
-        # if ((epoch + 1) == 21):
-        #     torch.save(model.state_dict(), "../models/qc_2/qc前二期双十常规灯板-{}.pth".format(epoch + 1))
+        # if ((epoch + 1) == 100 or (epoch + 1) == 103):
+        #     torch.save(model.state_dict(), "../models/resnet18/双路径-双波段-{}.pth".format(epoch + 1))
         print('%d epoch' % (epoch + 1))
 
         train_acc, train_sen, train_spe = all_metrics(train_targets, train_pred)

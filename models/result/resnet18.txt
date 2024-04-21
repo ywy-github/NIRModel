@@ -1,0 +1,41 @@
+resnet18+双通道
+qc后二期数据
+
+100 epoch
+训练集 acc: 0.9984 sen: 0.9963 spe: 1.0000 auc: 1.0000 loss: 0.1168
+验证集 acc: 0.6612 sen: 0.8036 spe: 0.5385 auc: 0.6940 loss: 0.0000
+测试集 acc: 0.7107 sen: 0.7636 spe: 0.6667 auc: 0.7835 loss: 0.0000
+103 epoch
+训练集 acc: 1.0000 sen: 1.0000 spe: 1.0000 auc: 1.0000 loss: 0.0015
+验证集 acc: 0.6612 sen: 0.6607 spe: 0.6615 auc: 0.6920 loss: 0.0000
+测试集 acc: 0.7355 sen: 0.6545 spe: 0.8030 auc: 0.7876 loss: 0.0000
+
+resnet18+双通道+删除最后一个layer  224*224
+48 epoch
+训练集 acc: 1.0000 sen: 1.0000 spe: 1.0000 auc: 1.0000 loss: 0.0197
+验证集 acc: 0.5785 sen: 0.6429 spe: 0.5231 auc: 0.6327 loss: 0.0000
+测试集 acc: 0.7025 sen: 0.6909 spe: 0.7121 auc: 0.7124 loss: 0.0000
+
+resnet18+双通道+删除最后两个layer  112*112
+12 epoch
+训练集 acc: 0.9670 sen: 0.9631 spe: 0.9699 auc: 0.9942 loss: 11.1532
+验证集 acc: 0.6529 sen: 0.5893 spe: 0.7077 auc: 0.7272 loss: 0.0000
+测试集 acc: 0.6446 sen: 0.5818 spe: 0.6970 auc: 0.6736 loss: 0.0000
+
+23 epoch
+训练集 acc: 1.0000 sen: 1.0000 spe: 1.0000 auc: 1.0000 loss: 1.1540
+验证集 acc: 0.6529 sen: 0.7500 spe: 0.5692 auc: 0.7110 loss: 0.0000
+测试集 acc: 0.6364 sen: 0.7273 spe: 0.5606 auc: 0.6774 loss: 0.0000
+
+resnet18+双通道+删除最后三个layer  112*112
+50 epoch
+训练集 acc: 1.0000 sen: 1.0000 spe: 1.0000 auc: 1.0000 loss: 0.7075
+验证集 acc: 0.6281 sen: 0.6250 spe: 0.6308 auc: 0.6453 loss: 0.0000
+测试集 acc: 0.5702 sen: 0.6000 spe: 0.5455 auc: 0.6088 loss: 0.0000
+
+###################
+qc前二期数据
+74 epoch
+训练集 acc: 1.0000 sen: 1.0000 spe: 1.0000 auc: 1.0000 loss: 0.0181
+验证集 acc: 0.6211 sen: 0.6154 spe: 0.6263 auc: 0.6537 loss: 0.0000
+测试集 acc: 0.6250 sen: 0.6848 spe: 0.5700 auc: 0.6500 loss: 0.0000
