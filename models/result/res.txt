@@ -91,10 +91,21 @@ VQ-DenseNet:
 
 
 
+VAE+resnet resize448：
+20 epoch
+训练集 acc: 0.9979 sen: 0.9967 spe: 0.9984 auc: 1.0000 loss: 53.9578
+验证集 acc: 0.7365 sen: 0.4257 spe: 0.8832 auc: 0.7724 loss: 40.9766
+测试集 acc: 0.7770 sen: 0.5172 spe: 0.8953 auc: 0.7916 loss: 35.4710
+51 epoch
+训练集 acc: 0.9979 sen: 0.9967 spe: 0.9984 auc: 0.9999 loss: 53.8972
+验证集 acc: 0.7302 sen: 0.5347 spe: 0.8224 auc: 0.7616 loss: 43.0246
+测试集 acc: 0.7662 sen: 0.6437 spe: 0.8220 auc: 0.7806 loss: 38.7463
 
-
-
-
+VAE+resnet resize512：
+9 epoch
+训练集 acc: 0.8898 sen: 0.8827 spe: 0.8932 auc: 0.9551 loss: 65.2677
+验证集 acc: 0.6762 sen: 0.6931 spe: 0.6682 auc: 0.7530 loss: 25.9038
+测试集 acc: 0.7194 sen: 0.7931 spe: 0.6859 auc: 0.7798 loss: 24.1455
 
 
 

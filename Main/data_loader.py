@@ -25,6 +25,41 @@ class MyData(Dataset):
     def __len__(self):
         return len(self.image_path_list)
 
+class SinglePathAndInformation(Dataset):
+    def __init__(self, path, label, excel,transform=None):
+        self.path = path
+        self.excel = excel
+        self.label = label
+        self.transform = transform
+        self.image_path_list = os.listdir(self.path)
+        self.label_mapping = {'benign': 0, 'malignant': 1}
+        # 读取包含标签、年龄和罩杯信息的Excel文件
+        self.df = pd.read_excel(self.excel)
+    def __getitem__(self, idx):
+        name = self.image_path_list[idx]
+
+        # 使用文件名中的唯一标识符从Excel中获取对应的年龄和罩杯信息
+        row = self.df[self.df['dcm_name'] == name].iloc[0]
+        age = float(row['age'])
+        cup_size = row['cup_size']
+
+
+        self.image_path = os.path.join(self.path, name)
+        img = Image.open(self.image_path)
+        if self.transform:
+            img = self.transform(img)
+        label = self.label_mapping[self.label]
+
+        information_dict = {
+            'age': float(age),
+            'cup_size': cup_size
+        }
+        return img, label, name , information_dict
+
+    def __len__(self):
+        return len(self.image_path_list)
+
+
 
 class TreeChannels(Dataset):
     def __init__(self, path1, path2, label, transform=None):
