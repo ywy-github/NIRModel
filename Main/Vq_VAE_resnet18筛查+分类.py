@@ -285,6 +285,8 @@ class ExtendedModel(nn.Module):
         loss, quantized, perplexity, _ = self.model._vq_vae(z)
         classifier_output = self.classifier(quantized.view(quantized.size(0),-1))
         x_recon = self.model._decoder(quantized)
+
+
         return loss, x_recon, perplexity, classifier_output
 
 
@@ -366,8 +368,8 @@ if __name__ == '__main__':
         transforms.Normalize((0.3281,), (0.2366,))  # 设置均值和标准差
     ])
 
-    train_benign_data = MyData("../data/一期数据/train/benign", "benign", transform=transform)
-    train_malignat_data = MyData("../data/一期数据/train/malignant", "malignant", transform=transform)
+    train_benign_data = MyData("../data/一期数据/train+clahe/benign", "benign", transform=transform)
+    train_malignat_data = MyData("../data/一期数据/train+clahe/malignant", "malignant", transform=transform)
     train_data = train_benign_data + train_malignat_data
 
     val_benign_data = MyData("../data/一期数据/val/benign", "benign", transform=transform)
