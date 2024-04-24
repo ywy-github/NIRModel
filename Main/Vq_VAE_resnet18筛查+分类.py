@@ -368,8 +368,8 @@ if __name__ == '__main__':
         transforms.Normalize((0.3281,), (0.2366,))  # 设置均值和标准差
     ])
 
-    train_benign_data = MyData("../data/一期数据/train+clahe/benign", "benign", transform=transform)
-    train_malignat_data = MyData("../data/一期数据/train+clahe/malignant", "malignant", transform=transform)
+    train_benign_data = MyData("../data/一期数据/train/benign", "benign", transform=transform)
+    train_malignat_data = MyData("../data/一期数据/train/malignant", "malignant", transform=transform)
     train_data = train_benign_data + train_malignat_data
 
     val_benign_data = MyData("../data/一期数据/val/benign", "benign", transform=transform)
@@ -427,14 +427,7 @@ if __name__ == '__main__':
     criterion.to(device)
     optimizer = optim.Adam(filter(lambda p: p.requires_grad, extendModel.parameters()), lr=learning_rate, amsgrad=False)
     # scheduler = StepLR(optimizer,50,0.1)
-    train_res_recon_error = []
-    train_res_perplexity = []
 
-    val_res_recon_error = []
-    val_res_perplexity = []
-
-    test_res_recon_error = []
-    test_res_perplexity = []
     start_time = time.time()  # 记录训练开始时间
     writer = SummaryWriter("../Logs")
     for epoch in range(epochs):
@@ -443,6 +436,9 @@ if __name__ == '__main__':
         train_pred = []
         train_targets = []
         total_train_loss = 0.0
+        train_classifier_loss = 0.0
+        train_res_recon_error = 0.0
+        train_res_perplexity = 0.0
         for batch in training_loader:
             data, targets, dcm_names = batch
             data = torch.cat([data] * 3, dim=1)
@@ -466,14 +462,18 @@ if __name__ == '__main__':
             train_pred.extend(predicted_labels.cpu().numpy())
             train_targets.extend(targets.cpu().numpy())
 
-            total_train_loss +=total_loss
-            train_res_recon_error.append(recon_loss.item())
-            train_res_perplexity.append(perplexity.item())
+            total_train_loss += total_loss
+            train_classifier_loss += classifier_loss
+            train_res_recon_error += recon_loss
+            train_res_perplexity += perplexity
         # writer.add_scalar('Loss/Train', total_train_loss, epoch)
         val_score = []
         val_pred = []
         val_targets = []
         total_val_loss = 0.0
+        val_classifier_loss = 0.0
+        val_res_recon_error = 0.0
+        val_res_perplexity = 0.0
         extendModel.eval()
         with torch.no_grad():
             for batch in validation_loader:
@@ -494,13 +494,17 @@ if __name__ == '__main__':
                 val_targets.extend(targets.cpu().numpy())
 
                 total_val_loss += total_loss
-                val_res_recon_error.append(recon_loss.item())
-                val_res_perplexity.append(perplexity.item())
+                val_classifier_loss += classifier_loss
+                val_res_recon_error += recon_loss
+                val_res_perplexity += perplexity
 
         test_score = []
         test_pred = []
         test_targets = []
         total_test_loss = 0.0
+        test_classifier_loss = 0.0
+        test_res_recon_error = 0.0
+        test_res_perplexity = 0.0
         model.eval()
         with torch.no_grad():
             for batch in test_loader:
@@ -521,8 +525,9 @@ if __name__ == '__main__':
                 test_targets.extend(targets.cpu().numpy())
 
                 total_test_loss += total_loss
-                test_res_recon_error.append(recon_loss.item())
-                test_res_perplexity.append(perplexity.item())
+                test_classifier_loss += classifier_loss
+                test_res_recon_error += recon_loss
+                test_res_perplexity += perplexity
 
         # writer.add_scalar('Loss/Val', total_val_loss, epoch)
 
@@ -537,7 +542,8 @@ if __name__ == '__main__':
 
         print("训练集 acc: {:.4f}".format(train_acc) + " sen: {:.4f}".format(train_sen) +
               " spe: {:.4f}".format(train_spe) + " auc: {:.4f}".format(train_auc) +
-              " loss: {:.4f}".format(total_train_loss))
+              " loss: {:.4f}".format(train_classifier_loss) + " train_recon_loss: {:.4f}".format(train_res_recon_error)
+              + " train_perplexity: {:.4f}".format(train_res_perplexity))
 
         val_acc, val_sen, val_spe = all_metrics(val_targets, val_pred)
 
@@ -547,7 +553,8 @@ if __name__ == '__main__':
 
         print("验证集 acc: {:.4f}".format(val_acc) + " sen: {:.4f}".format(val_sen) +
               " spe: {:.4f}".format(val_spe) + " auc: {:.4f}".format(val_auc) +
-              " loss: {:.4f}".format(total_val_loss))
+              " loss: {:.4f}".format(val_classifier_loss) + " val_recon_loss: {:.4f}".format(val_res_recon_error)
+              + " val_perplexity: {:.4f}".format(val_res_perplexity))
 
         test_acc, test_sen, test_spe = all_metrics(test_targets, test_pred)
 
@@ -557,12 +564,8 @@ if __name__ == '__main__':
 
         print("测试集 acc: {:.4f}".format(test_acc) + " sen: {:.4f}".format(test_sen) +
               " spe: {:.4f}".format(test_spe) + " auc: {:.4f}".format(test_auc) +
-              " loss: {:.4f}".format(total_test_loss))
-
-        print('train_recon_error: %.3f' % np.mean(train_res_recon_error[-10:]))
-        print('train_perplexity: %.3f' % np.mean(train_res_perplexity[-10:]))
-        print('val_recon_error: %.3f' % np.mean(val_res_recon_error[-10:]))
-        print('val_perplexity: %.3f' % np.mean(val_res_perplexity[-10:]))
+              " loss: {:.4f}".format(test_classifier_loss) + " test_recon_loss: {:.4f}".format(test_res_recon_error)
+              + " test_perplexity: {:.4f}".format(test_res_perplexity))
     writer.close()
     # 结束训练时间
     end_time = time.time()
