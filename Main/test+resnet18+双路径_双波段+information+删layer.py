@@ -1,8 +1,10 @@
 from __future__ import print_function
 
+import os
 import time
 
 import matplotlib.pyplot as plt
+import pandas as pd
 from scipy.optimize import differential_evolution
 from six.moves import xrange
 
@@ -423,15 +425,15 @@ if __name__ == '__main__':
 
     fold_data = "qc前二期双十数据"
 
-    train_benign_data = DoubleTreeChannelsOtherInformation("../data/"+fold_data+"/train/wave1/benign",
-                                                           "../data/"+fold_data+"/train/wave2/benign",
-                                                           "../data/"+fold_data+"/train/wave3/benign",
-                                                           "../data/"+fold_data+"/train/wave4/benign",
-                                                           "../data/"+fold_data+"/train/benign.xlsx",
-                                                           "benign",
-                                                           transform=transform)
+    test_benign_data = DoubleTreeChannelsOtherInformation("../data/"+fold_data+"/train/wave1/benign",
+                                                          "../data/"+fold_data+"/train/wave2/benign",
+                                                          "../data/"+fold_data+"/train/wave3/benign",
+                                                          "../data/"+fold_data+"/train/wave4/benign",
+                                                          "../data/"+fold_data+"/train/benign.xlsx",
+                                                          "benign",
+                                                          transform=transform)
 
-    train_malignant_data = DoubleTreeChannelsOtherInformation(
+    test_malignant_data = DoubleTreeChannelsOtherInformation(
         "../data/"+fold_data+"/train/wave1/malignant",
         "../data/"+fold_data+"/train/wave2/malignant",
         "../data/"+fold_data+"/train/wave3/malignant",
@@ -440,61 +442,7 @@ if __name__ == '__main__':
         "malignant",
         transform=transform)
 
-    train_data = train_benign_data + train_malignant_data
-
-    val_benign_data = DoubleTreeChannelsOtherInformation("../data/"+fold_data+"/val/wave1/benign",
-                                                         "../data/"+fold_data+"/val/wave2/benign",
-                                                         "../data/"+fold_data+"/val/wave3/benign",
-                                                         "../data/"+fold_data+"/val/wave4/benign",
-                                                         "../data/"+fold_data+"/val/benign.xlsx",
-                                                         "benign",
-                                                         transform=transform)
-
-    val_malignant_data = DoubleTreeChannelsOtherInformation(
-        "../data/"+fold_data+"/val/wave1/malignant",
-        "../data/"+fold_data+"/val/wave2/malignant",
-        "../data/"+fold_data+"/val/wave3/malignant",
-        "../data/"+fold_data+"/val/wave4/malignant",
-        "../data/"+fold_data+"/val/malignant.xlsx",
-        "malignant",
-        transform=transform)
-
-    val_data = val_benign_data + val_malignant_data
-
-    test_benign_data = DoubleTreeChannelsOtherInformation("../data/"+fold_data+"/test/wave1/benign",
-                                                          "../data/"+fold_data+"/test/wave2/benign",
-                                                          "../data/"+fold_data+"/test/wave3/benign",
-                                                          "../data/"+fold_data+"/test/wave4/benign",
-                                                          "../data/"+fold_data+"/test/benign.xlsx",
-                                                          "benign",
-                                                          transform=transform)
-
-    test_malignant_data = DoubleTreeChannelsOtherInformation(
-        "../data/"+fold_data+"/test/wave1/malignant",
-        "../data/"+fold_data+"/test/wave2/malignant",
-        "../data/"+fold_data+"/test/wave3/malignant",
-        "../data/"+fold_data+"/test/wave4/malignant",
-        "../data/"+fold_data+"/test/malignant.xlsx",
-        "malignant",
-        transform=transform)
-
     test_data = test_benign_data + test_malignant_data
-
-    training_loader = DataLoader(train_data,
-                                 batch_size=batch_size,
-                                 shuffle=True,
-                                 num_workers=4,
-                                 persistent_workers=True,
-                                 pin_memory=True
-                                 )
-
-    validation_loader = DataLoader(val_data,
-                                   batch_size=batch_size,
-                                   shuffle=True,
-                                   num_workers=4,
-                                   persistent_workers=True,
-                                   pin_memory=True
-                                   )
 
     test_loader = DataLoader(test_data,
                                    batch_size=batch_size,
@@ -520,147 +468,69 @@ if __name__ == '__main__':
     encoder2 = nn.Sequential(*list(encoder2.children())[:-3])
 
     model = Model(encoder1,encoder2,num_embeddings, embedding_dim, commitment_cost, decay).to(device)
-
+    model.load_state_dict(torch.load('../models/resnet18/qc前数据-删一个layer-82.pth'))
 
     criterion = WeightedBinaryCrossEntropyLoss(1.1)
     # criterion = WeightedBinaryCrossEntropyLossWithRegularization(2, 0.01)
     criterion.to(device)
     optimizer = optim.Adam(filter(lambda p: p.requires_grad, model.parameters()), lr=learning_rate, amsgrad=False)
     # scheduler = StepLR(optimizer,10,0.1)
-    train_res_recon_error = []
-    train_res_perplexity = []
-
-    val_res_recon_error = []
-    val_res_perplexity = []
 
     start_time = time.time()  # 记录训练开始时间
     # writer = SummaryWriter("../Logs")
-    for epoch in range(epochs):
-        # if((epoch+1) % 10 == 0):
-        #     for param_group in optimizer.param_groups:
-        #         param_group['lr'] = param_group['lr'] * 0.8
-        model.train()
-        train_score = []
-        train_pred = []
-        train_targets = []
-        total_train_loss = 0.0
-        for batch in training_loader:
+
+    test_score = []
+    test_pred = []
+    test_targets = []
+    test_results = []
+    total_test_loss = 0.0
+    model.eval()
+    with torch.no_grad():
+        for batch in test_loader:
             data1, data2, data3, data4, targets, name, information_dict = batch
 
-            data_path1 = torch.cat([data1, data3, data1-data3], dim=1)
-            data_path2 = torch.cat([data2, data4, data2-data4],dim=1)
+            data_path1 = torch.cat([data1, data3, data1 - data3], dim=1)
+            data_path2 = torch.cat([data2, data4, data2 - data4], dim=1)
             data_path1 = data_path1.to(device)
             data_path2 = data_path2.to(device)
             targets = targets.to(device)
 
-            optimizer.zero_grad()
-
             classifier_outputs = model(data_path1,data_path2,information_dict)
 
-            classifier_loss = criterion(targets.view(-1, 1), classifier_outputs)
-
-            classifier_loss.backward()
-            optimizer.step()
-            # scheduler.step()
-
             predicted_labels = (classifier_outputs >= 0.5).int().view(-1)
-            train_score.append(classifier_outputs.cpu().detach().numpy())
-            train_pred.extend(predicted_labels.cpu().numpy())
-            train_targets.extend(targets.cpu().numpy())
+            test_score.append(classifier_outputs.flatten().cpu().numpy())
+            test_pred.extend(predicted_labels.cpu().numpy())
+            test_targets.extend(targets.cpu().numpy())
 
-            total_train_loss += classifier_loss
-
-        # writer.add_scalar('Loss/Train', total_train_loss, epoch)
-        val_score = []
-        val_pred = []
-        val_targets = []
-        total_val_loss = 0.0
-        model.eval()
-        with torch.no_grad():
-            for batch in validation_loader:
-                data1, data2, data3, data4, targets, name, information_dict = batch
-
-                data_path1 = torch.cat([data1, data3, data1 - data3], dim=1)
-                data_path2 = torch.cat([data2, data4, data2 - data4], dim=1)
-                data_path1 = data_path1.to(device)
-                data_path2 = data_path2.to(device)
-                targets = targets.to(device)
-
-                classifier_outputs = model(data_path1,data_path2,information_dict)
+            # 记录每个样本的dcm_name、预测概率值和标签
+            for i in range(len(name)):
+                test_results.append({'dcm_name': name[i], 'pred': classifier_outputs[i].item(),
+                                     'prob': predicted_labels[i].item(), 'label': targets[i].item()})
 
 
-                predicted_labels = (classifier_outputs >= 0.5).int().view(-1)
-                val_score.append(classifier_outputs.flatten().cpu().numpy())
-                val_pred.extend(predicted_labels.cpu().numpy())
-                val_targets.extend(targets.cpu().numpy())
+    # writer.add_scalar('Loss/Val', total_val_loss, epoch)
 
-        test_score = []
-        test_pred = []
-        test_targets = []
-        total_test_loss = 0.0
-        model.eval()
-        with torch.no_grad():
-            for batch in test_loader:
-                data1, data2, data3, data4, targets, name, information_dict = batch
+    test_acc, test_sen, test_spe = all_metrics(test_targets, test_pred)
 
-                data_path1 = torch.cat([data1, data3, data1 - data3], dim=1)
-                data_path2 = torch.cat([data2, data4, data2 - data4], dim=1)
-                data_path1 = data_path1.to(device)
-                data_path2 = data_path2.to(device)
-                targets = targets.to(device)
+    test_score = np.concatenate(test_score)  # 将列表转换为NumPy数组
+    test_targets = np.array(test_targets)
+    test_auc = roc_auc_score(test_targets, test_score)
 
-                classifier_outputs = model(data_path1,data_path2,information_dict)
+    print("测试集 acc: {:.4f}".format(test_acc) + " sen: {:.4f}".format(test_sen) +
+          " spe: {:.4f}".format(test_spe) + " auc: {:.4f}".format(test_auc) +
+          " loss: {:.4f}".format(total_test_loss))
 
-                predicted_labels = (classifier_outputs >= 0.5).int().view(-1)
-                test_score.append(classifier_outputs.flatten().cpu().numpy())
-                test_pred.extend(predicted_labels.cpu().numpy())
-                test_targets.extend(targets.cpu().numpy())
+    df = pd.DataFrame(test_results)
+    filename = '../models/result/resnet18+删一个layer.xlsx'
 
-
-
-        # writer.add_scalar('Loss/Val', total_val_loss, epoch)
-
-        if ((epoch + 1) == 82):
-            torch.save(model.state_dict(), "../models/resnet18/qc前数据-删一个layer-{}.pth".format(epoch + 1))
-        print('%d epoch' % (epoch + 1))
-
-        train_acc, train_sen, train_spe = all_metrics(train_targets, train_pred)
-
-        train_score = np.concatenate(train_score)  # 将列表转换为NumPy数组
-        train_targets = np.array(train_targets)
-        train_auc = roc_auc_score(train_targets, train_score)
-
-        print("训练集 acc: {:.4f}".format(train_acc) + " sen: {:.4f}".format(train_sen) +
-              " spe: {:.4f}".format(train_spe) + " auc: {:.4f}".format(train_auc) +
-              " loss: {:.4f}".format(total_train_loss))
-
-        val_acc, val_sen, val_spe = all_metrics(val_targets, val_pred)
-
-        val_score = np.concatenate(val_score)  # 将列表转换为NumPy数组
-        val_targets = np.array(val_targets)
-        val_auc = roc_auc_score(val_targets, val_score)
-
-        print("验证集 acc: {:.4f}".format(val_acc) + " sen: {:.4f}".format(val_sen) +
-              " spe: {:.4f}".format(val_spe) + " auc: {:.4f}".format(val_auc) +
-              " loss: {:.4f}".format(total_val_loss))
-
-        test_acc, test_sen, test_spe = all_metrics(test_targets, test_pred)
-
-        test_score = np.concatenate(test_score)  # 将列表转换为NumPy数组
-        test_targets = np.array(test_targets)
-        test_auc = roc_auc_score(test_targets, test_score)
-
-        print("测试集 acc: {:.4f}".format(test_acc) + " sen: {:.4f}".format(test_sen) +
-              " spe: {:.4f}".format(test_spe) + " auc: {:.4f}".format(test_auc) +
-              " loss: {:.4f}".format(total_test_loss))
-
-
-    # writer.close()
-    # 结束训练时间
-    end_time = time.time()
-    training_time = end_time - start_time
-
-    print(f"Training time: {training_time} seconds")
+    # # # 检查文件是否存在
+    if not os.path.isfile(filename):
+        # 如果文件不存在，创建新文件并保存数据到 Sheet1
+        df.to_excel(filename, sheet_name='train', index=False)
+    else:
+        # 如果文件已经存在，打开现有文件并保存数据到 Sheet2
+        with pd.ExcelWriter(filename, engine='openpyxl', mode='a') as writer:
+            df.to_excel(writer, sheet_name='train', index=False)
 
 
 

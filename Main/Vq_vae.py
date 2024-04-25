@@ -311,12 +311,12 @@ if __name__ == '__main__':
     # 读取数据集
     transform = transforms.Compose([transforms.Resize([128, 128]), transforms.ToTensor()])
 
-    train_benign_data = MyData("../data/train/benign", "benign", transform=transform)
-    train_malignat_data = MyData("../data/train/malignant", "malignant", transform=transform)
+    train_benign_data = MyData("../data/一期数据/train/benign", "benign", transform=transform)
+    train_malignat_data = MyData("../data/一期数据/train/malignant", "malignant", transform=transform)
     train_data = train_benign_data + train_malignat_data
 
-    val_benign_data = MyData("../data/val/benign", "benign", transform=transform)
-    val_malignat_data = MyData("../data/val/malignant", "malignant", transform=transform)
+    val_benign_data = MyData("../data/一期数据/val/benign", "benign", transform=transform)
+    val_malignat_data = MyData("../data/一期数据/val/malignant", "malignant", transform=transform)
     val_data = val_benign_data + val_malignat_data
 
     training_loader = DataLoader(train_data,

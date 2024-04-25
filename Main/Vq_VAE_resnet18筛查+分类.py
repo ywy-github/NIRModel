@@ -357,9 +357,9 @@ if __name__ == '__main__':
 
     learning_rate = 1e-5
 
-    lambda_recon = 0.2
-    lambda_vq = 0.2
-    lambda_classifier = 0.6
+    lambda_recon = 0.4
+    lambda_vq = 0.4
+    lambda_classifier = 0.2
 
     # 读取数据集
     transform = transforms.Compose([
@@ -448,8 +448,7 @@ if __name__ == '__main__':
 
             vq_loss, data_recon, perplexity, classifier_outputs = extendModel(data)
 
-            data_variance = torch.var(data)
-            recon_loss = F.mse_loss(data_recon, data) / data_variance
+            recon_loss = F.mse_loss(data_recon, data)
             classifier_loss = criterion(targets.view(-1, 1), classifier_outputs)
             total_loss = joint_loss_function(recon_loss, vq_loss, classifier_loss, lambda_recon, lambda_vq,
                                              lambda_classifier)
@@ -482,8 +481,8 @@ if __name__ == '__main__':
                 data = data.to(device)
                 targets = targets.to(device)
                 vq_loss, data_recon, perplexity, classifier_outputs = extendModel(data)
-                data_variance = torch.var(data)
-                recon_loss = F.mse_loss(data_recon, data) / data_variance
+
+                recon_loss = F.mse_loss(data_recon, data)
                 classifier_loss = criterion(targets.view(-1, 1), classifier_outputs)
                 total_loss = joint_loss_function(recon_loss, vq_loss, classifier_loss, lambda_recon, lambda_vq,
                                                  lambda_classifier)
@@ -513,8 +512,8 @@ if __name__ == '__main__':
                 data = data.to(device)
                 targets = targets.to(device)
                 vq_loss, data_recon, perplexity, classifier_outputs = extendModel(data)
-                data_variance = torch.var(data)
-                recon_loss = F.mse_loss(data_recon, data) / data_variance
+
+                recon_loss = F.mse_loss(data_recon, data)
                 classifier_loss = criterion(targets.view(-1, 1), classifier_outputs)
                 total_loss = joint_loss_function(recon_loss, vq_loss, classifier_loss, lambda_recon, lambda_vq,
                                                  lambda_classifier)
@@ -533,6 +532,12 @@ if __name__ == '__main__':
 
         # if ((epoch + 1) == 167):
         #     torch.save(model.state_dict(), "../models/qc/VQ-VAE-resnet18-qc-第二波段增强图-{}.pth".format(epoch + 1))
+        if ((epoch + 1)%10 == 0):
+            concat = torch.cat((data[0][0],data_recon[0][0]), 1)
+            plt.matshow(concat.cpu().detach().numpy())
+            plt.show()
+
+
         print('%d epoch' % (epoch + 1))
         train_acc, train_sen, train_spe = all_metrics(train_targets, train_pred)
 
