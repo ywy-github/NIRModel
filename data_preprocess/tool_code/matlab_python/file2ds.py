@@ -73,13 +73,13 @@ def Read_info_from_dcm(DcmFileName): # matlab file2ds
     arrayinfo = CurveData_2.reshape(int(Step),int(NFr),order='F')
     arrayinfo = np.transpose(arrayinfo, (1, 0))
     arrayinfo = np.transpose(arrayinfo, (1, 0))
-    # Main Time:
+    # Main1 Time:
     if DICOMRev == 1:
         MainTime = 0.001 * CurveData_0[0, ..., 2]
     elif DICOMRev == 2:
         MainTime = 0.001*(2 ^ 16 * arrayinfo[0, :] + arrayinfo[1, :]).T
         # MainTime= 0.001 * (2 ** 16 * arrayinfo[0, :] + arrayinfo[1, :]).T
-    # Main Stat:
+    # Main1 Stat:
     if DICOMRev == 2:
         A = CurveData_0.reshape(4, int(NFr),order='F') ####?
         A = np.transpose(A, (1, 0))
