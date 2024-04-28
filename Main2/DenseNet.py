@@ -1,7 +1,9 @@
+import os
 import random
 import time
 
 import numpy as np
+import pandas as pd
 import torch
 from matplotlib import pyplot as plt
 from sklearn.metrics import roc_auc_score
@@ -69,7 +71,7 @@ if __name__ == '__main__':
     training_loader = DataLoader(train_data,
                                  batch_size=batch_size,
                                  shuffle=True,
-                                 num_workers=6,
+                                 num_workers=3,
                                  persistent_workers=True,
                                  pin_memory=True
                                  )
@@ -77,7 +79,7 @@ if __name__ == '__main__':
     validation_loader = DataLoader(val_data,
                                    batch_size=batch_size,
                                    shuffle=True,
-                                   num_workers=6,
+                                   num_workers=3,
                                    persistent_workers=True,
                                    pin_memory=True
                                    )
@@ -85,7 +87,7 @@ if __name__ == '__main__':
     test_loader = DataLoader(test_data,
                              batch_size=batch_size,
                              shuffle=True,
-                             num_workers=6,
+                             num_workers=3,
                              persistent_workers=True,
                              pin_memory=True
                              )
@@ -181,26 +183,26 @@ if __name__ == '__main__':
                 test_pred.extend(predicted_labels.cpu().numpy())
                 test_targets.extend(targets.cpu().numpy())
 
-        #         if ((epoch + 1) == 8):
-        #             for i in range(len(dcm_names)):
-        #                 test_results.append({'dcm_name': dcm_names[i], 'pred': classifier_outputs[i].item(),
-        #                                      'prob': predicted_labels[i].item(), 'label': targets[i].item()})
-        #
-        # if ((epoch + 1) == 8):
-        #     # torch.save(model.state_dict(), "../models2/Vq-VAE-resnet18仅重构+分类器/Vq-VAE-resnet18仅重构+分类器-{}.pth".format(epoch + 1))
-        #     # 记录每个样本的dcm_name、预测概率值和标签
-        #
-        #     df = pd.DataFrame(test_results)
-        #     filename = '../models2/excels/resnet18-8.xlsx'
-        #
-        #     # 检查文件是否存在
-        #     if not os.path.isfile(filename):
-        #         # 如果文件不存在，创建新文件并保存数据到 Sheet1
-        #         df.to_excel(filename, sheet_name='test', index=False)
-        #     else:
-        #         # 如果文件已经存在，打开现有文件并保存数据到 Sheet2
-        #         with pd.ExcelWriter(filename, engine='openpyxl', mode='a') as writer:
-        #             df.to_excel(writer, sheet_name='test', index=False)
+                if ((epoch + 1) == 13):
+                    for i in range(len(dcm_names)):
+                        test_results.append({'dcm_name': dcm_names[i], 'pred': classifier_outputs[i].item(),
+                                             'prob': predicted_labels[i].item(), 'label': targets[i].item()})
+
+        if ((epoch + 1) == 13):
+            # torch.save(model.state_dict(), "../models2/Vq-VAE-resnet18仅重构+分类器/Vq-VAE-resnet18仅重构+分类器-{}.pth".format(epoch + 1))
+            # 记录每个样本的dcm_name、预测概率值和标签
+
+            df = pd.DataFrame(test_results)
+            filename = '../models2/excels/DenseNet-13.xlsx'
+
+            # 检查文件是否存在
+            if not os.path.isfile(filename):
+                # 如果文件不存在，创建新文件并保存数据到 Sheet1
+                df.to_excel(filename, sheet_name='test', index=False)
+            else:
+                # 如果文件已经存在，打开现有文件并保存数据到 Sheet2
+                with pd.ExcelWriter(filename, engine='openpyxl', mode='a') as writer:
+                    df.to_excel(writer, sheet_name='test', index=False)
 
         print('%d epoch' % (epoch + 1))
 

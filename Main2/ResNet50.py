@@ -1,6 +1,6 @@
 import os
 import time
-from random import random
+import random
 
 import numpy as np
 import pandas as pd
@@ -195,17 +195,17 @@ if __name__ == '__main__':
                 test_pred.extend(predicted_labels.cpu().numpy())
                 test_targets.extend(targets.cpu().numpy())
 
-                if ((epoch + 1) == 8):
+                if ((epoch + 1) == 16):
                     for i in range(len(dcm_names)):
                         test_results.append({'dcm_name': dcm_names[i], 'pred': output[i].item(),
                                              'prob': predicted_labels[i].item(), 'label': targets[i].item()})
 
-        if ((epoch + 1) == 8):
+        if ((epoch + 1) == 16):
             # torch.save(model.state_dict(), "../models2/Vq-VAE-resnet18仅重构+分类器/Vq-VAE-resnet18仅重构+分类器-{}.pth".format(epoch + 1))
             # 记录每个样本的dcm_name、预测概率值和标签
 
             df = pd.DataFrame(test_results)
-            filename = '../models2/excels/resnet18-8.xlsx'
+            filename = '../models2/excels/Resnet50-16.xlsx'
 
             # 检查文件是否存在
             if not os.path.isfile(filename):

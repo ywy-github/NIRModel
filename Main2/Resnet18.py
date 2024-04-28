@@ -205,7 +205,7 @@ if __name__ == '__main__':
             # 记录每个样本的dcm_name、预测概率值和标签
 
             df = pd.DataFrame(test_results)
-            filename = '../models2/excels/resnet18-8.xlsx'
+            filename = '../models2/excels/Resnet18-8.xlsx'
 
             # 检查文件是否存在
             if not os.path.isfile(filename):

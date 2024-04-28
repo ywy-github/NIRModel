@@ -12,14 +12,14 @@ from sklearn.metrics import roc_auc_score
 
 from torch.utils.data import DataLoader
 
-from torchvision import transforms
+from torchvision import transforms, models
 import torch
 
 import numpy as np
 
 
-from Metrics import all_metrics
-from data_loader import MyData
+from Main1.Metrics import all_metrics
+from Main1.data_loader import MyData
 
 class VectorQuantizer(nn.Module):
     def __init__(self, num_embeddings, embedding_dim, commitment_cost):
@@ -296,11 +296,21 @@ class WeightedBinaryCrossEntropyLoss(nn.Module):
 if __name__ == '__main__':
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-    batch_size = 64
+    batch_size = 16
+    epochs = 1000
 
-    weight_positive = 2  # 调整这个权重以提高对灵敏度的重视
+    embedding_dim = 64
+    num_embeddings = 512  # 和encoder输出维度相同，和decoder输入维度相同
+
+    commitment_cost = 0.25
+
+    decay = 0.99
 
     learning_rate = 1e-5
+
+    lambda_recon = 0.2
+    lambda_vq = 0.2
+    lambda_classifier = 0.6
 
 
     # 读取数据集
@@ -319,7 +329,24 @@ if __name__ == '__main__':
                              shuffle=True,
                              pin_memory=True)
 
-    model = torch.load("../models2/VQ-Resnet18/VQ-VAE-resnet18_data1_resize448.pth", map_location=device)
+    # 设置encoder
+    encoder = models.resnet18(pretrained=True)
+    for param in encoder.parameters():
+        param.requires_grad = False
+
+    for name, param in encoder.named_parameters():
+        if "layer3" in name:
+            param.requires_grad = True
+        if "layer4" in name:
+            param.requires_grad = True
+        if "fc" in name:
+            param.requires_grad = True
+
+    encoder = nn.Sequential(*list(encoder.children())[:-2])
+
+    model = Model(encoder, num_embeddings, embedding_dim, commitment_cost, decay).to(device)
+
+    model.load_state_dict(torch.load('../models2/VQ-Resnet18/VQ-VAE-resnet18-29.pth'))
 
     criterion = WeightedBinaryCrossEntropyLoss(2)
     criterion.to(device)
@@ -337,10 +364,11 @@ if __name__ == '__main__':
             data = data.to(device)
             targets = targets.to(device)
             vq_loss, data_recon, perplexity, classifier_outputs = model(data)
+
             loss = criterion(targets.view(-1, 1), classifier_outputs)
 
 
-            predicted_labels = (classifier_outputs >= 0.5).int().squeeze()
+            predicted_labels =  (classifier_outputs >= 0.5).int().view(-1)
             # 记录每个样本的dcm_name、预测概率值和标签
             for i in range(len(dcm_names)):
                 test_results.append({'dcm_name': dcm_names[i], 'pred': classifier_outputs[i].item(),
@@ -354,8 +382,6 @@ if __name__ == '__main__':
             # plt.matshow(concat.cpu().detach().numpy())
             # plt.show()
 
-
-
     test_acc, test_sen, test_spe = all_metrics(test_targets, test_predictions)
 
     test_pred = np.concatenate(test_pred)  # 将列表转换为NumPy数组
@@ -367,14 +393,14 @@ if __name__ == '__main__':
         np.mean(total_test_loss[-10:])))
 
     df = pd.DataFrame(test_results)
-    # filename = '../models2/excels/VQ-VAE-resnet18-data1-resize448.xlsx'
-    #
-    # # 检查文件是否存在
-    # if not os.path.isfile(filename):
-    #     # 如果文件不存在，创建新文件并保存数据到 Sheet1
-    #     df.to_excel(filename, sheet_name='test', index=False)
-    # else:
-    #     # 如果文件已经存在，打开现有文件并保存数据到 Sheet2
-    #     with pd.ExcelWriter(filename, engine='openpyxl', mode='a') as writer:
-    #         df.to_excel(writer, sheet_name='test', index=False)
+    filename = '../models2/VQ-Resnet18-excels/VQ-VAE-resnet18-29.xlsx'
+
+    # 检查文件是否存在
+    if not os.path.isfile(filename):
+        # 如果文件不存在，创建新文件并保存数据到 Sheet1
+        df.to_excel(filename, sheet_name='test', index=False)
+    else:
+        # 如果文件已经存在，打开现有文件并保存数据到 Sheet2
+        with pd.ExcelWriter(filename, engine='openpyxl', mode='a') as writer:
+            df.to_excel(writer, sheet_name='test', index=False)
 
