@@ -16,16 +16,12 @@ VQ-VAE-resnet18-data1-resize448.pth
 测试集 acc: 0.7374sen: 0.5402spe: 0.8272 auc: 0.7617loss: 1.0823
 
 
+resnet18_data1_resize448
+8 epoch
+训练集 acc: 0.7288 sen: 0.6743 spe: 0.7551 auc: 0.7994 loss: 46.6210
+验证集 acc: 0.6952 sen: 0.6832 spe: 0.7009 auc: 0.7473 loss: 16.2216
+测试集 acc: 0.7050 sen: 0.6782 spe: 0.7173 auc: 0.7556 loss: 14.4854
 
-
-
-resnet18_data1_resize512
-测试集 acc: 0.6223sen: 0.5057spe: 0.6754loss: 0.8934
-
-resnet18_data1
-训练集 acc: 0.8814 sen: 0.8632 spe: 0.8901 auc: 0.9549 loss: 7.1128
-验证集 acc: 0.6603 sen: 0.5050 spe: 0.7336 auc: 0.6668 loss: 8.8909
-验证集 acc: 0.6836 sen: 0.6092 spe: 0.7181 auc: 0.6809 loss: 7.8899
 
 
 

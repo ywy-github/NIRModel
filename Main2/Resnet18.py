@@ -172,7 +172,7 @@ if __name__ == '__main__':
                 val_pred.extend(predicted_labels.cpu().numpy())
                 val_targets.extend(targets.cpu().numpy())
 
-        model.eval()
+
         test_score = []
         test_pred = []
         test_targets = []
@@ -189,32 +189,32 @@ if __name__ == '__main__':
 
                 loss = criterion(targets.view(-1, 1), classifier_outputs)
                 total_test_loss += loss.item()
-                predicted_labels = (output >= 0.5).int().squeeze()
 
-                test_score.append(output.flatten().cpu().numpy())
+                predicted_labels = (classifier_outputs >= 0.5).int().squeeze()
+                test_score.append(classifier_outputs.flatten().cpu().numpy())
                 test_pred.extend(predicted_labels.cpu().numpy())
                 test_targets.extend(targets.cpu().numpy())
 
-                # if ((epoch + 1) == 71):
-                #     for i in range(len(names)):
-                #         test_results.append({'dcm_name': names[i], 'pred': classifier_outputs[i].item(),
-                #                              'prob': predicted_labels[i].item(), 'label': targets[i].item()})
+                if ((epoch + 1) == 8):
+                    for i in range(len(dcm_names)):
+                        test_results.append({'dcm_name': dcm_names[i], 'pred': classifier_outputs[i].item(),
+                                             'prob': predicted_labels[i].item(), 'label': targets[i].item()})
 
-        # if ((epoch + 1) == 71):
-        #     # torch.save(model.state_dict(), "../models2/Vq-VAE-resnet18仅重构+分类器/Vq-VAE-resnet18仅重构+分类器-{}.pth".format(epoch + 1))
-        #     # 记录每个样本的dcm_name、预测概率值和标签
-        #
-        #     df = pd.DataFrame(test_results)
-        #     filename = '../models2/excels/Vq-VAE-resnet18仅重构+分类器-71.xlsx'
-        #
-        #     # 检查文件是否存在
-        #     if not os.path.isfile(filename):
-        #         # 如果文件不存在，创建新文件并保存数据到 Sheet1
-        #         df.to_excel(filename, sheet_name='test', index=False)
-        #     else:
-        #         # 如果文件已经存在，打开现有文件并保存数据到 Sheet2
-        #         with pd.ExcelWriter(filename, engine='openpyxl', mode='a') as writer:
-        #             df.to_excel(writer, sheet_name='test', index=False)
+        if ((epoch + 1) == 8):
+            # torch.save(model.state_dict(), "../models2/Vq-VAE-resnet18仅重构+分类器/Vq-VAE-resnet18仅重构+分类器-{}.pth".format(epoch + 1))
+            # 记录每个样本的dcm_name、预测概率值和标签
+
+            df = pd.DataFrame(test_results)
+            filename = '../models2/excels/resnet18-8.xlsx'
+
+            # 检查文件是否存在
+            if not os.path.isfile(filename):
+                # 如果文件不存在，创建新文件并保存数据到 Sheet1
+                df.to_excel(filename, sheet_name='test', index=False)
+            else:
+                # 如果文件已经存在，打开现有文件并保存数据到 Sheet2
+                with pd.ExcelWriter(filename, engine='openpyxl', mode='a') as writer:
+                    df.to_excel(writer, sheet_name='test', index=False)
 
         print('%d epoch' % (epoch + 1))
 
