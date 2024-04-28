@@ -1,7 +1,9 @@
-import random
+import os
 import time
+from random import random
 
 import numpy as np
+import pandas as pd
 import torch
 from matplotlib import pyplot as plt
 from sklearn.metrics import roc_auc_score
@@ -11,8 +13,8 @@ from torch.utils.data import DataLoader
 from torch.utils.tensorboard import SummaryWriter
 from torchvision import models
 from torchvision import transforms
-from Metrics import all_metrics
-from data_loader import MyData
+from Main1.Metrics import all_metrics
+from Main1.data_loader import MyData
 
 # 定义自定义损失函数，加权二进制交叉熵
 class WeightedBinaryCrossEntropyLoss(nn.Module):
@@ -25,12 +27,10 @@ class WeightedBinaryCrossEntropyLoss(nn.Module):
         loss = - (self.weight_positive * y_true * torch.log(y_pred + 1e-7) + (1 - y_true) * torch.log(1 - y_pred + 1e-7))
         return torch.mean(loss)
 
-
 if __name__ == '__main__':
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    #测试
 
-    seed = 42
+    seed = 10
 
     # 设置 Python 的随机种子
     random.seed(seed)
@@ -44,13 +44,13 @@ if __name__ == '__main__':
     torch.backends.cudnn.deterministic = True
     torch.backends.cudnn.benchmark = False
 
-    batch_size = 64
-    epochs = 1000
-    learning_rate = 1e-4
+    batch_size = 16
+    epochs = 500
+    learning_rate = 1e-5
 
     # 读取数据集
     transform = transforms.Compose([
-        transforms.Resize([512, 512]),
+        transforms.Resize([448, 448]),
         transforms.ToTensor(),
         transforms.Normalize((0.3281,), (0.2366,))  # 设置均值和标准差
     ])
@@ -70,44 +70,61 @@ if __name__ == '__main__':
     training_loader = DataLoader(train_data,
                                  batch_size=batch_size,
                                  shuffle=True,
-                                 pin_memory=True)
+                                 num_workers=6,
+                                 persistent_workers=True,
+                                 pin_memory=True
+                                 )
 
     validation_loader = DataLoader(val_data,
-                                   batch_size=32,
+                                   batch_size=batch_size,
                                    shuffle=True,
-                                   pin_memory=True)
+                                   num_workers=6,
+                                   persistent_workers=True,
+                                   pin_memory=True
+                                   )
 
     test_loader = DataLoader(test_data,
-                                   batch_size=32,
-                                   shuffle=True,
-                                   pin_memory=True)
+                             batch_size=batch_size,
+                             shuffle=True,
+                             num_workers=6,
+                             persistent_workers=True,
+                             pin_memory=True
+                             )
 
+    model = models.resnet50(pretrained=True)
 
-
-    model = models.alexnet(pretrained=True)
     #调整结构
-    model.classifier = nn.Sequential(
-        nn.Dropout(p=0.5, inplace=False),
-        nn.Linear(in_features=9216, out_features=4096, bias=True),
-        nn.ReLU(inplace=True),
-        nn.Dropout(p=0.5, inplace=False),
-        nn.Linear(in_features=4096, out_features=4096, bias=True),
-        nn.ReLU(inplace=True),
-        nn.Linear(in_features=4096, out_features=1, bias=True),
+    num_hidden = 512
+    model.fc = nn.Sequential(
+        nn.Linear(model.fc.in_features, num_hidden),
+        nn.ReLU(),
+        nn.Dropout(0.5),
+        nn.Linear(num_hidden, num_hidden//2),
+        nn.ReLU(),
+        nn.Dropout(0.5),
+        nn.Linear(num_hidden//2, 1),
         nn.Sigmoid()
-  )
+    )
 
     model = model.to(device)
 
     for param in model.parameters():
-        param.requires_grad = True
+        param.requires_grad = False
+
+    for name, param in model.named_parameters():
+        if "layer3" in name:
+            param.requires_grad = True
+        if "layer4" in name:
+            param.requires_grad = True
+        if "fc" in name:
+            param.requires_grad = True
 
     criterion = WeightedBinaryCrossEntropyLoss(2)
 
-    optimizer = optim.SGD(filter(lambda p: p.requires_grad, model.parameters()), lr=learning_rate)
+    optimizer = optim.Adam(filter(lambda p: p.requires_grad, model.parameters()), lr=learning_rate, amsgrad=False)
 
     start_time = time.time()  # 记录训练开始时间
-    writer = SummaryWriter("../Logs")
+
     for epoch in range(epochs):
         model.train()
         train_score = []
@@ -132,7 +149,6 @@ if __name__ == '__main__':
             train_score.append(output.cpu().detach().numpy())
             train_pred.extend(pred.cpu().numpy())
             train_targets.extend(targets.cpu().numpy())
-        writer.add_scalar('Loss/Train', total_train_loss, epoch)
 
         model.eval()
         val_score = []
@@ -142,8 +158,8 @@ if __name__ == '__main__':
         with torch.no_grad():
             for batch in validation_loader:
                 images, targets, names = batch
-                # targets = targets.to(torch.float32)
                 images = torch.cat([images] * 3, dim=1)
+                # targets = targets.to(torch.float32)
                 images = images.to(device)
                 targets = targets.to(device)
                 output = model(images)
@@ -155,32 +171,50 @@ if __name__ == '__main__':
                 val_score.append(output.flatten().cpu().numpy())
                 val_pred.extend(predicted_labels.cpu().numpy())
                 val_targets.extend(targets.cpu().numpy())
-        writer.add_scalar('Loss/Val', total_val_loss, epoch)
 
+        model.eval()
         test_score = []
         test_pred = []
         test_targets = []
+        test_results = []
         total_test_loss = 0.0
+        model.eval()
         with torch.no_grad():
             for batch in test_loader:
-                images, targets, names = batch
-                # targets = targets.to(torch.float32)
-                images = torch.cat([images] * 3, dim=1)
-                images = images.to(device)
+                data, targets, dcm_names = batch
+                data = torch.cat([data] * 3, dim=1)
+                data = data.to(device)
                 targets = targets.to(device)
-                output = model(images)
-                loss = criterion(targets.view(-1, 1), output)
+                output = model(data)
 
+                loss = criterion(targets.view(-1, 1), output)
                 total_test_loss += loss.item()
                 predicted_labels = (output >= 0.5).int().squeeze()
 
                 test_score.append(output.flatten().cpu().numpy())
                 test_pred.extend(predicted_labels.cpu().numpy())
                 test_targets.extend(targets.cpu().numpy())
-        writer.add_scalar('Loss/Test', total_test_loss, epoch)
 
-        # if ((epoch + 1) == 798):
-        #     torch.save(model, "../models1/VQ-Resnet/resnet18{}.pth".format(epoch + 1))
+                if ((epoch + 1) == 8):
+                    for i in range(len(dcm_names)):
+                        test_results.append({'dcm_name': dcm_names[i], 'pred': output[i].item(),
+                                             'prob': predicted_labels[i].item(), 'label': targets[i].item()})
+
+        if ((epoch + 1) == 8):
+            # torch.save(model.state_dict(), "../models2/Vq-VAE-resnet18仅重构+分类器/Vq-VAE-resnet18仅重构+分类器-{}.pth".format(epoch + 1))
+            # 记录每个样本的dcm_name、预测概率值和标签
+
+            df = pd.DataFrame(test_results)
+            filename = '../models2/excels/resnet18-8.xlsx'
+
+            # 检查文件是否存在
+            if not os.path.isfile(filename):
+                # 如果文件不存在，创建新文件并保存数据到 Sheet1
+                df.to_excel(filename, sheet_name='test', index=False)
+            else:
+                # 如果文件已经存在，打开现有文件并保存数据到 Sheet2
+                with pd.ExcelWriter(filename, engine='openpyxl', mode='a') as writer:
+                    df.to_excel(writer, sheet_name='test', index=False)
 
         print('%d epoch' % (epoch + 1))
 
@@ -210,11 +244,10 @@ if __name__ == '__main__':
         test_targets = np.array(test_targets)
         test_auc = roc_auc_score(test_targets, test_score)
 
-        print("验证集 acc: {:.4f}".format(test_acc) + " sen: {:.4f}".format(test_sen) +
+        print("测试集 acc: {:.4f}".format(test_acc) + " sen: {:.4f}".format(test_sen) +
               " spe: {:.4f}".format(test_spe) + " auc: {:.4f}".format(test_auc) +
               " loss: {:.4f}".format(total_test_loss))
 
-    writer.close()
     end_time = time.time()
     training_time = end_time - start_time
 
