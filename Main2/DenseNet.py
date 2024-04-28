@@ -11,8 +11,8 @@ from torch.utils.data import DataLoader
 from torch.utils.tensorboard import SummaryWriter
 from torchvision import models
 from torchvision import transforms
-from Metrics import all_metrics
-from data_loader import MyData
+from Main1.Metrics import all_metrics
+from Main1.data_loader import MyData
 
 # 定义自定义损失函数，加权二进制交叉熵
 class WeightedBinaryCrossEntropyLoss(nn.Module):
@@ -28,9 +28,8 @@ class WeightedBinaryCrossEntropyLoss(nn.Module):
 
 if __name__ == '__main__':
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    #测试
 
-    seed = 42
+    seed = 10
 
     # 设置 Python 的随机种子
     random.seed(seed)
@@ -44,13 +43,13 @@ if __name__ == '__main__':
     torch.backends.cudnn.deterministic = True
     torch.backends.cudnn.benchmark = False
 
-    batch_size = 64
-    epochs = 1000
-    learning_rate = 1e-4
+    batch_size = 16
+    epochs = 500
+    learning_rate = 1e-5
 
     # 读取数据集
     transform = transforms.Compose([
-        transforms.Resize([224, 224]),
+        transforms.Resize([448, 448]),
         transforms.ToTensor(),
         transforms.Normalize((0.3281,), (0.2366,))  # 设置均值和标准差
     ])
@@ -63,18 +62,33 @@ if __name__ == '__main__':
     val_malignat_data = MyData("../data/一期数据/val/malignant", "malignant", transform=transform)
     val_data = val_benign_data + val_malignat_data
 
+    test_benign_data = MyData("../data/一期数据/test/benign", "benign", transform=transform)
+    test_malignat_data = MyData("../data/一期数据/test/malignant", "malignant", transform=transform)
+    test_data = test_benign_data + test_malignat_data
 
     training_loader = DataLoader(train_data,
                                  batch_size=batch_size,
                                  shuffle=True,
-                                 pin_memory=True,
-                                 num_workers=8)
+                                 num_workers=6,
+                                 persistent_workers=True,
+                                 pin_memory=True
+                                 )
 
     validation_loader = DataLoader(val_data,
                                    batch_size=batch_size,
                                    shuffle=True,
-                                   pin_memory=True,
-                                   num_workers=8)
+                                   num_workers=6,
+                                   persistent_workers=True,
+                                   pin_memory=True
+                                   )
+
+    test_loader = DataLoader(test_data,
+                             batch_size=batch_size,
+                             shuffle=True,
+                             num_workers=6,
+                             persistent_workers=True,
+                             pin_memory=True
+                             )
 
 
     model = models.densenet121(pretrained=True)
@@ -95,7 +109,7 @@ if __name__ == '__main__':
 
     criterion = WeightedBinaryCrossEntropyLoss(2)
 
-    optimizer = optim.SGD(filter(lambda p: p.requires_grad, model.parameters()), lr=learning_rate)
+    optimizer = optim.Adam(filter(lambda p: p.requires_grad, model.parameters()), lr=learning_rate, amsgrad=False)
 
     start_time = time.time()  # 记录训练开始时间
     for epoch in range(epochs):
@@ -131,8 +145,8 @@ if __name__ == '__main__':
         with torch.no_grad():
             for batch in validation_loader:
                 images, targets, names = batch
-                # targets = targets.to(torch.float32)
                 images = torch.cat([images] * 3, dim=1)
+                # targets = targets.to(torch.float32)
                 images = images.to(device)
                 targets = targets.to(device)
                 output = model(images)
@@ -145,8 +159,48 @@ if __name__ == '__main__':
                 val_pred.extend(predicted_labels.cpu().numpy())
                 val_targets.extend(targets.cpu().numpy())
 
-        if ((epoch + 1)%50 == 0):
-            torch.save(model, "../models1/VQ-DenseNet/DenseNet{}.pth".format(epoch + 1))
+        test_score = []
+        test_pred = []
+        test_targets = []
+        test_results = []
+        total_test_loss = 0.0
+        model.eval()
+        with torch.no_grad():
+            for batch in test_loader:
+                data, targets, dcm_names = batch
+                data = torch.cat([data] * 3, dim=1)
+                data = data.to(device)
+                targets = targets.to(device)
+                classifier_outputs = model(data)
+
+                loss = criterion(targets.view(-1, 1), classifier_outputs)
+                total_test_loss += loss.item()
+
+                predicted_labels = (classifier_outputs >= 0.5).int().squeeze()
+                test_score.append(classifier_outputs.flatten().cpu().numpy())
+                test_pred.extend(predicted_labels.cpu().numpy())
+                test_targets.extend(targets.cpu().numpy())
+
+        #         if ((epoch + 1) == 8):
+        #             for i in range(len(dcm_names)):
+        #                 test_results.append({'dcm_name': dcm_names[i], 'pred': classifier_outputs[i].item(),
+        #                                      'prob': predicted_labels[i].item(), 'label': targets[i].item()})
+        #
+        # if ((epoch + 1) == 8):
+        #     # torch.save(model.state_dict(), "../models2/Vq-VAE-resnet18仅重构+分类器/Vq-VAE-resnet18仅重构+分类器-{}.pth".format(epoch + 1))
+        #     # 记录每个样本的dcm_name、预测概率值和标签
+        #
+        #     df = pd.DataFrame(test_results)
+        #     filename = '../models2/excels/resnet18-8.xlsx'
+        #
+        #     # 检查文件是否存在
+        #     if not os.path.isfile(filename):
+        #         # 如果文件不存在，创建新文件并保存数据到 Sheet1
+        #         df.to_excel(filename, sheet_name='test', index=False)
+        #     else:
+        #         # 如果文件已经存在，打开现有文件并保存数据到 Sheet2
+        #         with pd.ExcelWriter(filename, engine='openpyxl', mode='a') as writer:
+        #             df.to_excel(writer, sheet_name='test', index=False)
 
         print('%d epoch' % (epoch + 1))
 
@@ -169,6 +223,16 @@ if __name__ == '__main__':
         print("验证集 acc: {:.4f}".format(val_acc) + " sen: {:.4f}".format(val_sen) +
               " spe: {:.4f}".format(val_spe) + " auc: {:.4f}".format(val_auc) +
               " loss: {:.4f}".format(total_val_loss))
+
+        test_acc, test_sen, test_spe = all_metrics(test_targets, test_pred)
+
+        test_score = np.concatenate(test_score)  # 将列表转换为NumPy数组
+        test_targets = np.array(test_targets)
+        test_auc = roc_auc_score(test_targets, test_score)
+
+        print("测试集 acc: {:.4f}".format(test_acc) + " sen: {:.4f}".format(test_sen) +
+              " spe: {:.4f}".format(test_spe) + " auc: {:.4f}".format(test_auc) +
+              " loss: {:.4f}".format(total_test_loss))
 
     end_time = time.time()
     training_time = end_time - start_time
