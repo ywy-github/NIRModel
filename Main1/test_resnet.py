@@ -1,5 +1,6 @@
 from __future__ import print_function
 
+import os
 import time
 
 import matplotlib.pyplot as plt
@@ -71,7 +72,7 @@ if __name__ == '__main__':
 
     # 读取数据集
     transform = transforms.Compose([
-        transforms.Resize([224,224]),
+        transforms.Resize([512,512]),
         transforms.ToTensor(),
         transforms.Normalize((0.3281,), (0.2366,))  # 设置均值和标准差
     ])
@@ -125,4 +126,13 @@ if __name__ == '__main__':
           "spe: {:.4f}".format(train_spe) + "loss: {:.4f}".format(np.mean(total_test_loss[-10:])))
 
     df = pd.DataFrame(test_results)
-    # df.to_excel("../models1/result/resnet18-data2-train.xlsx", index=False)
+    filename = '../models2/excels/VQ-VAE-resnet18-data1-resize448.xlsx'
+
+    # 检查文件是否存在
+    if not os.path.isfile(filename):
+        # 如果文件不存在，创建新文件并保存数据到 Sheet1
+        df.to_excel(filename, sheet_name='test', index=False)
+    else:
+        # 如果文件已经存在，打开现有文件并保存数据到 Sheet2
+        with pd.ExcelWriter(filename, engine='openpyxl', mode='a') as writer:
+            df.to_excel(writer, sheet_name='test', index=False)
