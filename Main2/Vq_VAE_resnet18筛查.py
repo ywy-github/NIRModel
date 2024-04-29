@@ -21,8 +21,8 @@ from PIL import Image
 import glob
 import random
 
-from Metrics import all_metrics
-from data_loader import MyData
+from Main1.Metrics import all_metrics
+from Main1.data_loader import MyData
 
 class VectorQuantizer(nn.Module):
     def __init__(self, num_embeddings, embedding_dim, commitment_cost):
@@ -192,6 +192,7 @@ class Encoder(nn.Module):
         x = self.b3(x)
         return x
 
+
 class Decoder(nn.Module):
     def __init__(self):
         super(Decoder, self).__init__()
@@ -232,23 +233,6 @@ class Decoder(nn.Module):
         x = self.deconv5(x)
         return x
 
-class Classifier(nn.Module):
-    def __init__(self, input_dim, hidden_dim, num_classes):
-        super(Classifier, self).__init__()
-        self.path = nn.Sequential(
-            nn.Linear(input_dim, hidden_dim),
-            nn.ReLU(),
-            nn.Dropout(0.5),
-            nn.Linear(hidden_dim, hidden_dim // 2),
-            nn.ReLU(),
-            nn.Dropout(0.5),
-            nn.Linear(hidden_dim // 2, num_classes),
-            nn.Sigmoid()
-        )
-    def forward(self, x):
-        x = self.path(x)
-        return x
-
 class Model(nn.Module):
     def __init__(self,encoder,num_embeddings, embedding_dim, commitment_cost, decay=0):
         super(Model, self).__init__()
@@ -270,32 +254,10 @@ class Model(nn.Module):
         z = self._encoder(x)
         # z = self._pre_vq_conv(z)
         loss, quantized, perplexity, _ = self._vq_vae(z)
+
         x_recon = self._decoder(quantized)
 
-        return loss, x_recon, perplexity, classifier_outputs
-
-class ExtendedModel(nn.Module):
-    def __init__(self, model):
-        super(ExtendedModel, self).__init__()
-        self.model = model
-        self.classifier = Classifier(512*14*14, 512,1)
-        self.attention_weights = nn.Parameter(torch.ones(3))
-    def forward(self, x, targets ):
-        z = self.model._encoder(x)
-        vq_loss, quantized, perplexity, _ = self.model._vq_vae(z)
-        classifier_outputs = self.classifier(quantized.view(quantized.size(0),-1))
-        x_recon = self.model._decoder(quantized)
-
-        data_variance = torch.var(x)
-        recon_loss = F.mse_loss(x_recon, x) / data_variance
-        classifier_loss = criterion(targets.view(-1, 1), classifier_outputs)
-
-        # 总损失
-        total_loss = joint_loss_function(recon_loss,vq_loss,classifier_loss,self.attention_weights[0],
-                                         self.attention_weights[1],self.attention_weights[2])
-
-        return total_loss,recon_loss,perplexity,classifier_loss,classifier_outputs
-
+        return loss, x_recon, perplexity
 
 # 定义联合模型的损失函数
 def joint_loss_function(recon_loss,vq_loss,classifier_loss,lambda_recon,lambda_vq,lambda_classifier):
@@ -336,7 +298,7 @@ class Focal_Loss(nn.Module):
 if __name__ == '__main__':
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-    seed = 10
+    seed = 42
 
     # 设置 Python 的随机种子
     random.seed(seed)
@@ -351,7 +313,7 @@ if __name__ == '__main__':
     torch.backends.cudnn.benchmark = False
 
     batch_size = 16
-    epochs = 500
+    epochs = 1000
 
     embedding_dim = 64
     num_embeddings = 512  # 和encoder输出维度相同，和decoder输入维度相同
@@ -360,10 +322,13 @@ if __name__ == '__main__':
 
     decay = 0.99
 
-    weight_positive = 2  # 调整这个权重以提高对灵敏度的重视
-
     learning_rate = 1e-5
 
+    lambda_recon = 0.2
+    lambda_vq = 0.2
+    lambda_classifier = 0.6
+
+    # 读取数据集
     # 读取数据集
     transform = transforms.Compose([
         transforms.Resize([448, 448]),
@@ -371,192 +336,77 @@ if __name__ == '__main__':
         transforms.Normalize((0.3281,), (0.2366,))  # 设置均值和标准差
     ])
 
-    train_benign_data = MyData("../data/一期数据/train/benign", "benign", transform=transform)
-    train_malignat_data = MyData("../data/一期数据/train/malignant", "malignant", transform=transform)
-    train_data = train_benign_data + train_malignat_data
-
-    val_benign_data = MyData("../data/一期数据/val/benign", "benign", transform=transform)
-    val_malignat_data = MyData("../data/一期数据/val/malignant", "malignant", transform=transform)
-    val_data = val_benign_data + val_malignat_data
-
-    test_benign_data = MyData("../data/一期数据/test/benign", "benign", transform=transform)
-    test_malignat_data = MyData("../data/一期数据/test/malignant", "malignant", transform=transform)
-    test_data = test_benign_data + test_malignat_data
-
+    train_data = MyData("../data/筛查数据/train/benign", "benign", transform=transform)
 
     training_loader = DataLoader(train_data,
                                  batch_size=batch_size,
                                  shuffle=True,
-                                 num_workers=6,
+                                 num_workers=16,
                                  persistent_workers=True,
                                  pin_memory=True
                                  )
 
-    validation_loader = DataLoader(val_data,
-                                   batch_size=batch_size,
-                                   shuffle=True,
-                                   num_workers=6,
-                                   persistent_workers=True,
-                                   pin_memory=True
-                                  )
 
-    test_loader = DataLoader(test_data,
-                                   batch_size=batch_size,
-                                   shuffle=True,
-                                   num_workers=6,
-                                   persistent_workers=True,
-                                   pin_memory=True
-                                   )
+    #设置encoder
+    encoder = models.resnet18(pretrained=True)
+    for param in encoder.parameters():
+        param.requires_grad = False
 
+    for name, param in encoder.named_parameters():
+        if "layer3" in name:
+            param.requires_grad = True
+        if "layer4" in name:
+            param.requires_grad = True
+        if "fc" in name:
+            param.requires_grad = True
 
+    encoder = nn.Sequential(*list(encoder.children())[:-2])
 
-    model = torch.load("../models1/VQ-Resnet/VQ-VAE-筛查重构-rezize448.pth", map_location=device)
+    model = Model(encoder,num_embeddings, embedding_dim, commitment_cost, decay).to(device)
 
-    for param in model.parameters():
-        param.requires_grad = True
-    # for name, param in model.named_parameters():
-    #     if "6" in name:
-    #         param.requires_grad = True
-    #     if "7" in name:
-    #         param.requires_grad = True
-    #     if "_vq_vae" in name:
-    #         param.requires_grad = True
-    #     if "_decoder" in name:
-    #         param.requires_grad = True
-
-    extendModel = ExtendedModel(model).to(device)
 
     criterion = WeightedBinaryCrossEntropyLoss(2)
     criterion.to(device)
-    optimizer = optim.Adam(filter(lambda p: p.requires_grad, extendModel.parameters()), lr=learning_rate, amsgrad=False)
+    optimizer = optim.Adam(filter(lambda p: p.requires_grad, model.parameters()), lr=learning_rate, amsgrad=False)
     # scheduler = StepLR(optimizer,50,0.1)
+    train_res_recon_error = []
+    train_res_perplexity = []
 
     start_time = time.time()  # 记录训练开始时间
-    writer = SummaryWriter("../Logs")
+
     for epoch in range(epochs):
-        extendModel.train()
-        train_score = []
-        train_pred = []
-        train_targets = []
-        total_train_loss = 0.0
-        train_classifier_loss = 0.0
-        train_res_recon_error = 0.0
-        train_res_perplexity = 0.0
+        model.train()
         for batch in training_loader:
             data, targets, dcm_names = batch
             data = torch.cat([data] * 3, dim=1)
             data = data.to(device)
-            targets = targets.to(device)
             optimizer.zero_grad()
 
-            total_loss,recon_loss,perplexity,classifier_loss,classifier_outputs = extendModel(data,targets)
+            vq_loss, data_recon, perplexity = model(data)
 
-            total_loss.backward()
+            data_variance = torch.var(data)
+            recon_loss = F.mse_loss(data_recon, data) / data_variance
+
+            loss = recon_loss + vq_loss
+            loss.backward()
             optimizer.step()
             # scheduler.step()
 
-            predicted_labels = (classifier_outputs >= 0.5).int().squeeze()
-            train_score.append(classifier_outputs.cpu().detach().numpy())
-            train_pred.extend(predicted_labels.cpu().numpy())
-            train_targets.extend(targets.cpu().numpy())
+            train_res_recon_error.append(recon_loss.item())
+            train_res_perplexity.append(perplexity.item())
 
-            total_train_loss += total_loss
-            train_classifier_loss += classifier_loss
-            train_res_recon_error += recon_loss
-            train_res_perplexity += perplexity
-        # writer.add_scalar('Loss/Train', total_train_loss, epoch)
-        val_score = []
-        val_pred = []
-        val_targets = []
-        total_val_loss = 0.0
-        val_classifier_loss = 0.0
-        val_res_recon_error = 0.0
-        val_res_perplexity = 0.0
-        extendModel.eval()
-        with torch.no_grad():
-            for batch in validation_loader:
-                data, targets, names = batch
-                data = torch.cat([data] * 3, dim=1)
-                data = data.to(device)
-                targets = targets.to(device)
 
-                total_loss,recon_loss,perplexity,classifier_loss,classifier_outputs = extendModel(data,targets)
+        if ((epoch + 1)%50==0):
+            torch.save(model, "../models2/筛查重构/VQ-VAE-筛查重构-{}.pth".format(epoch + 1))
+            concat = torch.cat((data[0][0], data_recon[0][0]), 1)
+            plt.matshow(concat.cpu().detach().numpy())
+            plt.show()
 
-                predicted_labels = (classifier_outputs >= 0.5).int().squeeze()
-                val_score.append(classifier_outputs.flatten().cpu().numpy())
-                val_pred.extend(predicted_labels.cpu().numpy())
-                val_targets.extend(targets.cpu().numpy())
-
-                total_val_loss += total_loss
-                val_classifier_loss += classifier_loss
-                val_res_recon_error += recon_loss
-                val_res_perplexity += perplexity
-
-        test_score = []
-        test_pred = []
-        test_targets = []
-        total_test_loss = 0.0
-        test_classifier_loss = 0.0
-        test_res_recon_error = 0.0
-        test_res_perplexity = 0.0
-        model.eval()
-        with torch.no_grad():
-            for batch in test_loader:
-                data, targets, names = batch
-                data = torch.cat([data] * 3, dim=1)
-                data = data.to(device)
-                targets = targets.to(device)
-
-                total_loss,recon_loss,perplexity,classifier_loss,classifier_outputs = extendModel(data,targets)
-
-                predicted_labels = (classifier_outputs >= 0.5).int().view(-1)
-                test_score.append(classifier_outputs.flatten().cpu().numpy())
-                test_pred.extend(predicted_labels.cpu().numpy())
-                test_targets.extend(targets.cpu().numpy())
-
-                total_test_loss += total_loss
-                test_classifier_loss += classifier_loss
-                test_res_recon_error += recon_loss
-                test_res_perplexity += perplexity
-
-        # writer.add_scalar('Loss/Val', total_val_loss, epoch)
-
-        # if ((epoch + 1) == 167):
-        #     torch.save(model.state_dict(), "../models1/qc/VQ-VAE-resnet18-qc-第二波段增强图-{}.pth".format(epoch + 1))
         print('%d epoch' % (epoch + 1))
-        train_acc, train_sen, train_spe = all_metrics(train_targets, train_pred)
 
-        train_score = np.concatenate(train_score)  # 将列表转换为NumPy数组
-        train_targets = np.array(train_targets)
-        train_auc = roc_auc_score(train_targets, train_score)
+        print('train_recon_error: %.3f' % train_res_recon_error[epoch])
+        print('train_perplexity: %.3f' % train_res_perplexity[epoch])
 
-        print("训练集 acc: {:.4f}".format(train_acc) + " sen: {:.4f}".format(train_sen) +
-              " spe: {:.4f}".format(train_spe) + " auc: {:.4f}".format(train_auc) +
-              " loss: {:.4f}".format(train_classifier_loss) + " train_recon_loss: {:.4f}".format(train_res_recon_error)
-              + " train_perplexity: {:.4f}".format(train_res_perplexity))
-
-        val_acc, val_sen, val_spe = all_metrics(val_targets, val_pred)
-
-        val_score = np.concatenate(val_score)  # 将列表转换为NumPy数组
-        val_targets = np.array(val_targets)
-        val_auc = roc_auc_score(val_targets, val_score)
-
-        print("验证集 acc: {:.4f}".format(val_acc) + " sen: {:.4f}".format(val_sen) +
-              " spe: {:.4f}".format(val_spe) + " auc: {:.4f}".format(val_auc) +
-              " loss: {:.4f}".format(val_classifier_loss) + " val_recon_loss: {:.4f}".format(val_res_recon_error)
-              + " val_perplexity: {:.4f}".format(val_res_perplexity))
-
-        test_acc, test_sen, test_spe = all_metrics(test_targets, test_pred)
-
-        test_score = np.concatenate(test_score)  # 将列表转换为NumPy数组
-        test_targets = np.array(test_targets)
-        test_auc = roc_auc_score(test_targets, test_score)
-
-        print("测试集 acc: {:.4f}".format(test_acc) + " sen: {:.4f}".format(test_sen) +
-              " spe: {:.4f}".format(test_spe) + " auc: {:.4f}".format(test_auc) +
-              " loss: {:.4f}".format(test_classifier_loss) + " test_recon_loss: {:.4f}".format(test_res_recon_error)
-              + " test_perplexity: {:.4f}".format(test_res_perplexity))
-    writer.close()
     # 结束训练时间
     end_time = time.time()
     training_time = end_time - start_time

@@ -407,7 +407,7 @@ if __name__ == '__main__':
 
 
 
-    model = torch.load("../models1/VQ-Resnet/VQ-VAE-筛查-rezize448.pth", map_location=device)
+    model = torch.load("../models2/筛查重构/VQ-VAE-筛查重构-200.pth", map_location=device)
 
     for param in model.parameters():
         param.requires_grad = True
@@ -533,8 +533,8 @@ if __name__ == '__main__':
 
         # writer.add_scalar('Loss/Val', total_val_loss, epoch)
 
-        if ((epoch + 1) == 89):
-            torch.save(extendModel.state_dict(), "../models1/VQ-Resnet/筛查+分类+resize448-{}.pth".format(epoch + 1))
+        if ((epoch + 1) == 66 or (epoch + 1) == 70 or (epoch + 1) == 74 or (epoch + 1) == 76 or (epoch + 1) == 89):
+            torch.save(extendModel.state_dict(), "../models2/筛查重构+分类/筛查重构+分类-{}.pth".format(epoch + 1))
         # if ((epoch + 1)%10 == 0):
         #     concat = torch.cat((data[0][0],data_recon[0][0]), 1)
         #     plt.matshow(concat.cpu().detach().numpy())

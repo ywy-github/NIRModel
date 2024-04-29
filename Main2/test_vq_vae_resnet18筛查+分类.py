@@ -338,26 +338,23 @@ if __name__ == '__main__':
                              shuffle=True,
                              pin_memory=True)
 
-    encoder = models.resnet18(pretrained=True)
-    for param in encoder.parameters():
-        param.requires_grad = False
+    model = torch.load("../models2/筛查重构/VQ-VAE-筛查重构-200.pth", map_location=device)
 
-    for name, param in encoder.named_parameters():
-        if "layer3" in name:
-            param.requires_grad = True
-        if "layer4" in name:
-            param.requires_grad = True
-        if "fc" in name:
-            param.requires_grad = True
-
-    encoder = nn.Sequential(*list(encoder.children())[:-2])
-
-    model = Model(encoder, num_embeddings, embedding_dim, commitment_cost, decay).to(device)
-    model.load_state_dict(torch.load('../models2/筛查+分类/筛查+分类+resize448-89.pth'))
+    for param in model.parameters():
+        param.requires_grad = True
+    # for name, param in model.named_parameters():
+    #     if "6" in name:
+    #         param.requires_grad = True
+    #     if "7" in name:
+    #         param.requires_grad = True
+    #     if "_vq_vae" in name:
+    #         param.requires_grad = True
+    #     if "_decoder" in name:
+    #         param.requires_grad = True
 
     extendModel = ExtendedModel(model).to(device)
 
-
+    extendModel.load_state_dict(torch.load('../models2/筛查重构+分类/筛查重构+分类-66.pth'))
 
     criterion = WeightedBinaryCrossEntropyLoss(2)
     criterion.to(device)
@@ -404,4 +401,4 @@ if __name__ == '__main__':
           "spe: {:.4f}".format(test_spe)+ " auc: {:.4f}".format(test_auc) + "loss: {:.4f}".format(np.mean(total_test_loss[-10:])))
 
     df = pd.DataFrame(test_results)
-    # df.to_excel("../models1/result/VQ-Resnet18二期双十_train.xlsx", index=False)
+    df.to_excel("../models2/筛查重构+分类_excels/筛查重构+分类-66.xlsx", index=False)

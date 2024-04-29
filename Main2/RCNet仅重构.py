@@ -180,17 +180,17 @@ class Encoder(nn.Module):
         self.b1 = nn.Sequential(
             nn.Conv2d(1, 2, kernel_size=3, stride=1, padding=1),
             nn.ReLU(),
-            nn.MaxPool2d(kernel_size=2, stride=2, padding=1)
+            nn.MaxPool2d(kernel_size=2, stride=2)
         )
         self.b2 = nn.Sequential(
             nn.Conv2d(2, 4, kernel_size=3, stride=1, padding=1),
             nn.ReLU(),
-            nn.MaxPool2d(kernel_size=2, stride=2, padding=1)
+            nn.MaxPool2d(kernel_size=2, stride=2)
         )
         self.b3 = nn.Sequential(
             nn.Conv2d(4, 8, kernel_size=3, stride=1, padding=1),
             nn.ReLU(),
-            nn.MaxPool2d(kernel_size=2, stride=2, padding=1)
+            nn.MaxPool2d(kernel_size=2, stride=2)
         )
 
     def forward(self, inputs):
@@ -308,8 +308,8 @@ if __name__ == '__main__':
     batch_size = 16
     epochs = 1000
 
-    embedding_dim = 64
-    num_embeddings = 512  # 和encoder输出维度相同，和decoder输入维度相同
+    embedding_dim = 8
+    num_embeddings = 56  # 和encoder输出维度相同，和decoder输入维度相同
 
     commitment_cost = 0.25
 
@@ -353,7 +353,6 @@ if __name__ == '__main__':
         model.train()
         for batch in training_loader:
             data, targets, dcm_names = batch
-            data = torch.cat([data] * 3, dim=1)
             data = data.to(device)
             optimizer.zero_grad()
 
@@ -372,7 +371,7 @@ if __name__ == '__main__':
 
 
         if ((epoch + 1)%100==0):
-            torch.save(model, "../models2/Vq-VAE-resnet18仅重构/Vq-VAE-resnet18仅重构-{}.pth".format(epoch + 1))
+            torch.save(model, "../models2/RCNet/RCNet仅重构-{}.pth".format(epoch + 1))
         print('%d epoch' % (epoch + 1))
 
         print('train_recon_error: %.3f' % train_res_recon_error[epoch])

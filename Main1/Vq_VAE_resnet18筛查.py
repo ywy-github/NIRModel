@@ -397,7 +397,7 @@ if __name__ == '__main__':
         writer.add_scalar('Loss/Train', recon_loss, epoch)
 
         if ((epoch + 1)%50==0):
-            torch.save(model, "../models1/result/VQ-VAE-筛查-{}.pth".format(epoch + 1))
+            torch.save(model, "../models1/result/VQ-VAE-筛查重构-{}.pth".format(epoch + 1))
         print('%d epoch' % (epoch + 1))
 
         print('train_recon_error: %.3f' % train_res_recon_error[epoch])

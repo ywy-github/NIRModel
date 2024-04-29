@@ -34,6 +34,12 @@ Vq-VAE-resnet18仅重构+分类器  300
 验证集 acc: 0.6857 sen: 0.4455 spe: 0.7991 auc: 0.6747 loss: 17.2704
 测试集 acc: 0.6655 sen: 0.3448 spe: 0.8115 auc: 0.6318 loss: 15.8368
 
+RCNet+分类器 300
+151 epoch
+训练集 acc: 0.9820 sen: 0.9902 spe: 0.9780 auc: 0.9992 loss: 5.9874
+验证集 acc: 0.6698 sen: 0.5050 spe: 0.7477 auc: 0.6710 loss: 34.9338
+测试集 acc: 0.6871 sen: 0.5287 spe: 0.7592 auc: 0.6687 loss: 32.9578
+
 resnet18
 8 epoch
 训练集 acc: 0.7288 sen: 0.6743 spe: 0.7551 auc: 0.7994 loss: 46.6210
@@ -66,5 +72,26 @@ DenseNet
 
 
 
+筛查数据迁移：
+66 epoch
+训练集 acc: 0.9936 sen: 0.9967 spe: 0.9922 auc: 0.9999 loss: 0.9052 train_recon_loss: 123.9385 train_perplexity: 16509.3164
+验证集 acc: 0.7238 sen: 0.5149 spe: 0.8224 auc: 0.7261 loss: 55.8944 val_recon_loss: 38.4076 val_perplexity: 5731.7031
+测试集 acc: 0.7770 sen: 0.5862 spe: 0.8639 auc: 0.7576 loss: 44.8144 test_recon_loss: 35.8708 test_perplexity: 5027.3335
+70 epoch
+训练集 acc: 0.9989 sen: 1.0000 spe: 0.9984 auc: 1.0000 loss: 0.2184 train_recon_loss: 123.4794 train_perplexity: 16843.4844
+验证集 acc: 0.7302 sen: 0.3663 spe: 0.9019 auc: 0.7050 loss: 70.5629 val_recon_loss: 37.8846 val_perplexity: 5863.6289
+测试集 acc: 0.7734 sen: 0.4598 spe: 0.9162 auc: 0.7574 loss: 52.4442 test_recon_loss: 35.2689 test_perplexity: 5161.7671
+74 epoch
+训练集 acc: 1.0000 sen: 1.0000 spe: 1.0000 auc: 1.0000 loss: 0.1349 train_recon_loss: 124.1569 train_perplexity: 16603.5879
+验证集 acc: 0.7238 sen: 0.4950 spe: 0.8318 auc: 0.7232 loss: 61.0545 val_recon_loss: 38.5027 val_perplexity: 5906.1592
+测试集 acc: 0.7770 sen: 0.5862 spe: 0.8639 auc: 0.7566 loss: 47.3695 test_recon_loss: 35.3688 test_perplexity: 5185.8379
+76 epoch
+训练集 acc: 1.0000 sen: 1.0000 spe: 1.0000 auc: 1.0000 loss: 0.1054 train_recon_loss: 124.0503 train_perplexity: 16535.6484
+验证集 acc: 0.7302 sen: 0.4752 spe: 0.8505 auc: 0.7241 loss: 63.8775 val_recon_loss: 38.2297 val_perplexity: 5947.2856
+测试集 acc: 0.7734 sen: 0.5402 spe: 0.8796 auc: 0.7531 loss: 48.7854 test_recon_loss: 36.0584 test_perplexity: 5194.1729
+89 epoch
+训练集 acc: 1.0000 sen: 1.0000 spe: 1.0000 auc: 1.0000 loss: 0.1626 train_recon_loss: 125.3542 train_perplexity: 15888.4033
+验证集 acc: 0.7333 sen: 0.5248 spe: 0.8318 auc: 0.7390 loss: 63.3438 val_recon_loss: 38.3974 val_perplexity: 5680.9429
+测试集 acc: 0.7842 sen: 0.6092 spe: 0.8639 auc: 0.7718 loss: 47.1276 test_recon_loss: 35.8307 test_perplexity: 4968.9258
 
 

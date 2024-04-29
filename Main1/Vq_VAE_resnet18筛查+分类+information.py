@@ -428,7 +428,7 @@ if __name__ == '__main__':
 
 
 
-    model = torch.load("../models1/VQ-Resnet/VQ-VAE-筛查-rezize448.pth", map_location=device)
+    model = torch.load("../models1/VQ-Resnet/VQ-VAE-筛查重构-rezize448.pth", map_location=device)
 
     for param in model.parameters():
         param.requires_grad = False
