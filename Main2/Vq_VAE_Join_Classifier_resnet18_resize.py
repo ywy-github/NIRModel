@@ -367,22 +367,22 @@ if __name__ == '__main__':
         transforms.Normalize((0.3281,), (0.2366,))  # 设置均值和标准差
     ])
 
-    train_benign_data = MyData("../data/一期数据/train/benign", "benign", transform=transform)
-    train_malignat_data = MyData("../data/一期数据/train/malignant", "malignant", transform=transform)
+    train_benign_data = MyData("../data/qc后二期数据/train/wave1/benign", "benign", transform=transform)
+    train_malignat_data = MyData("../data/qc后二期数据/train/wave1/malignant", "malignant", transform=transform)
     train_data = train_benign_data + train_malignat_data
 
-    val_benign_data = MyData("../data/一期数据/val/benign", "benign", transform=transform)
-    val_malignat_data = MyData("../data/一期数据/val/malignant", "malignant", transform=transform)
+    val_benign_data = MyData("../data/qc后二期数据/val/wave1/benign", "benign", transform=transform)
+    val_malignat_data = MyData("../data/qc后二期数据/val/wave1/malignant", "malignant", transform=transform)
     val_data = val_benign_data + val_malignat_data
 
-    test_benign_data = MyData("../data/一期数据/test/benign", "benign", transform=transform)
-    test_malignat_data = MyData("../data/一期数据/test/malignant", "malignant", transform=transform)
+    test_benign_data = MyData("../data/qc后二期数据/test/wave1/benign", "benign", transform=transform)
+    test_malignat_data = MyData("../data/qc后二期数据/test/wave1/malignant", "malignant", transform=transform)
     test_data = test_benign_data + test_malignat_data
 
     training_loader = DataLoader(train_data,
                                  batch_size=batch_size,
                                  shuffle=True,
-                                 num_workers=6,
+                                 num_workers=1,
                                  persistent_workers=True,
                                  pin_memory=True
                                  )
@@ -390,7 +390,7 @@ if __name__ == '__main__':
     validation_loader = DataLoader(val_data,
                                    batch_size=batch_size,
                                    shuffle=True,
-                                   num_workers=6,
+                                   num_workers=1,
                                    persistent_workers=True,
                                    pin_memory=True
                                   )
@@ -398,7 +398,7 @@ if __name__ == '__main__':
     test_loader = DataLoader(test_data,
                                    batch_size=batch_size,
                                    shuffle=True,
-                                   num_workers=6,
+                                   num_workers=1,
                                    persistent_workers=True,
                                    pin_memory=True
                                    )
@@ -422,7 +422,7 @@ if __name__ == '__main__':
     model = Model(encoder,num_embeddings, embedding_dim, commitment_cost, decay).to(device)
 
 
-    criterion = WeightedBinaryCrossEntropyLoss(2)
+    criterion = WeightedBinaryCrossEntropyLoss(1.1)
     # criterion = WeightedBinaryCrossEntropyLossWithRegularization(2, 0.01)
     criterion.to(device)
     optimizer = optim.Adam(filter(lambda p: p.requires_grad, model.parameters()), lr=learning_rate, amsgrad=False)
@@ -530,8 +530,8 @@ if __name__ == '__main__':
                 test_res_perplexity.append(perplexity.item())
         # writer.add_scalar('Loss/Val', total_val_loss, epoch)
 
-        if ((epoch + 1) == 16 or (epoch + 1) == 18 or (epoch + 1) == 26 or (epoch + 1) == 28 or (epoch + 1) == 29):
-            torch.save(model.state_dict(),"../models2/VQ-Resnet18/VQ-VAE-resnet18-{}.pth".format(epoch + 1))
+        # if ((epoch + 1) == 45 or (epoch + 1) == 51 or (epoch + 1) == 62 or (epoch + 1) == 79 or (epoch + 1) == 80):
+        #     torch.save(model.state_dict(),"../models3/VQ-Resnet18/VQ-VAE-resnet18-{}.pth".format(epoch + 1))
         print('%d epoch' % (epoch + 1))
 
         train_acc, train_sen, train_spe = all_metrics(train_targets, train_pred)

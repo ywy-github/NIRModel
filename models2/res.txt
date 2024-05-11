@@ -28,13 +28,13 @@ VQ-VAE-resnet18-data1-resize448
 测试集 acc: 0.7374 sen: 0.6437 spe: 0.7801 auc: 0.7618 loss: 27.9149
 
 
-Vq-VAE-resnet18仅重构+分类器  300
+Vq-VAE-resnet18仅重构+分类器  300   不微调，直接接分类器
 71 epoch
 训练集 acc: 0.6335 sen: 0.4919 spe: 0.7017 auc: 0.6616 loss: 50.8907
 验证集 acc: 0.6857 sen: 0.4455 spe: 0.7991 auc: 0.6747 loss: 17.2704
 测试集 acc: 0.6655 sen: 0.3448 spe: 0.8115 auc: 0.6318 loss: 15.8368
 
-RCNet+分类器 300
+RCNet+分类器 300    对称结构  编码器和解码器各三个
 151 epoch
 训练集 acc: 0.9820 sen: 0.9902 spe: 0.9780 auc: 0.9992 loss: 5.9874
 验证集 acc: 0.6698 sen: 0.5050 spe: 0.7477 auc: 0.6710 loss: 34.9338
@@ -72,7 +72,7 @@ DenseNet
 
 
 
-筛查数据迁移：
+筛查重构+分类联合学习： 接分类器和重构器联合学习
 66 epoch
 训练集 acc: 0.9936 sen: 0.9967 spe: 0.9922 auc: 0.9999 loss: 0.9052 train_recon_loss: 123.9385 train_perplexity: 16509.3164
 验证集 acc: 0.7238 sen: 0.5149 spe: 0.8224 auc: 0.7261 loss: 55.8944 val_recon_loss: 38.4076 val_perplexity: 5731.7031
@@ -94,4 +94,9 @@ DenseNet
 验证集 acc: 0.7333 sen: 0.5248 spe: 0.8318 auc: 0.7390 loss: 63.3438 val_recon_loss: 38.3974 val_perplexity: 5680.9429
 测试集 acc: 0.7842 sen: 0.6092 spe: 0.8639 auc: 0.7718 loss: 47.1276 test_recon_loss: 35.8307 test_perplexity: 4968.9258
 
+筛查重构+分类   只接分类器进行微调
+32 epoch
+训练集 acc: 0.9968 sen: 0.9967 spe: 0.9969 auc: 0.9999 loss: 0.9804
+验证集 acc: 0.7333 sen: 0.4455 spe: 0.8692 auc: 0.7401 loss: 47.5728
+测试集 acc: 0.7333 sen: 0.4455 spe: 0.8692 auc: 0.7401 loss: 46.5717
 

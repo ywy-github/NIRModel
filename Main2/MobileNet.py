@@ -56,16 +56,16 @@ if __name__ == '__main__':
         transforms.Normalize((0.3281,), (0.2366,))  # 设置均值和标准差
     ])
 
-    train_benign_data = MyData("../data/一期数据/train/benign", "benign", transform=transform)
-    train_malignat_data = MyData("../data/一期数据/train/malignant", "malignant", transform=transform)
+    train_benign_data = MyData("../data/qc后二期数据/train/wave1/benign", "benign", transform=transform)
+    train_malignat_data = MyData("../data/qc后二期数据/train/wave1/malignant", "malignant", transform=transform)
     train_data = train_benign_data + train_malignat_data
 
-    val_benign_data = MyData("../data/一期数据/val/benign", "benign", transform=transform)
-    val_malignat_data = MyData("../data/一期数据/val/malignant", "malignant", transform=transform)
+    val_benign_data = MyData("../data/qc后二期数据/val/wave1/benign", "benign", transform=transform)
+    val_malignat_data = MyData("../data/qc后二期数据/val/wave1/malignant", "malignant", transform=transform)
     val_data = val_benign_data + val_malignat_data
 
-    test_benign_data = MyData("../data/一期数据/test/benign", "benign", transform=transform)
-    test_malignat_data = MyData("../data/一期数据/test/malignant", "malignant", transform=transform)
+    test_benign_data = MyData("../data/qc后二期数据/test/wave1/benign", "benign", transform=transform)
+    test_malignat_data = MyData("../data/qc后二期数据/test/wave1/malignant", "malignant", transform=transform)
     test_data = test_benign_data + test_malignat_data
 
     training_loader = DataLoader(train_data,
@@ -110,7 +110,7 @@ if __name__ == '__main__':
     for param in model.parameters():
         param.requires_grad = True
 
-    criterion = WeightedBinaryCrossEntropyLoss(2)
+    criterion = WeightedBinaryCrossEntropyLoss(1.1)
 
     optimizer = optim.Adam(filter(lambda p: p.requires_grad, model.parameters()), lr=learning_rate, amsgrad=False)
 
@@ -184,17 +184,17 @@ if __name__ == '__main__':
                 test_pred.extend(predicted_labels.cpu().numpy())
                 test_targets.extend(targets.cpu().numpy())
 
-                if ((epoch + 1) == 13):
+                if ((epoch + 1) == 26):
                     for i in range(len(dcm_names)):
                         test_results.append({'dcm_name': dcm_names[i], 'pred': classifier_outputs[i].item(),
                                              'prob': predicted_labels[i].item(), 'label': targets[i].item()})
 
-        if ((epoch + 1) == 13):
+        if ((epoch + 1) == 26):
             # torch.save(model.state_dict(), "../models2/Vq-VAE-resnet18仅重构+分类器/Vq-VAE-resnet18仅重构+分类器-{}.pth".format(epoch + 1))
             # 记录每个样本的dcm_name、预测概率值和标签
 
             df = pd.DataFrame(test_results)
-            filename = '../models2/excels/MobileNet-13.xlsx'
+            filename = '../models3/excels/MobileNet-26.xlsx'
 
             # 检查文件是否存在
             if not os.path.isfile(filename):

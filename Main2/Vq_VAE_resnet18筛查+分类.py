@@ -1,8 +1,10 @@
 from __future__ import print_function
 
+import os
 import time
 
 import matplotlib.pyplot as plt
+import pandas as pd
 from six.moves import xrange
 
 import torch.nn as nn
@@ -282,12 +284,12 @@ class ExtendedModel(nn.Module):
 
     def forward(self, x):
         z = self.model._encoder(x)
-        loss, quantized, perplexity, _ = self.model._vq_vae(z)
-        classifier_output = self.classifier(quantized.view(quantized.size(0),-1))
-        x_recon = self.model._decoder(quantized)
+        # loss, quantized, perplexity, _ = self.model._vq_vae(z)
+        classifier_output = self.classifier(z.view(z.size(0),-1))
+        # x_recon = self.model._decoder(quantized)
 
 
-        return loss, x_recon, perplexity, classifier_output
+        return classifier_output
 
 
 # 定义联合模型的损失函数
@@ -376,8 +378,8 @@ if __name__ == '__main__':
     val_malignat_data = MyData("../data/一期数据/val/malignant", "malignant", transform=transform)
     val_data = val_benign_data + val_malignat_data
 
-    test_benign_data = MyData("../data/一期数据/test/benign", "benign", transform=transform)
-    test_malignat_data = MyData("../data/一期数据/test/malignant", "malignant", transform=transform)
+    test_benign_data = MyData("../data/一期数据/val/benign", "benign", transform=transform)
+    test_malignat_data = MyData("../data/一期数据/val/malignant", "malignant", transform=transform)
     test_data = test_benign_data + test_malignat_data
 
 
@@ -446,14 +448,11 @@ if __name__ == '__main__':
             targets = targets.to(device)
             optimizer.zero_grad()
 
-            vq_loss, data_recon, perplexity, classifier_outputs = extendModel(data)
+            classifier_outputs = extendModel(data)
 
-            data_variance = torch.var(data)
-            recon_loss = F.mse_loss(data_recon, data) / data_variance
             classifier_loss = criterion(targets.view(-1, 1), classifier_outputs)
-            total_loss = joint_loss_function(recon_loss, vq_loss, classifier_loss, lambda_recon, lambda_vq,
-                                             lambda_classifier)
-            total_loss.backward()
+
+            classifier_loss.backward()
             optimizer.step()
             # scheduler.step()
 
@@ -462,10 +461,9 @@ if __name__ == '__main__':
             train_pred.extend(predicted_labels.cpu().numpy())
             train_targets.extend(targets.cpu().numpy())
 
-            total_train_loss += total_loss
+
             train_classifier_loss += classifier_loss
-            train_res_recon_error += recon_loss
-            train_res_perplexity += perplexity
+
         # writer.add_scalar('Loss/Train', total_train_loss, epoch)
         val_score = []
         val_pred = []
@@ -481,27 +479,25 @@ if __name__ == '__main__':
                 data = torch.cat([data] * 3, dim=1)
                 data = data.to(device)
                 targets = targets.to(device)
-                vq_loss, data_recon, perplexity, classifier_outputs = extendModel(data)
+                classifier_outputs = extendModel(data)
 
-                data_variance = torch.var(data)
-                recon_loss = F.mse_loss(data_recon, data) / data_variance
+
                 classifier_loss = criterion(targets.view(-1, 1), classifier_outputs)
-                total_loss = joint_loss_function(recon_loss, vq_loss, classifier_loss, lambda_recon, lambda_vq,
-                                                 lambda_classifier)
+
 
                 predicted_labels = (classifier_outputs >= 0.5).int().squeeze()
                 val_score.append(classifier_outputs.flatten().cpu().numpy())
                 val_pred.extend(predicted_labels.cpu().numpy())
                 val_targets.extend(targets.cpu().numpy())
 
-                total_val_loss += total_loss
+
                 val_classifier_loss += classifier_loss
-                val_res_recon_error += recon_loss
-                val_res_perplexity += perplexity
+
 
         test_score = []
         test_pred = []
         test_targets = []
+        test_results = []
         total_test_loss = 0.0
         test_classifier_loss = 0.0
         test_res_recon_error = 0.0
@@ -513,28 +509,44 @@ if __name__ == '__main__':
                 data = torch.cat([data] * 3, dim=1)
                 data = data.to(device)
                 targets = targets.to(device)
-                vq_loss, data_recon, perplexity, classifier_outputs = extendModel(data)
+                classifier_outputs = extendModel(data)
 
-                data_variance = torch.var(data)
-                recon_loss = F.mse_loss(data_recon, data) / data_variance
+
                 classifier_loss = criterion(targets.view(-1, 1), classifier_outputs)
-                total_loss = joint_loss_function(recon_loss, vq_loss, classifier_loss, lambda_recon, lambda_vq,
-                                                 lambda_classifier)
+
 
                 predicted_labels = (classifier_outputs >= 0.5).int().view(-1)
                 test_score.append(classifier_outputs.flatten().cpu().numpy())
                 test_pred.extend(predicted_labels.cpu().numpy())
                 test_targets.extend(targets.cpu().numpy())
 
-                total_test_loss += total_loss
+
                 test_classifier_loss += classifier_loss
-                test_res_recon_error += recon_loss
-                test_res_perplexity += perplexity
+                if ((epoch + 1) == 32):
+                    for i in range(len(names)):
+                        test_results.append({'dcm_name': names[i], 'pred': classifier_outputs[i].item(),
+                                             'prob': predicted_labels[i].item(), 'label': targets[i].item()})
+
+        if ((epoch + 1) == 32):
+            # torch.save(model.state_dict(), "../models2/Vq-VAE-resnet18仅重构+分类器/Vq-VAE-resnet18仅重构+分类器-{}.pth".format(epoch + 1))
+            # 记录每个样本的dcm_name、预测概率值和标签
+
+            df = pd.DataFrame(test_results)
+            filename = '../models2/excels/筛查重构+分类联合学习-32.xlsx'
+
+            # 检查文件是否存在
+            if not os.path.isfile(filename):
+                # 如果文件不存在，创建新文件并保存数据到 Sheet1
+                df.to_excel(filename, sheet_name='test', index=False)
+            else:
+                # 如果文件已经存在，打开现有文件并保存数据到 Sheet2
+                with pd.ExcelWriter(filename, engine='openpyxl', mode='a') as writer:
+                    df.to_excel(writer, sheet_name='test', index=False)
 
         # writer.add_scalar('Loss/Val', total_val_loss, epoch)
 
-        if ((epoch + 1) == 66 or (epoch + 1) == 70 or (epoch + 1) == 74 or (epoch + 1) == 76 or (epoch + 1) == 89):
-            torch.save(extendModel.state_dict(), "../models2/筛查重构+分类/筛查重构+分类-{}.pth".format(epoch + 1))
+        # if ((epoch + 1) == 64 or (epoch + 1) == 66 or (epoch + 1) == 67 or (epoch + 1) == 100 or (epoch + 1) == 102):
+        #     torch.save(extendModel.state_dict(), "../models3/筛查重构+分类联合学习/筛查重构+分类联合学习-{}.pth".format(epoch + 1))
         # if ((epoch + 1)%10 == 0):
         #     concat = torch.cat((data[0][0],data_recon[0][0]), 1)
         #     plt.matshow(concat.cpu().detach().numpy())
@@ -550,8 +562,7 @@ if __name__ == '__main__':
 
         print("训练集 acc: {:.4f}".format(train_acc) + " sen: {:.4f}".format(train_sen) +
               " spe: {:.4f}".format(train_spe) + " auc: {:.4f}".format(train_auc) +
-              " loss: {:.4f}".format(train_classifier_loss) + " train_recon_loss: {:.4f}".format(train_res_recon_error)
-              + " train_perplexity: {:.4f}".format(train_res_perplexity))
+              " loss: {:.4f}".format(train_classifier_loss) )
 
         val_acc, val_sen, val_spe = all_metrics(val_targets, val_pred)
 
@@ -561,8 +572,7 @@ if __name__ == '__main__':
 
         print("验证集 acc: {:.4f}".format(val_acc) + " sen: {:.4f}".format(val_sen) +
               " spe: {:.4f}".format(val_spe) + " auc: {:.4f}".format(val_auc) +
-              " loss: {:.4f}".format(val_classifier_loss) + " val_recon_loss: {:.4f}".format(val_res_recon_error)
-              + " val_perplexity: {:.4f}".format(val_res_perplexity))
+              " loss: {:.4f}".format(val_classifier_loss))
 
         test_acc, test_sen, test_spe = all_metrics(test_targets, test_pred)
 
@@ -572,8 +582,7 @@ if __name__ == '__main__':
 
         print("测试集 acc: {:.4f}".format(test_acc) + " sen: {:.4f}".format(test_sen) +
               " spe: {:.4f}".format(test_spe) + " auc: {:.4f}".format(test_auc) +
-              " loss: {:.4f}".format(test_classifier_loss) + " test_recon_loss: {:.4f}".format(test_res_recon_error)
-              + " test_perplexity: {:.4f}".format(test_res_perplexity))
+              " loss: {:.4f}".format(test_classifier_loss))
     writer.close()
     # 结束训练时间
     end_time = time.time()
