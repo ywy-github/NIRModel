@@ -329,8 +329,8 @@ if __name__ == '__main__':
         transforms.Normalize((0.3281,), (0.2366,))  # 设置均值和标准差
     ])
 
-    test_benign_data = MyData("../data/qc后二期数据/test/wave1/benign", "benign", transform=transform)
-    test_malignat_data = MyData("../data/qc后二期数据/test/wave1/malignant", "malignant", transform=transform)
+    test_benign_data = MyData("../data/一期数据/test/benign", "benign", transform=transform)
+    test_malignat_data = MyData("../data/一期数据/test/malignant", "malignant", transform=transform)
     test_data = test_benign_data + test_malignat_data
 
     test_loader = DataLoader(test_data,
@@ -354,7 +354,7 @@ if __name__ == '__main__':
 
     extendModel = ExtendedModel(model).to(device)
 
-    extendModel.load_state_dict(torch.load('../models3/筛查重构+分类联合学习/筛查重构+分类联合学习-102.pth'))
+    extendModel.load_state_dict(torch.load('../models2/筛查重构+分类联合学习/筛查重构+分类-89.pth'))
 
     criterion = WeightedBinaryCrossEntropyLoss(2)
     criterion.to(device)
@@ -399,6 +399,6 @@ if __name__ == '__main__':
 
     print("测试集 acc: {:.4f}".format(test_acc) + "sen: {:.4f}".format(test_sen) +
           "spe: {:.4f}".format(test_spe)+ " auc: {:.4f}".format(test_auc) + "loss: {:.4f}".format(np.mean(total_test_loss[-10:])))
-
-    df = pd.DataFrame(test_results)
-    df.to_excel("../models3/筛查重构+分类联合学习_excels/筛查重构+分类联合学习-102.xlsx", index=False)
+    #
+    # df = pd.DataFrame(test_results)
+    # df.to_excel("../models3/筛查重构+分类联合学习_excels/筛查重构+分类联合学习-102.xlsx", index=False)

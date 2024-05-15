@@ -106,10 +106,10 @@ class DoubleTreeChannels(Dataset):
         self.image_path2 = os.path.join(self.path2, name)
         self.image_path3 = os.path.join(self.path3, name)
         self.image_path4 = os.path.join(self.path4, name)
-        img1 = Image.open(self.image_path1)
-        img2 = Image.open(self.image_path2)
-        img3 = Image.open(self.image_path3)
-        img4 = Image.open(self.image_path4)
+        img1 = Image.open(self.image_path1).convert('L')
+        img2 = Image.open(self.image_path2).convert('L')
+        img3 = Image.open(self.image_path3).convert('L')
+        img4 = Image.open(self.image_path4).convert('L')
 
         if self.transform:
             img1 = self.transform(img1)

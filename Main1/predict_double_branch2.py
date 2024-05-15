@@ -257,7 +257,7 @@ class Model(nn.Module):
             self._vq_vae2 = VectorQuantizer(num_embeddings, embedding_dim,
                                             commitment_cost)
 
-        self.classifier = Classifier(1024,512,1)
+        self.classifier = Classifier(200704, 512, 1)
 
         self._decoder1 = Decoder()
         self._decoder2 = Decoder()
@@ -273,61 +273,17 @@ class Model(nn.Module):
         loss2, quantized2, perplexity2, _ = self._vq_vae2(z2)
         quantized = torch.cat([quantized1, quantized2], dim=1)
 
-        features = self.Avg(quantized)
-        classifier_outputs = self.classifier(features.view(features.size(0),-1))
+        feature = quantized.view(quantized.size(0), -1)
+
+        # 拼接到展平后的特征上
+        # combined_features = torch.cat((feature,one_hot_cup_sizes), dim=1)
+
+        classifier_outputs = self.classifier(feature)
 
         x_recon1 = self._decoder1(quantized1)
         x_recon2 = self._decoder2(quantized2)
 
         return loss1,loss2,x_recon1,x_recon2,perplexity1,perplexity2,classifier_outputs
-
-# 定义联合模型的损失函数
-def joint_loss_function(recon_loss1,recon_loss2, vq_loss1,vq_loss2, classifier_loss,
-                        lambda_recon1,lambda_recon2, lambda_vq1,lambda_vq2,lambda_classifier):
-    # 总损失
-    total_loss = lambda_recon1 * recon_loss1 + lambda_vq1 * vq_loss1 + lambda_classifier * classifier_loss + \
-                 lambda_recon2 * recon_loss2 + lambda_vq2 * vq_loss2
-
-    return total_loss
-
-# 定义自定义损失函数，加权二进制交叉熵
-class WeightedBinaryCrossEntropyLoss(nn.Module):
-    def __init__(self, weight_positive):
-        super(WeightedBinaryCrossEntropyLoss, self).__init__()
-        self.weight_positive = weight_positive
-
-    def forward(self, y_true, y_pred):
-        y_true = y_true.to(dtype=torch.float32)
-        loss = - (self.weight_positive * y_true * torch.log(y_pred + 1e-7) + (1 - y_true) * torch.log(1 - y_pred + 1e-7))
-        return torch.mean(loss)
-
-# 定义 Focal Loss
-class WeightedBinaryCrossEntropyLossWithRegularization(nn.Module):
-    def __init__(self, weight_positive, lambda_reg):
-        super(WeightedBinaryCrossEntropyLossWithRegularization, self).__init__()
-        self.weight_positive = weight_positive
-        self.lambda_reg = lambda_reg  # 正则化系数
-
-    def forward(self, y_true, y_pred, model):
-        y_true = y_true.to(dtype=torch.float32)
-        bce_loss = - (self.weight_positive * y_true * torch.log(y_pred + 1e-7) + (1 - y_true) * torch.log(1 - y_pred + 1e-7))
-        bce_loss = torch.mean(bce_loss)
-
-        # 添加L2正则化项
-        reg_loss = 0.0
-        for param in model.parameters():
-            reg_loss += torch.norm(param, p=2)
-
-        total_loss = bce_loss + self.lambda_reg * reg_loss
-
-        return total_loss
-def mixup_data(x, y, alpha=1.0):
-    lam = np.random.beta(alpha, alpha)
-    batch_size = x.size()[0]
-    index = torch.randperm(batch_size)
-    mixed_x = lam * x + (1 - lam) * x[index, :]
-    y_a, y_b = y, y[index]
-    return mixed_x, y_a, y_b, lam
 
 def pred(NIR_path,origin_img1_path,enhanced_img2_path,origin_img2_path,work_dir):
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -367,7 +323,7 @@ def pred(NIR_path,origin_img1_path,enhanced_img2_path,origin_img2_path,work_dir)
     encoder2 = nn.Sequential(*list(encoder2.children())[:-2])
 
     model = Model(encoder1, encoder2, num_embeddings, embedding_dim, commitment_cost, decay).to(device)
-    model_path = work_dir + 'resnet18-双路径-增-增-相减-原-原-相减-57.pth'
+    model_path = work_dir + '一期+二期-100.pth'
     model.load_state_dict(torch.load(model_path,map_location=device))
 
     # 读取四种图片，分别是第一波段增强图，第一波段原始图，第二波段增强图，第二波段原始图
@@ -394,3 +350,18 @@ def pred(NIR_path,origin_img1_path,enhanced_img2_path,origin_img2_path,work_dir)
         _,_,_, _,_, _,classifier_outputs = model(data_path1,data_path2)
         # print("Predicted Probability:", "{:.6f}".format(classifier_outputs.item()))
     return classifier_outputs.detach().cpu().numpy().item()
+
+
+if __name__ == '__main__':
+    image_name = "020-ZSSYX-00305-CWME-202203240949-双波段-L-D.bmp"
+    # 读取四种图片，分别是第一波段增强图，第一波段原始图，第二波段增强图，第二波段原始图
+
+    NIR_path = "../data/一期+二期/test/wave1/benign/" + image_name
+    origin_img1_path = "../data/一期+二期/test/wave2/benign/" + image_name
+    enhanced_img2_path = "../data/一期+二期/test/wave3/benign/" + image_name
+    origin_img2_path = "../data/一期+二期/test/wave4/benign/" + image_name
+
+    work_dir = "../models1/package/"
+
+    classifier_outputs = pred(NIR_path,origin_img1_path,enhanced_img2_path,origin_img2_path,work_dir)
+    print("Predicted Probability:", "{:.6f}".format(classifier_outputs))

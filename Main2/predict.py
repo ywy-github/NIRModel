@@ -1,25 +1,11 @@
 from __future__ import print_function
-
-import os
-import time
-
-import pandas as pd
-
-
 import torch.nn as nn
 import torch.nn.functional as F
-from sklearn.metrics import roc_auc_score
-
-from torch.utils.data import DataLoader
-
-from torchvision import transforms, models
+from PIL import Image
 import torch
-
+from torchvision import transforms, models
 import numpy as np
 
-
-from Metrics import all_metrics
-from data_loader import MyData, DoubleTreeChannels
 
 
 class VectorQuantizer(nn.Module):
@@ -231,6 +217,8 @@ class Decoder(nn.Module):
         x = self.deconv5(x)
         return x
 
+
+
 class Classifier(nn.Module):
     def __init__(self, input_dim, hidden_dim, num_classes):
         super(Classifier, self).__init__()
@@ -249,223 +237,100 @@ class Classifier(nn.Module):
         return x
 
 class Model(nn.Module):
-    def __init__(self,encoder1,encoder2,num_embeddings, embedding_dim, commitment_cost, decay=0):
+    def __init__(self,encoder,num_embeddings, embedding_dim, commitment_cost, decay=0):
         super(Model, self).__init__()
 
-        self._encoder1 = encoder1
-        self._encoder2 = encoder2
+        self._encoder = encoder
         # self._pre_vq_conv = nn.Conv2d(in_channels=num_hiddens,
         #                               out_channels=embedding_dim,
         #                               kernel_size=1,
         #                               stride=1)
         if decay > 0.0:
-            self._vq_vae1 = VectorQuantizerEMA(num_embeddings, embedding_dim,
-                                              commitment_cost, decay)
-            self._vq_vae2 = VectorQuantizerEMA(num_embeddings, embedding_dim,
+            self._vq_vae = VectorQuantizerEMA(num_embeddings, embedding_dim,
                                               commitment_cost, decay)
         else:
-            self._vq_vae1 = VectorQuantizer(num_embeddings, embedding_dim,
+            self._vq_vae = VectorQuantizer(num_embeddings, embedding_dim,
                                            commitment_cost)
-            self._vq_vae2 = VectorQuantizer(num_embeddings, embedding_dim,
-                                            commitment_cost)
 
-        self.classifier = Classifier(200704, 512, 1)
+        self.classifier = Classifier(512*14*14,512,1)
 
-        self._decoder1 = Decoder()
-        self._decoder2 = Decoder()
+        self._decoder = Decoder()
 
-        self.Avg = nn.AdaptiveMaxPool2d(1)
-
-    def forward(self, data1,data2):
-        z1 = self._encoder1(data1)
-        z2 = self._encoder2(data2)
-
+    def forward(self, x):
+        z = self._encoder(x)
         # z = self._pre_vq_conv(z)
-        loss1, quantized1, perplexity1, _ = self._vq_vae1(z1)
-        loss2, quantized2, perplexity2, _ = self._vq_vae2(z2)
-        quantized = torch.cat([quantized1, quantized2], dim=1)
+        loss, quantized, perplexity, _ = self._vq_vae(z)
+        x_recon = self._decoder(quantized)
 
-        feature = quantized.view(quantized.size(0), -1)
+        return loss, x_recon, perplexity, classifier_outputs
 
-        # 拼接到展平后的特征上
-        # combined_features = torch.cat((feature,one_hot_cup_sizes), dim=1)
+class ExtendedModel(nn.Module):
+    def __init__(self, model):
+        super(ExtendedModel, self).__init__()
+        self.model = model
+        self.classifier = Classifier(512*14*14, 512,1)
 
-        classifier_outputs = self.classifier(feature)
+    def forward(self, x):
+        z = self.model._encoder(x)
+        loss, quantized, perplexity, _ = self.model._vq_vae(z)
+        classifier_output = self.classifier(quantized.view(quantized.size(0),-1))
+        x_recon = self.model._decoder(quantized)
+        return loss, x_recon, perplexity, classifier_output
 
-        x_recon1 = self._decoder1(quantized1)
-        x_recon2 = self._decoder2(quantized2)
-
-        return loss1,loss2,x_recon1,x_recon2,perplexity1,perplexity2,classifier_outputs
-
-
-def joint_loss_function(recon_loss1,recon_loss2, vq_loss1,vq_loss2, classifier_loss,
-                        lambda_recon1,lambda_recon2, lambda_vq1,lambda_vq2,lambda_classifier):
-    # 总损失
-    total_loss = lambda_recon1 * recon_loss1 + lambda_vq1 * vq_loss1 + lambda_classifier * classifier_loss + \
-                 lambda_recon2 * recon_loss2 + lambda_vq2 * vq_loss2
-
-    return total_loss
-# 定义自定义损失函数，加权二进制交叉熵
-class WeightedBinaryCrossEntropyLoss(nn.Module):
-    def __init__(self, weight_positive):
-        super(WeightedBinaryCrossEntropyLoss, self).__init__()
-        self.weight_positive = weight_positive
-
-    def forward(self, y_true, y_pred):
-        y_true = y_true.to(dtype=torch.float32)
-        loss = - (self.weight_positive * y_true * torch.log(y_pred + 1e-7) + (1 - y_true) * torch.log(1 - y_pred + 1e-7))
-        return torch.mean(loss)
-if __name__ == '__main__':
+def pred(image_path,work_dir1,work_dir2):
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-    batch_size = 16
-    epochs = 1000
+    model_path = work_dir1 + 'VQ-VAE-筛查重构-200.pth'
+    model = torch.load(model_path, map_location=device)
 
-    embedding_dim = 64
-    num_embeddings = 512  # 和encoder输出维度相同，和decoder输入维度相同
+    for param in model.parameters():
+        param.requires_grad = True
+    # for name, param in model.named_parameters():
+    #     if "6" in name:
+    #         param.requires_grad = True
+    #     if "7" in name:
+    #         param.requires_grad = True
+    #     if "_vq_vae" in name:
+    #         param.requires_grad = True
+    #     if "_decoder" in name:
+    #         param.requires_grad = True
 
-    commitment_cost = 0.25
+    extendModel = ExtendedModel(model).to(device)
 
-    decay = 0.99
 
-    learning_rate = 1e-5
 
-    lambda_recon1 = 0.1
-    lambda_vq1 = 0.1
-    lambda_classifier = 0.6
+    extendModel_path = work_dir2 + '筛查重构+分类-89.pth'
 
-    lambda_recon2 = 0.1
-    lambda_vq2 = 0.1
+    extendModel.load_state_dict(torch.load(extendModel_path))
 
-    # 读取数据集
+    # 读取四种图片，分别是第一波段增强图，第一波段原始图，第二波段增强图，第二波段原始图
+    images = Image.open(image_path)
+
     transform = transforms.Compose([
         transforms.Resize([448,448]),
         transforms.ToTensor(),
         transforms.Normalize((0.3281,), (0.2366,))  # 设置均值和标准差
     ])
-    fold_data = "一期+二期"
-    test_benign_data = DoubleTreeChannels("../data/" + fold_data + "/train/wave1/benign",
-                                          "../data/" + fold_data + "/train/wave2/benign",
-                                          "../data/" + fold_data + "/train/wave3/benign",
-                                          "../data/" + fold_data + "/train/wave4/benign",
-                                          "benign",
-                                          transform=transform)
 
-    test_malignant_data = DoubleTreeChannels(
-        "../data/" + fold_data + "/train/wave1/malignant",
-        "../data/" + fold_data + "/train/wave2/malignant",
-        "../data/" + fold_data + "/train/wave3/malignant",
-        "../data/" + fold_data + "/train/wave4/malignant",
-        "malignant",
-        transform=transform)
-
-    test_data = test_benign_data + test_malignant_data
+    images = transform(images).unsqueeze(0).to(device)
 
 
-    test_loader = DataLoader(test_data,
-                                   batch_size=batch_size,
-                                   shuffle=True
-                                   )
-
-    # 设置encoder
-    encoder1 = models.resnet18(pretrained=True)
-    for param in encoder1.parameters():
-        param.requires_grad = False
-
-    for name, param in encoder1.named_parameters():
-        if "layer3" in name:
-            param.requires_grad = True
-        if "layer4" in name:
-            param.requires_grad = True
-        if "fc" in name:
-            param.requires_grad = True
-
-    encoder1 = nn.Sequential(*list(encoder1.children())[:-2])
-
-    encoder2 = models.resnet18(pretrained=True)
-    for param in encoder2.parameters():
-        param.requires_grad = False
-
-    for name, param in encoder2.named_parameters():
-        if "layer3" in name:
-            param.requires_grad = True
-        if "layer4" in name:
-            param.requires_grad = True
-        if "fc" in name:
-            param.requires_grad = True
-
-    encoder2 = nn.Sequential(*list(encoder2.children())[:-2])
-
-    model = Model(encoder1, encoder2, num_embeddings, embedding_dim, commitment_cost, decay).to(device)
-
-    model.load_state_dict(torch.load('../models1/package/一期+二期-100.pth'))
-
-    criterion = WeightedBinaryCrossEntropyLoss(2)
-    criterion.to(device)
-
-    test_pred = []
-    test_predictions = []
-    test_targets = []
-    test_results = []
-    total_test_loss = []
-    model.eval()
     with torch.no_grad():
-        for batch in test_loader:
-            data1, data2, data3, data4, targets, dcm_names = batch
-            data_path1 = torch.cat([data1, data3, data1 - data3], dim=1)
-            data_path2 = torch.cat([data2, data4, data2 - data4], dim=1)
-            data_path1 = data_path1.to(device)
-            data_path2 = data_path2.to(device)
-            targets = targets.to(device)
+        extendModel.eval()  # 确保模型处于评估模式
+        images = torch.cat([images] * 3, dim=1)
+        _,_,_,classifier_outputs = extendModel(images)
+        # print("Predicted Probability:", "{:.6f}".format(classifier_outputs.item()))
+    return classifier_outputs.detach().cpu().numpy().item()
 
-            vq_loss1, vq_loss2, data_recon1, data_recon2, perplexity1, perplexity2, classifier_outputs = model(
-                data_path1, data_path2)
 
-            data_variance1 = torch.var(data_path1)
-            recon_loss1 = F.mse_loss(data_recon1, data_path1) / data_variance1
+if __name__ == '__main__':
+    image_name = "021-SHZL-00104-MYF-201712190850-D.bmp"
+    # 读取四种图片，分别是第一波段增强图，第一波段原始图，第二波段增强图，第二波段原始图
 
-            classifier_loss = criterion(targets.view(-1, 1), classifier_outputs)
+    image_path = "../data/一期数据/test/malignant/" + image_name
 
-            data_variance2 = torch.var(data_path2)
-            recon_loss2 = F.mse_loss(data_recon2, data_path2) / data_variance2
+    work_dir1 = "../models2/筛查重构/"
+    work_dir2 = "../models2/筛查重构+分类联合学习/"
 
-            total_loss = joint_loss_function(recon_loss1, recon_loss2, vq_loss1, vq_loss2, classifier_loss,
-                                             lambda_recon1, lambda_recon2, lambda_vq1, lambda_vq2, lambda_classifier
-                                             )
-
-            predicted_labels =  (classifier_outputs >= 0.5).int().view(-1)
-            # 记录每个样本的dcm_name、预测概率值和标签
-            for i in range(len(dcm_names)):
-                test_results.append({'dcm_name': dcm_names[i], 'pred': classifier_outputs[i].item(),
-                                     'prob': predicted_labels[i].item(), 'label': targets[i].item()})
-            test_predictions.extend(predicted_labels.cpu().numpy())
-            test_targets.extend(targets.cpu().numpy())
-            total_test_loss.append(total_loss.item())
-            test_pred.append(classifier_outputs.flatten().cpu().numpy())
-            # concat = torch.cat((data[0].view(128, 128),
-            #                     data_recon[0].view(128, 128)), 1)
-            # plt.matshow(concat.cpu().detach().numpy())
-            # plt.show()
-
-    test_acc, test_sen, test_spe = all_metrics(test_targets, test_predictions)
-
-    test_pred = np.concatenate(test_pred)  # 将列表转换为NumPy数组
-    test_targets = np.array(test_targets)
-    test_auc = roc_auc_score(test_targets, test_pred)
-
-    print("测试集 acc: {:.4f}".format(test_acc) + "sen: {:.4f}".format(test_sen) +
-          "spe: {:.4f}".format(test_spe) + " auc: {:.4f}".format(test_auc) + "loss: {:.4f}".format(
-        np.mean(total_test_loss[-10:])))
-
-    df = pd.DataFrame(test_results)
-    filename = '../models1/package/一期+二期.xlsx'
-
-    # # 检查文件是否存在
-    if not os.path.isfile(filename):
-        # 如果文件不存在，创建新文件并保存数据到 Sheet1
-        df.to_excel(filename, sheet_name='train', index=False)
-    else:
-        # 如果文件已经存在，打开现有文件并保存数据到 Sheet2
-        with pd.ExcelWriter(filename, engine='openpyxl', mode='a') as writer:
-            df.to_excel(writer, sheet_name='train', index=False)
-
+    classifier_outputs = pred(image_path,work_dir1,work_dir2)
+    print("Predicted Probability:", "{:.6f}".format(classifier_outputs))
