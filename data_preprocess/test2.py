@@ -11,8 +11,8 @@ if __name__ == "__main__":
 
     # 设置文件夹路径
 
-    source_dir = '../data/第二波段原始图/benign'  # 原始图片所在文件夹
-    target_dir = '../data/二期双十+双十五/train/wave4/benign'  # 目标文件夹，复制图片到这里
+    source_dir = '../data/一期数据/test/malignant'  # 原始图片所在文件夹
+    target_dir = '../data/一期+二期/test/wave4/malignant'  # 目标文件夹，复制图片到这里
 
     # 确保目标文件夹存在
     if not os.path.exists(target_dir):
