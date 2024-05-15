@@ -9,34 +9,33 @@ from openpyxl import Workbook
 
 if __name__ == "__main__":
 
-    # 读取Excel文件
-    excel_file = "../data/info.xlsx"
-    df_train = pd.read_excel(excel_file, sheet_name="train")
-    df_val = pd.read_excel(excel_file, sheet_name="val")
-    df_test = pd.read_excel(excel_file, sheet_name="test")
+    # 设置文件夹路径
 
-    # 获取所有常规灯板的图片名字
-    all_images = set(df_train['dcm_name']).union(set(df_val['dcm_name']), set(df_test['dcm_name']))
+    source_dir = '../data/二期双10双15第二波段原始图'  # 原始图片所在文件夹
+    nir1_dir = '../data/二期双十+双十五/train/wave1/malignant'  # NIR1图片所在文件夹
+    target_dir = '../data/二期双十+双十五/train/wave4/malignant'  # 目标文件夹，复制图片到这里
 
-    # 原始文件夹路径
-    original_folder_path = "../data/qc前二期双十常规灯板"
+    # 确保目标文件夹存在
+    if not os.path.exists(target_dir):
+        os.makedirs(target_dir)
 
-    # 遍历qc后二期数据文件夹
-    for folder_name in ["train", "val", "test"]:
-        folder_path = os.path.join(original_folder_path, folder_name)
-        if os.path.exists(folder_path):
-            for wave_folder in os.listdir(folder_path):
-                wave_folder_path = os.path.join(folder_path, wave_folder)
-                if os.path.isdir(wave_folder_path):
-                    for label_folder in os.listdir(wave_folder_path):
-                        label_folder_path = os.path.join(wave_folder_path, label_folder)
-                        if os.path.isdir(label_folder_path):
-                            for image_name in os.listdir(label_folder_path):
-                                # 检查图片是否为常规灯板的图片，如果不是则删除
-                                if image_name not in all_images:
-                                    image_path = os.path.join(label_folder_path, image_name)
-                                    os.remove(image_path)
-                                    print(f"Deleted {image_path}")
+        # 遍历原始文件夹中的所有文件
+    for filename in os.listdir(source_dir):
+        # 检查文件是否为图片（这里假设所有文件都是图片，或者您可以添加检查逻辑）
+        if os.path.isfile(os.path.join(source_dir, filename)):
+            # 检查NIR1文件夹中是否有同名文件
+            if os.path.exists(os.path.join(nir1_dir, filename)):
+                # 构造源文件和目标文件的完整路径
+                source_file = os.path.join(source_dir, filename)
+                target_file = os.path.join(target_dir, filename)
+
+                # 复制文件
+                shutil.copy2(source_file, target_file)  # copy2会尝试保留文件的元数据
+                print(f"Copied {source_file} to {target_file}")
+            else:
+                print(f"No matching file found in {nir1_dir} for {filename}")
+
+    print("All matching files have been copied.")
 
 
 

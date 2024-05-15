@@ -245,6 +245,8 @@ class Classifier(nn.Module):
             nn.ReLU(),
             nn.Dropout(0.5),
             nn.Linear(hidden_dim // 2, num_classes),
+            nn.ReLU(),
+            nn.Dropout(0.5),
             nn.Sigmoid()
         )
     def forward(self, x):
