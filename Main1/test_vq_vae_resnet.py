@@ -307,7 +307,7 @@ if __name__ == '__main__':
     ])
 
     test_benign_data = MyData("../data/一期数据/train/benign", "benign", transform=transform)
-    test_malignat_data = MyData("../data/一期数据/train/malignant", "malignant", transform=transform)
+    test_malignat_data = MyData("../data/一期数据/train/malignant", "benign", transform=transform)
     test_data = test_benign_data + test_malignat_data
 
     test_loader = DataLoader(test_data,

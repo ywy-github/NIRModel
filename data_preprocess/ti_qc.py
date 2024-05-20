@@ -18,7 +18,7 @@ if __name__ == '__main__':
         new_qc = row['new_qc']
 
         # 构建图片路径
-        img_path = os.path.join(base_folder, 'benign' if tumor_nature == 0 else 'malignant', dcm_name)
+        img_path = os.path.join(base_folder, 'benign' if tumor_nature == 0 else 'benign', dcm_name)
 
         # 检查是否合格
         if new_qc != '合格':

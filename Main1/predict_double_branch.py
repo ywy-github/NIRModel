@@ -395,10 +395,10 @@ if __name__ == '__main__':
     image_name = "020-ZSSYX-02087-LILI-202308181107-R-D.bmp"
 
     # 读取四种图片，分别是第一波段增强图，第一波段原始图，第二波段增强图，第二波段原始图
-    image1 = Image.open("../data/ti_二期双十wave1/test/malignant/"+image_name)
-    image2 = Image.open("../data/ti_二期双十wave1原始图/test/malignant/"+image_name)
-    image3 = Image.open("../data/ti_二期双十wave2/test/malignant/"+image_name)
-    image4 = Image.open("../data/ti_二期双十wave2原始图/test/malignant/"+image_name)
+    image1 = Image.open("../data/ti_二期双十wave1/test/benign/"+image_name)
+    image2 = Image.open("../data/ti_二期双十wave1原始图/test/benign/"+image_name)
+    image3 = Image.open("../data/ti_二期双十wave2/test/benign/"+image_name)
+    image4 = Image.open("../data/ti_二期双十wave2原始图/test/benign/"+image_name)
 
     transform = transforms.Compose([
         transforms.Resize([448,448]),

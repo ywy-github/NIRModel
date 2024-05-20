@@ -10,7 +10,7 @@ def get_data(input_path, label):
     data = []
     labels = []
 
-    for folder in ['benign', 'malignant']:
+    for folder in ['benign', 'benign']:
         folder_path = os.path.join(input_path, folder)
         image_names = os.listdir(folder_path)
 

@@ -333,8 +333,8 @@ if __name__ == '__main__':
     test_benign_data = TreeChannels("../data/ti_二期双十wave1原始图/val/benign",
                                      "../data/ti_二期双十wave2原始图/val/benign", "benign",
                                      transform=transform)
-    test_malignat_data = TreeChannels("../data/ti_二期双十wave1原始图/val/malignant",
-                                       "../data/ti_二期双十wave2原始图/val/malignant", "malignant",
+    test_malignat_data = TreeChannels("../data/ti_二期双十wave1原始图/val/benign",
+                                       "../data/ti_二期双十wave2原始图/val/benign", "benign",
                                        transform=transform)
     test_data = test_benign_data + test_malignat_data
 

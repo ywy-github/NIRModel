@@ -278,7 +278,7 @@ class PairedDataset(Dataset):
         self.root_dir = root_dir
         self.transform = transform
         self.enum_dict = {
-            'benign': 0 , 'malignant': 1
+            'benign': 0 , 'benign': 1
         }
         self.samples = self._load_samples()
     def _load_samples(self):

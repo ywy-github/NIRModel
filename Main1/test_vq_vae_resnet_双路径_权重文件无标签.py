@@ -346,10 +346,10 @@ if __name__ == '__main__':
                                           "../data/省肿瘤493wave2原始图",
                                           transform=transform)
 
-    # test_malignant_data = DoubleTreeChannels("../data/ti_二期双十+双十五wave1/train/malignant",
-    #                                          "../data/ti_二期双十+双十五wave1原始图/train/malignant",
-    #                                          "../data/ti_二期双十+双十五wave2/train/malignant",
-    #                                          "../data/ti_二期双十+双十五wave2原始图/train/malignant",
+    # test_malignant_data = DoubleTreeChannels("../data/ti_二期双十+双十五wave1/train/benign",
+    #                                          "../data/ti_二期双十+双十五wave1原始图/train/benign",
+    #                                          "../data/ti_二期双十+双十五wave2/train/benign",
+    #                                          "../data/ti_二期双十+双十五wave2原始图/train/benign",
     #                                          transform=transform)
 
     # test_data = test_benign_data + test_malignant_data

@@ -353,8 +353,6 @@ if __name__ == '__main__':
 
     decay = 0.99
 
-    weight_positive = 2  # 调整这个权重以提高对灵敏度的重视
-
     learning_rate = 1e-5
 
     lambda_recon = 0.2
@@ -368,16 +366,16 @@ if __name__ == '__main__':
         transforms.Normalize((0.3281,), (0.2366,))  # 设置均值和标准差
     ])
 
-    train_benign_data = MyData("../data/qc后二期数据/train/wave1/benign", "benign", transform=transform)
-    train_malignat_data = MyData("../data/qc后二期数据/train/wave1/malignant", "malignant", transform=transform)
+    train_benign_data = MyData("../data/一期数据/train/benign", "benign", transform=transform)
+    train_malignat_data = MyData("../data/一期数据/train/malignant", "benign", transform=transform)
     train_data = train_benign_data + train_malignat_data
 
-    val_benign_data = MyData("../data/qc后二期数据/val/wave1/benign", "benign", transform=transform)
-    val_malignat_data = MyData("../data/qc后二期数据/val/wave1/malignant", "malignant", transform=transform)
+    val_benign_data = MyData("../data/一期数据/val/benign", "benign", transform=transform)
+    val_malignat_data = MyData("../data/一期数据/val/malignant", "benign", transform=transform)
     val_data = val_benign_data + val_malignat_data
 
-    test_benign_data = MyData("../data/qc后二期数据/test/wave1/benign", "benign", transform=transform)
-    test_malignat_data = MyData("../data/qc后二期数据/test/wave1/malignant", "malignant", transform=transform)
+    test_benign_data = MyData("../data/一期数据/test/benign", "benign", transform=transform)
+    test_malignat_data = MyData("../data/一期数据/test/malignant", "benign", transform=transform)
     test_data = test_benign_data + test_malignat_data
 
 
@@ -407,7 +405,7 @@ if __name__ == '__main__':
 
 
 
-    model = torch.load("../models2/筛查重构/VQ-VAE-筛查重构-200.pth", map_location=device)
+    model = torch.load("../models/VQ-VAE-筛查重构-200.pth", map_location=device)
 
     for param in model.parameters():
         param.requires_grad = True
@@ -423,13 +421,10 @@ if __name__ == '__main__':
 
     extendModel = ExtendedModel(model).to(device)
 
-    criterion = WeightedBinaryCrossEntropyLoss(2)
+    criterion = WeightedBinaryCrossEntropyLoss(2)  # 调整这个权重以提高对灵敏度的重视
     criterion.to(device)
     optimizer = optim.Adam(filter(lambda p: p.requires_grad, extendModel.parameters()), lr=learning_rate, amsgrad=False)
-    # scheduler = StepLR(optimizer,50,0.1)
 
-    start_time = time.time()  # 记录训练开始时间
-    writer = SummaryWriter("../Logs")
     for epoch in range(epochs):
         extendModel.train()
         train_score = []
@@ -531,15 +526,10 @@ if __name__ == '__main__':
                 test_res_recon_error += recon_loss
                 test_res_perplexity += perplexity
 
-        # writer.add_scalar('Loss/Val', total_val_loss, epoch)
+        # 训练的时候注释掉下边保存模型的代码，之后二次训练根据选择的epoch来保存模型
 
-        if ((epoch + 1) == 64 or (epoch + 1) == 66 or (epoch + 1) == 67 or (epoch + 1) == 100 or (epoch + 1) == 102):
-            torch.save(extendModel.state_dict(), "../models3/筛查重构+分类联合学习/筛查重构+分类联合学习-{}.pth".format(epoch + 1))
-        # if ((epoch + 1)%10 == 0):
-        #     concat = torch.cat((data[0][0],data_recon[0][0]), 1)
-        #     plt.matshow(concat.cpu().detach().numpy())
-        #     plt.show()
-
+        # if ((epoch + 1) == 64 or (epoch + 1) == 66):
+        #     torch.save(extendModel.state_dict(), "../models3/筛查重构+分类联合学习/筛查重构+分类联合学习-{}.pth".format(epoch + 1))
 
         print('%d epoch' % (epoch + 1))
         train_acc, train_sen, train_spe = all_metrics(train_targets, train_pred)
@@ -574,12 +564,7 @@ if __name__ == '__main__':
               " spe: {:.4f}".format(test_spe) + " auc: {:.4f}".format(test_auc) +
               " loss: {:.4f}".format(test_classifier_loss) + " test_recon_loss: {:.4f}".format(test_res_recon_error)
               + " test_perplexity: {:.4f}".format(test_res_perplexity))
-    writer.close()
-    # 结束训练时间
-    end_time = time.time()
-    training_time = end_time - start_time
 
-    print(f"Training time: {training_time} seconds")
 
 
 

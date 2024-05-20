@@ -310,7 +310,7 @@ if __name__ == '__main__':
     ])
 
     test_benign_data = MyData("../data/一期数据/test/benign", "benign", transform=transform)
-    test_malignat_data = MyData("../data/一期数据/test/malignant", "malignant", transform=transform)
+    test_malignat_data = MyData("../data/一期数据/test/malignant", "benign", transform=transform)
     test_data = test_benign_data + test_malignat_data
 
     test_loader = DataLoader(test_data,

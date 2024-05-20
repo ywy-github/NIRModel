@@ -339,12 +339,12 @@ if __name__ == '__main__':
     ])
 
     val_benign_data = MyData("../data/一期数据/new_val/benign", "benign", transform=transform)
-    val_malignat_data = MyData("../data/一期数据/new_val/malignant", "malignant",transform=transform)
+    val_malignat_data = MyData("../data/一期数据/new_val/malignant", "benign",transform=transform)
     # val_data = val_benign_data + val_malignat_data
 
 
     # test_benign_data = MyData("../data/筛查有病理数据_一期_52例/test_clahe/benign", "benign", transform=transform)
-    test_malignat_data = MyData("../data/筛查有病理数据_一期_52例/test_clahe/malignant", "malignant", transform=transform)
+    test_malignat_data = MyData("../data/筛查有病理数据_一期_52例/test_clahe/benign", "benign", transform=transform)
     # test_data = test_benign_data + test_malignat_data
 
     val_benign_loader = DataLoader(val_benign_data,

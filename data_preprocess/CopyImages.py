@@ -12,8 +12,8 @@ source_images = os.listdir(source_folder)
 for set_folder in ["train", "val", "test"]:
     set_path = os.path.join("../data/ti_二期双十+双十五wave1", set_folder)
 
-    # 遍历 benign 和 malignant 文件夹
-    for class_folder in ["benign", "malignant"]:
+    # 遍历 benign 和 benign 文件夹
+    for class_folder in ["benign", "benign"]:
         class_path = os.path.join(set_path, class_folder)
 
         # 遍历每个文件夹中的图像文件

@@ -385,12 +385,12 @@ if __name__ == '__main__':
     #                                                       transform=transform)
     #
     # test_malignant_data = DoubleTreeChannelsOtherInformation(
-    #     "../data/NIR-lincls-D10-wave/val/wave1/malignant/images",
-    #     "../data/NIR-lincls-D10-wave/val/wave2/malignant/images",
-    #     "../data/NIR-lincls-D10-wave/val/wave3/malignant/images",
-    #     "../data/NIR-lincls-D10-wave/val/wave4/malignant/images",
-    #     "../data/NIR-lincls-D10-wave/val/malignant.xlsx",
-    #     "malignant",
+    #     "../data/NIR-lincls-D10-wave/val/wave1/benign/images",
+    #     "../data/NIR-lincls-D10-wave/val/wave2/benign/images",
+    #     "../data/NIR-lincls-D10-wave/val/wave3/benign/images",
+    #     "../data/NIR-lincls-D10-wave/val/wave4/benign/images",
+    #     "../data/NIR-lincls-D10-wave/val/benign.xlsx",
+    #     "benign",
     #     transform=transform)
     #
     #
@@ -405,12 +405,12 @@ if __name__ == '__main__':
                                                           transform=transform)
 
     test_malignant_data = DoubleTreeChannelsOtherInformation(
-        "../data/qc后二期数据/train/wave1/malignant",
-        "../data/qc后二期数据/train/wave2/malignant",
-        "../data/qc后二期数据/train/wave3/malignant",
-        "../data/qc后二期数据/train/wave4/malignant",
-        "../data/qc后二期数据/train/malignant.xlsx",
-        "malignant",
+        "../data/qc后二期数据/train/wave1/benign",
+        "../data/qc后二期数据/train/wave2/benign",
+        "../data/qc后二期数据/train/wave3/benign",
+        "../data/qc后二期数据/train/wave4/benign",
+        "../data/qc后二期数据/train/benign.xlsx",
+        "benign",
         transform=transform)
 
     test_data = test_benign_data + test_malignant_data

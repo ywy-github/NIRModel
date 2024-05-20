@@ -368,15 +368,15 @@ if __name__ == '__main__':
     ])
 
     train_benign_data_448 = MyData("../data/一期数据/train+clahe/benign", "benign", transform=transform1)
-    train_malignat_data_448 = MyData("../data/一期数据/train+clahe/malignant", "malignant", transform=transform1)
+    train_malignat_data_448 = MyData("../data/一期数据/train+clahe/malignant", "benign", transform=transform1)
     train_data_448 = train_benign_data_448 + train_malignat_data_448
 
     train_benign_data_512 = MyData("../data/一期数据/train+clahe/benign", "benign", transform=transform2)
-    train_malignat_data_512 = MyData("../data/一期数据/train+clahe/malignant", "malignant", transform=transform2)
+    train_malignat_data_512 = MyData("../data/一期数据/train+clahe/malignant", "benign", transform=transform2)
     train_data_512 = train_benign_data_512 + train_malignat_data_512
 
     val_benign_data = MyData("../data/一期数据/new_val/benign", "benign", transform=transform1)
-    val_malignat_data = MyData("../data/一期数据/new_val/malignant", "malignant", transform=transform1)
+    val_malignat_data = MyData("../data/一期数据/new_val/malignant", "benign", transform=transform1)
     val_data = val_benign_data + val_malignat_data
 
 

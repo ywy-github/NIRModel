@@ -379,11 +379,11 @@ if __name__ == '__main__':
                                            "benign",
                                            transform=transform)
 
-    train_malignant_data = DoubleTreeChannels("../data/ti_二期双十+双十五wave1/train/malignant",
-                                              "../data/ti_二期双十+双十五wave1原始图/train/malignant",
-                                              "../data/ti_二期双十+双十五wave2/train/malignant",
-                                              "../data/ti_二期双十+双十五wave2原始图/train/malignant",
-                                              "malignant",
+    train_malignant_data = DoubleTreeChannels("../data/ti_二期双十+双十五wave1/train/benign",
+                                              "../data/ti_二期双十+双十五wave1原始图/train/benign",
+                                              "../data/ti_二期双十+双十五wave2/train/benign",
+                                              "../data/ti_二期双十+双十五wave2原始图/train/benign",
+                                              "benign",
                                               transform=transform)
 
     train_data = train_benign_data + train_malignant_data
@@ -395,11 +395,11 @@ if __name__ == '__main__':
                                          "benign",
                                          transform=transform)
 
-    val_malignant_data = DoubleTreeChannels("../data/ti_二期双十wave1/val/malignant",
-                                            "../data/ti_二期双十wave1原始图/val/malignant",
-                                            "../data/ti_二期双十wave2/val/malignant",
-                                            "../data/ti_二期双十wave2原始图/val/malignant",
-                                            "malignant",
+    val_malignant_data = DoubleTreeChannels("../data/ti_二期双十wave1/val/benign",
+                                            "../data/ti_二期双十wave1原始图/val/benign",
+                                            "../data/ti_二期双十wave2/val/benign",
+                                            "../data/ti_二期双十wave2原始图/val/benign",
+                                            "benign",
                                             transform=transform)
 
     val_data = val_benign_data + val_malignant_data
@@ -411,11 +411,11 @@ if __name__ == '__main__':
                                           "benign",
                                           transform=transform)
 
-    test_malignant_data = DoubleTreeChannels("../data/ti_二期双十wave1/test/malignant",
-                                             "../data/ti_二期双十wave1原始图/test/malignant",
-                                             "../data/ti_二期双十wave2/test/malignant",
-                                             "../data/ti_二期双十wave2原始图/test/malignant",
-                                             "malignant",
+    test_malignant_data = DoubleTreeChannels("../data/ti_二期双十wave1/test/benign",
+                                             "../data/ti_二期双十wave1原始图/test/benign",
+                                             "../data/ti_二期双十wave2/test/benign",
+                                             "../data/ti_二期双十wave2原始图/test/benign",
+                                             "benign",
                                              transform=transform)
 
     test_data = test_benign_data + test_malignant_data

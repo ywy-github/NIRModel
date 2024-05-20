@@ -179,7 +179,7 @@ def plot_confusion_matrix(y_true, y_prob):
     plt.imshow(cm, interpolation='nearest', cmap=plt.cm.Blues)
     # plt.title('Confusion Matrix')
     plt.colorbar()
-    classes = ["benign", "malignant"]  # 类别标签
+    classes = ["benign", "benign"]  # 类别标签
     tick_marks = np.arange(len(classes))
     plt.xticks(tick_marks, classes, rotation=45)
     plt.yticks(tick_marks, classes)

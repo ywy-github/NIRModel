@@ -19,7 +19,7 @@ class MyData(Dataset):
         self.cup_size_column = cup_size_column
 
         # 类别映射
-        self.label_mapping = {'benign': 0, 'malignant': 1}
+        self.label_mapping = {'benign': 0, 'benign': 1}
 
     def __getitem__(self, idx):
         name = self.image_path_list[idx]
@@ -42,5 +42,5 @@ if __name__ == '__main__':
     cup_size_column = 'cup_size'
 
     benign_dataset = MyData("../data/一期age_cupsize/train/benign", "benign",age_column,cup_size_column)
-    malignat_dataset = MyData("../data/一期age_cupsize/train/malignant", "malignant",age_column,cup_size_column)
+    malignat_dataset = MyData("../data/一期age_cupsize/train/malignant", "benign",age_column,cup_size_column)
     train_dataset = benign_dataset + malignat_dataset

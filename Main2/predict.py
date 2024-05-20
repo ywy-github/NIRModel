@@ -325,9 +325,9 @@ def pred(image_path,work_dir1,work_dir2):
 
 if __name__ == '__main__':
     image_name = "021-SHZL-00104-MYF-201712190850-D.bmp"
-    # 读取四种图片，分别是第一波段增强图，第一波段原始图，第二波段增强图，第二波段原始图
 
-    image_path = "../data/一期数据/test/malignant/" + image_name
+
+    image_path = "../data/一期数据/test/benign/" + image_name
 
     work_dir1 = "../models2/筛查重构/"
     work_dir2 = "../models2/筛查重构+分类联合学习/"

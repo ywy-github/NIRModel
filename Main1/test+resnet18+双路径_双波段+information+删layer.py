@@ -434,12 +434,12 @@ if __name__ == '__main__':
                                                           transform=transform)
 
     test_malignant_data = DoubleTreeChannelsOtherInformation(
-        "../data/"+fold_data+"/test/wave1/malignant",
-        "../data/"+fold_data+"/test/wave2/malignant",
-        "../data/"+fold_data+"/test/wave3/malignant",
-        "../data/"+fold_data+"/test/wave4/malignant",
-        "../data/"+fold_data+"/test/malignant.xlsx",
-        "malignant",
+        "../data/"+fold_data+"/test/wave1/benign",
+        "../data/"+fold_data+"/test/wave2/benign",
+        "../data/"+fold_data+"/test/wave3/benign",
+        "../data/"+fold_data+"/test/wave4/benign",
+        "../data/"+fold_data+"/test/benign.xlsx",
+        "benign",
         transform=transform)
 
     test_data = test_benign_data + test_malignant_data
