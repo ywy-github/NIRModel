@@ -454,7 +454,7 @@ if __name__ == '__main__':
         np.mean(total_test_loss[-10:])))
 
     df = pd.DataFrame(test_results)
-    filename = '../models1/package/二期数据.xlsx'
+    filename = '../models1/result/二期数据.xlsx'
 
     # # 检查文件是否存在
     if not os.path.isfile(filename):
