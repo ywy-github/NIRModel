@@ -269,7 +269,7 @@ class Model(nn.Module):
             self._vq_vae2 = VectorQuantizer(num_embeddings, embedding_dim,
                                             commitment_cost)
 
-        self.classifier = Classifier(200704, 512, 1)
+        self.classifier = Classifier(1024, 512, 1)
 
         self._decoder1 = Decoder()
         self._decoder2 = Decoder()
@@ -285,12 +285,8 @@ class Model(nn.Module):
         loss2, quantized2, perplexity2, _ = self._vq_vae2(z2)
         quantized = torch.cat([quantized1, quantized2], dim=1)
 
-        feature = quantized.view(quantized.size(0), -1)
-
-        # 拼接到展平后的特征上
-        # combined_features = torch.cat((feature,one_hot_cup_sizes), dim=1)
-
-        classifier_outputs = self.classifier(feature)
+        features = self.Avg(quantized)
+        classifier_outputs = self.classifier(features.view(features.size(0), -1))
 
         x_recon1 = self._decoder1(quantized1)
         x_recon2 = self._decoder2(quantized2)
@@ -343,19 +339,19 @@ if __name__ == '__main__':
         transforms.ToTensor(),
         transforms.Normalize((0.3281,), (0.2366,))  # 设置均值和标准差
     ])
-    fold_data = "一期+二期"
-    test_benign_data = DoubleTreeChannels("../data/" + fold_data + "/train/wave1/benign",
-                                          "../data/" + fold_data + "/train/wave2/benign",
-                                          "../data/" + fold_data + "/train/wave3/benign",
-                                          "../data/" + fold_data + "/train/wave4/benign",
+    fold_data = "qc前二期双十数据"
+    test_benign_data = DoubleTreeChannels("../data/" + fold_data + "/test/wave1/benign",
+                                          "../data/" + fold_data + "/test/wave2/benign",
+                                          "../data/" + fold_data + "/test/wave3/benign",
+                                          "../data/" + fold_data + "/test/wave4/benign",
                                           "benign",
                                           transform=transform)
 
     test_malignant_data = DoubleTreeChannels(
-        "../data/" + fold_data + "/train/wave1/malignant",
-        "../data/" + fold_data + "/train/wave2/malignant",
-        "../data/" + fold_data + "/train/wave3/malignant",
-        "../data/" + fold_data + "/train/wave4/malignant",
+        "../data/" + fold_data + "/test/wave1/malignant",
+        "../data/" + fold_data + "/test/wave2/malignant",
+        "../data/" + fold_data + "/test/wave3/malignant",
+        "../data/" + fold_data + "/test/wave4/malignant",
         "malignant",
         transform=transform)
 
@@ -398,7 +394,7 @@ if __name__ == '__main__':
 
     model = Model(encoder1, encoder2, num_embeddings, embedding_dim, commitment_cost, decay).to(device)
 
-    model.load_state_dict(torch.load('../models1/package/一期+二期-100.pth'))
+    model.load_state_dict(torch.load('../models1/qc/resnet18-双路径-增-增-相减-原-原-相减-57.pth'))
 
     criterion = WeightedBinaryCrossEntropyLoss(2)
     criterion.to(device)
@@ -458,14 +454,14 @@ if __name__ == '__main__':
         np.mean(total_test_loss[-10:])))
 
     df = pd.DataFrame(test_results)
-    filename = '../models1/package/一期+二期.xlsx'
+    filename = '../models1/package/二期数据.xlsx'
 
     # # 检查文件是否存在
     if not os.path.isfile(filename):
         # 如果文件不存在，创建新文件并保存数据到 Sheet1
-        df.to_excel(filename, sheet_name='train', index=False)
+        df.to_excel(filename, sheet_name='test', index=False)
     else:
         # 如果文件已经存在，打开现有文件并保存数据到 Sheet2
         with pd.ExcelWriter(filename, engine='openpyxl', mode='a') as writer:
-            df.to_excel(writer, sheet_name='train', index=False)
+            df.to_excel(writer, sheet_name='test', index=False)
 
