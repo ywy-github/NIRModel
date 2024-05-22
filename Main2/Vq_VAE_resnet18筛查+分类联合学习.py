@@ -272,7 +272,7 @@ class Model(nn.Module):
         loss, quantized, perplexity, _ = self._vq_vae(z)
         x_recon = self._decoder(quantized)
 
-        return loss, x_recon, perplexity, classifier_outputs
+        return loss, x_recon, perplexity
 
 class ExtendedModel(nn.Module):
     def __init__(self, model):

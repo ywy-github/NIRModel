@@ -22,33 +22,33 @@ def ROC_Curve(y_true,y_pred):
     plt.show()
 
 def Multi_ROC_Curve():
-    filepath = "../models2/excels"
-    # data_AlexNet = pd.read_excel(filepath + "/AlexNet-5.xlsx")
-    # data_DenseNet = pd.read_excel(filepath + "/DenseNet-13.xlsx")
-    # data_MobileNet = pd.read_excel(filepath + "/MobileNet-13.xlsx")
-    # data_Resnet18 = pd.read_excel(filepath + "/Resnet18-8.xlsx")
-    # data_Resnet50 = pd.read_excel(filepath + "/AlexNet+CNN.xlsx")
-    # data_RCNet = pd.read_excel(filepath + "/Vq-VAE-resnet18仅重构+分类器-71.xlsx")
-    data_SRCNet = pd.read_excel(filepath + "/VQ-VAE-resnet18-29.xlsx")
-    data_TSRCNet = pd.read_excel("../models2/筛查重构+分类_excels/筛查重构+分类-89.xlsx")
+    filepath = "../models3/excels2"
+    data_TransPath = pd.read_excel(filepath + "/TransPath.xlsx")
+    data_TSBN = pd.read_excel(filepath + "/TSBN.xlsx")
+    data_MobileNet = pd.read_excel(filepath + "/MobileNet-26.xlsx")
+    data_Resnet18 = pd.read_excel(filepath + "/Resnet18-8.xlsx")
+    data_Resnet50 = pd.read_excel(filepath + "/Resnet50-73.xlsx")
+    data_SelfPath = pd.read_excel(filepath + "/SelfPath.xlsx")
+    data_SSL = pd.read_excel(filepath + "SSL.xlsx")
+    data_our = pd.read_excel(filepath + "our.xlsx")
 
-    # y_true_AlexNet = data_AlexNet.loc[:, "label"]
-    # y_true_DenseNet = data_DenseNet.loc[:, "label"]
-    # y_true_MobileNet = data_MobileNet.loc[:, "label"]
-    # y_true_Resnet18 = data_Resnet18.loc[:, "label"]
-    # y_true_Resnet50 = data_Resnet50.loc[:, "label"]
-    # y_true_RCNet = data_RCNet.loc[:, "label"]
-    y_true_SRCNet = data_SRCNet.loc[:, "label"]
-    y_true_TSRCNet = data_TSRCNet.loc[:, "label"]
+    y_true_TransPath = data_TransPath.loc[:, "label"]
+    y_true_TSBN = data_TSBN.loc[:, "label"]
+    y_true_MobileNet = data_MobileNet.loc[:, "label"]
+    y_true_Resnet18 = data_Resnet18.loc[:, "label"]
+    y_true_Resnet50 = data_Resnet50.loc[:, "label"]
+    y_true_SelfPath = data_SelfPath.loc[:, "label"]
+    y_true_SSL = data_SSL.loc[:, "label"]
+    y_true_our = data_our.loc[:, "label"]
 
-    # y_scores_AlexNet = data_AlexNet.loc[:, "pred"]
-    # y_scores_DenseNet = data_DenseNet.loc[:, "pred"]
-    # y_scores_MobileNet = data_MobileNet.loc[:, "pred"]
-    # y_scores_Resnet18 = data_Resnet18.loc[:, "pred"]
-    # y_scores_Resnet50 = data_Resnet50.loc[:, "pred"]
-    # y_scores_RCNet = data_RCNet.loc[:, "pred"]
-    y_scores_SRCNet = data_SRCNet.loc[:, "pred"]
-    y_scores_TSRCNet = data_TSRCNet.loc[:, "pred"]
+    y_scores_TransPath = data_TransPath.loc[:, "pred"]
+    y_scores_TSBN = data_TSBN.loc[:, "pred"]
+    y_scores_MobileNet = data_MobileNet.loc[:, "pred"]
+    y_scores_Resnet18 = data_Resnet18.loc[:, "pred"]
+    y_scores_Resnet50 = data_Resnet50.loc[:, "pred"]
+    y_scores_SelfPath = data_SelfPath.loc[:, "pred"]
+    y_scores_SSL = data_SSL.loc[:, "pred"]
+    y_scores_our = data_our.loc[:, "pred"]
 
     # fpr_AlexNet, tpr_AlexNet, thresholds_AlexNet = roc_curve(y_true_AlexNet, y_scores_AlexNet)
     # fpr_DenseNet, tpr_DenseNet, thresholds_DenseNet = roc_curve(y_true_DenseNet,y_scores_DenseNet)
@@ -110,15 +110,15 @@ def PR_Curve(y_true,y_pred):
     plt.show()
 
 def Multi_PR_Curve():
-    filepath = "../models2/excels"
-    # data_AlexNet = pd.read_excel(filepath + "/AlexNet-5.xlsx")
-    # data_DenseNet = pd.read_excel(filepath + "/DenseNet-13.xlsx")
-    # data_MobileNet = pd.read_excel(filepath + "/MobileNet-13.xlsx")
-    # data_Resnet18 = pd.read_excel(filepath + "/Resnet18-8.xlsx")
-    # data_Resnet50 = pd.read_excel(filepath + "/AlexNet+CNN.xlsx")
-    # data_RCNet = pd.read_excel(filepath + "/Vq-VAE-resnet18仅重构+分类器-71.xlsx")
-    data_SRCNet = pd.read_excel(filepath + "/VQ-VAE-resnet18-29.xlsx")
-    data_TSRCNet = pd.read_excel("../models2/筛查重构+分类_excels/筛查重构+分类-89.xlsx")
+    filepath = "../models2/excels2"
+    data_SSL = pd.read_excel(filepath + "/SSL.xlsx")
+    data_TSBN = pd.read_excel(filepath + "/TSBN.xlsx")
+    data_MobileNet = pd.read_excel(filepath + "/MobileNet-13.xlsx")
+    data_Resnet18 = pd.read_excel(filepath + "/Resnet18-8.xlsx")
+    data_Resnet50 = pd.read_excel(filepath + "/Resnet50-16.xlsx")
+    data_SelfPath = pd.read_excel(filepath + "/SelfPath.xlsx")
+    data_TransPath = pd.read_excel(filepath + "/TransPath.xlsx")
+    data_our = pd.read_excel(filepath + "/our.xlsx")
 
     # y_true_AlexNet = data_AlexNet.loc[:, "label"]
     # y_true_DenseNet = data_DenseNet.loc[:, "label"]
@@ -232,6 +232,6 @@ if __name__ == '__main__':
     # PR_Curve(y_true,y_pred)
     # ROC_Curve(y_true,y_pred)
 
-    compute(y_true,y_prob,y_pred)
+    # compute(y_true,y_prob,y_pred)
     # Multi_PR_Curve()
-    # Multi_ROC_Curve()
+    Multi_ROC_Curve()

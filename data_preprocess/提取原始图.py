@@ -11,7 +11,7 @@ from data_preprocess.DobiImage import DubiImage
 
 if __name__ == '__main__':
     #dcm图片路径
-    fold_path = "G:\\二期双15常规灯板&小灯板"
+    fold_path = "../data/1"
     for file_name in os.listdir(fold_path):
         # if file_name == "029-XAJD-00115-YXF-201807091046-D.dcm" or\
         #         file_name == "0571-ZKYZL-S376-ZEHU-202310101624-双波段10-R.dcm" or\
@@ -29,7 +29,7 @@ if __name__ == '__main__':
 
         if mainImage1 is not None:
             # 指定保存图片的文件夹路径
-            save_folder = "G:\\二期双15第二波段原始图"
+            save_folder = "../data/1"
 
             # 确保保存文件夹存在，如果不存在则创建
             if not os.path.exists(save_folder):
