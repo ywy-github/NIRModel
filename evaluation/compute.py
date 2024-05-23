@@ -2,7 +2,7 @@ import numpy as np
 
 if __name__ == '__main__':
 
-    values = [0.6882,0.6882,0.7200,0.7010,0.7129]
+    values = [0.6882,0.6882,0.7000,0.7083,0.7129]
 
     # 计算均值
     mean = sum(values) / len(values)

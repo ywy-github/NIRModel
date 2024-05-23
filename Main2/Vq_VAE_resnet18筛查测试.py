@@ -323,7 +323,7 @@ def pred(image_path):
 
 if __name__ == '__main__':
 
-    image = "../data/筛查数据/train/benign/health_0.bmp"
+    image = "../data/筛查数据/train/benign/health_1.bmp"
 
     pred(image)
 
