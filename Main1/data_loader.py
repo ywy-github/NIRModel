@@ -11,7 +11,7 @@ class MyData(Dataset):
         self.label = label
         self.transform = transform
         self.image_path_list = os.listdir(self.path)
-        self.label_mapping = {'benign': 0, 'benign': 1}
+        self.label_mapping = {'benign': 0, 'malignant': 1}
 
     def __getitem__(self, idx):
         name = self.image_path_list[idx]
@@ -32,7 +32,7 @@ class SinglePathAndInformation(Dataset):
         self.label = label
         self.transform = transform
         self.image_path_list = os.listdir(self.path)
-        self.label_mapping = {'benign': 0, 'benign': 1}
+        self.label_mapping = {'benign': 0, 'malignant': 1}
         # 读取包含标签、年龄和罩杯信息的Excel文件
         self.df = pd.read_excel(self.excel)
     def __getitem__(self, idx):
@@ -68,7 +68,7 @@ class TreeChannels(Dataset):
         self.label = label
         self.transform = transform
         self.image_path_list = os.listdir(self.path1)
-        self.label_mapping = {'benign': 0, 'benign': 1}
+        self.label_mapping = {'benign': 0, 'malignant': 1}
 
     def __getitem__(self, idx):
         name = self.image_path_list[idx]
@@ -97,7 +97,7 @@ class DoubleTreeChannels(Dataset):
         self.label = label
         self.transform = transform
         self.image_path_list = os.listdir(self.path1)
-        self.label_mapping = {'benign': 0, 'benign': 1}
+        self.label_mapping = {'benign': 0, 'malignant': 1}
 
     def __getitem__(self, idx):
         name = self.image_path_list[idx]
@@ -132,7 +132,7 @@ class DoubleTreeChannelsOtherInformation(Dataset):
         self.label = label
         self.transform = transform
         self.image_path_list = os.listdir(self.path1)
-        self.label_mapping = {'benign': 0, 'benign': 1}
+        self.label_mapping = {'benign': 0, 'malignant': 1}
         # 读取包含标签、年龄和罩杯信息的Excel文件
         self.df = pd.read_excel(self.excel)
 

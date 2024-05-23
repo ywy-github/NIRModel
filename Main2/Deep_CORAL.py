@@ -279,7 +279,7 @@ class ExtendedModel(nn.Module):
     def __init__(self, model):
         super(ExtendedModel, self).__init__()
         self.model = model
-        self.classifier = Classifier(512*14*14,512,1)
+        self.classifier = Classifier(512*7*7,512,1)
 
     def forward(self, x):
         z = self.model._encoder(x)
@@ -311,6 +311,7 @@ class WeightedBinaryCrossEntropyLoss(nn.Module):
         loss = - (self.weight_positive * y_true * torch.log(y_pred + 1e-7) + (1 - y_true) * torch.log(1 - y_pred + 1e-7))
         return torch.mean(loss)
 
+
 class CoralLoss(nn.Module):
     def __init__(self):
         super(CoralLoss, self).__init__()
@@ -327,8 +328,11 @@ class CoralLoss(nn.Module):
         n = features.size(0)  # 样本数量
         mean = torch.mean(features, dim=0, keepdim=True)
         features = features - mean
-        cov = (features.t() @ features) / (n - 1)
+
+        features = features - mean
+        cov = features.t().mm(features) / (n - 1)
         return cov
+
 
 if __name__ == '__main__':
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -366,32 +370,32 @@ if __name__ == '__main__':
 
     # 读取数据集
     transform = transforms.Compose([
-        transforms.Resize([448, 448]),
+        transforms.Resize([224, 224]),
         transforms.ToTensor(),
         transforms.Normalize((0.3281,), (0.2366,))  # 设置均值和标准差
     ])
 
-    source_train_benign_data = MyData("../data/一期数据/train/benign", "benign", transform=transform)
-    source_train_malignat_data = MyData("../data/一期数据/train/malignant", "benign", transform=transform)
+    source_train_benign_data = MyData("../data/一期all/benign", "benign", transform=transform)
+    source_train_malignat_data = MyData("../data/一期all/malignant", "malignant", transform=transform)
     source_train_data = source_train_benign_data + source_train_malignat_data
 
-    target_train_benign_data = MyData("../data/qc后二期数据/wave1/train/benign", "benign", transform=transform)
-    target_train_malignat_data = MyData("../data/qc后二期数据/wave1/train/malignant", "benign", transform=transform)
+    target_train_benign_data = MyData("../data/qc后二期数据/train/wave1/benign", "benign", transform=transform)
+    target_train_malignat_data = MyData("../data/qc后二期数据/train/wave1/malignant", "malignant", transform=transform)
     target_train_data = target_train_benign_data + target_train_malignat_data
 
 
-    val_benign_data = MyData("../data/qc后二期数据/wave1/val/benign", "benign", transform=transform)
-    val_malignat_data = MyData("../data/qc后二期数据/wave1/val/malignant", "benign", transform=transform)
+    val_benign_data = MyData("../data/qc后二期数据/val/wave1/benign", "benign", transform=transform)
+    val_malignat_data = MyData("../data/qc后二期数据/val/wave1/malignant", "malignant", transform=transform)
     val_data = val_benign_data + val_malignat_data
 
-    test_benign_data = MyData("../data/qc后二期数据/wave1/test/benign", "benign", transform=transform)
-    test_malignat_data = MyData("../data/qc后二期数据/wave1/test/malignant", "benign", transform=transform)
+    test_benign_data = MyData("../data/qc后二期数据/test/wave1/benign", "benign", transform=transform)
+    test_malignat_data = MyData("../data/qc后二期数据/test/wave1/malignant", "malignant", transform=transform)
     test_data = test_benign_data + test_malignat_data
 
     source_training_loader = DataLoader(source_train_data,
                                  batch_size=batch_size,
                                  shuffle=True,
-                                 num_workers=4,
+                                 num_workers=2,
                                  persistent_workers=True,
                                  pin_memory=True
                                  )
@@ -399,7 +403,7 @@ if __name__ == '__main__':
     target_training_loader = DataLoader(target_train_data,
                                  batch_size=batch_size,
                                  shuffle=True,
-                                 num_workers=4,
+                                 num_workers=2,
                                  persistent_workers=True,
                                  pin_memory=True
                                  )
@@ -407,7 +411,7 @@ if __name__ == '__main__':
     validation_loader = DataLoader(val_data,
                                    batch_size=batch_size,
                                    shuffle=True,
-                                   num_workers=4,
+                                   num_workers=2,
                                    persistent_workers=True,
                                    pin_memory=True
                                   )
@@ -415,12 +419,12 @@ if __name__ == '__main__':
     test_loader = DataLoader(test_data,
                                    batch_size=batch_size,
                                    shuffle=True,
-                                   num_workers=4,
+                                   num_workers=2,
                                    persistent_workers=True,
                                    pin_memory=True
                                    )
 
-    model = torch.load("../models/VQ-VAE-筛查重构-200.pth", map_location=device)
+    model = torch.load("../models2/筛查重构/VQ-VAE-筛查重构-200.pth", map_location=device)
 
     for param in model.parameters():
         param.requires_grad = True
@@ -437,7 +441,7 @@ if __name__ == '__main__':
     extendModel = ExtendedModel(model).to(device)
 
     coral_loss = CoralLoss()
-    criterion = WeightedBinaryCrossEntropyLoss(2)  # 调整这个权重以提高对灵敏度的重视
+    criterion = WeightedBinaryCrossEntropyLoss(1.6)  # 调整这个权重以提高对灵敏度的重视
     criterion.to(device)
     optimizer = optim.Adam(filter(lambda p: p.requires_grad, extendModel.parameters()), lr=learning_rate, amsgrad=False)
 
@@ -451,11 +455,11 @@ if __name__ == '__main__':
         train_res_recon_error = 0.0
         train_res_perplexity = 0.0
 
-        source_iter = cycle(iter(source_training_loader))
-        target_iter = cycle(iter(target_training_loader))
-        for i in range(max(len(source_training_loader), len(target_training_loader))):
-            source_data, source_labels = next(source_iter)
-            target_data, _ = next(target_iter)
+        source_iter = cycle(source_training_loader)
+        target_iter = cycle(target_training_loader)
+        for i in range(len(source_training_loader)):
+            source_data, source_labels,_ = next(source_iter)
+            target_data, _,_ = next(target_iter)
 
             source_data = torch.cat([source_data] * 3, dim=1)
             source_data = source_data.to(device)
