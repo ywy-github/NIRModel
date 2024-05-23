@@ -333,6 +333,7 @@ class CoralLoss(nn.Module):
         cov = features.t().mm(features) / (n - 1)
         return cov
 
+
 class MMDLoss(nn.Module):
     def __init__(self, kernel_mul=2.0, kernel_num=5, fix_sigma=None):
         super(MMDLoss, self).__init__()
@@ -341,30 +342,39 @@ class MMDLoss(nn.Module):
         self.fix_sigma = fix_sigma
 
     def forward(self, source, target):
-        batch_size = int(source.size()[0])
+        if source.dim() != 2 or target.dim() != 2:
+            raise ValueError("Input tensors must be 2D (batch_size, feature_dim)")
+        if source.size(1) != target.size(1):
+            raise ValueError("Source and target must have the same number of features")
+
         kernels = self.gaussian_kernel(source, target)
-        XX = kernels[:batch_size, :batch_size]
-        YY = kernels[batch_size:, batch_size:]
-        XY = kernels[:batch_size, batch_size:]
-        YX = kernels[batch_size:, :batch_size]
-        loss = torch.mean(XX + YY - XY - YX)
+        batch_size_source = source.size(0)
+        batch_size_target = target.size(0)
+
+        XX = kernels[:batch_size_source, :batch_size_source]
+        YY = kernels[batch_size_source:, batch_size_source:]
+        XY = kernels[:batch_size_source, batch_size_source:]
+        YX = kernels[batch_size_source:, :batch_size_source]
+
+        loss = torch.mean(XX) + torch.mean(YY) - torch.mean(XY) - torch.mean(YX)
         return loss
 
     def gaussian_kernel(self, source, target):
-        n_samples = int(source.size()[0]) + int(target.size()[0])
+        n_samples = int(source.size(0)) + int(target.size(0))
         total = torch.cat([source, target], dim=0)
-        total0 = total.unsqueeze(0).expand(int(total.size(0)), int(total.size(0)), int(total.size(1)))
-        total1 = total.unsqueeze(1).expand(int(total.size(0)), int(total.size(0)), int(total.size(1)))
+        total0 = total.unsqueeze(0).expand(total.size(0), total.size(0), total.size(1))
+        total1 = total.unsqueeze(1).expand(total.size(0), total.size(0), total.size(1))
         L2_distance = ((total0 - total1) ** 2).sum(2)
+
         if self.fix_sigma:
             bandwidth = self.fix_sigma
         else:
-            bandwidth = torch.sum(L2_distance.data) / (n_samples ** 2 - n_samples)
+            bandwidth = torch.sum(L2_distance.detach()) / (n_samples ** 2 - n_samples)
+
         bandwidth /= self.kernel_mul ** (self.kernel_num // 2)
         bandwidth_list = [bandwidth * (self.kernel_mul ** i) for i in range(self.kernel_num)]
         kernel_val = [torch.exp(-L2_distance / bandwidth_temp) for bandwidth_temp in bandwidth_list]
         return sum(kernel_val)
-
 
 
 if __name__ == '__main__':
@@ -408,8 +418,8 @@ if __name__ == '__main__':
         transforms.Normalize((0.3281,), (0.2366,))  # 设置均值和标准差
     ])
 
-    source_train_benign_data = MyData("../data/一期all/benign", "benign", transform=transform)
-    source_train_malignat_data = MyData("../data/一期all/malignant", "malignant", transform=transform)
+    source_train_benign_data = MyData("../data/一期数据/train/benign", "benign", transform=transform)
+    source_train_malignat_data = MyData("../data/一期数据/train/malignant", "malignant", transform=transform)
     source_train_data = source_train_benign_data + source_train_malignat_data
 
     target_train_benign_data = MyData("../data/qc后二期数据/train/wave1/benign", "benign", transform=transform)
