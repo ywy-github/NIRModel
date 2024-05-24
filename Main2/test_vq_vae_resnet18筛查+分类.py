@@ -402,7 +402,7 @@ if __name__ == '__main__':
           "spe: {:.4f}".format(test_spe)+ " auc: {:.4f}".format(test_auc) + "loss: {:.4f}".format(np.mean(total_test_loss[-10:])))
 
     df = pd.DataFrame(test_results)
-    filename = '../models1/package/一期数据.xlsx'
+    filename = '../models1/result/一期数据.xlsx'
 
     # # 检查文件是否存在
     if not os.path.isfile(filename):
