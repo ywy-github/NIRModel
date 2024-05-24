@@ -278,7 +278,7 @@ def compute(y_true,y_prob,y_pred):
 
 
 if __name__ == '__main__':
-    data = pd.read_excel("../models3/excels3/TResnet.xlsx")
+    data = pd.read_excel("../evaluation/generated_data.xlsx")
     y_true = data.loc[:,"label"]
     y_prob = data.loc[:,"prob"]
     y_pred = data.loc[:,"pred"]
@@ -286,7 +286,7 @@ if __name__ == '__main__':
     # PR_Curve(y_true,y_pred)
     # ROC_Curve(y_true,y_pred)
 
-    # compute(y_true,y_prob,y_pred)
+    compute(y_true,y_prob,y_pred)
 
-    Multi_ROC_Curve_消融()
+    # Multi_ROC_Curve_消融()
     # Multi_ROC_Curve_对比()
