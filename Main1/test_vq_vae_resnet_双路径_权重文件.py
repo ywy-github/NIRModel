@@ -269,7 +269,7 @@ class Model(nn.Module):
             self._vq_vae2 = VectorQuantizer(num_embeddings, embedding_dim,
                                             commitment_cost)
 
-        self.classifier = Classifier(200704, 512, 1)
+        self.classifier = Classifier(1024, 512, 1)
 
         self._decoder1 = Decoder()
         self._decoder2 = Decoder()
@@ -285,12 +285,13 @@ class Model(nn.Module):
         loss2, quantized2, perplexity2, _ = self._vq_vae2(z2)
         quantized = torch.cat([quantized1, quantized2], dim=1)
 
-        feature = quantized.view(quantized.size(0), -1)
+        features = self.Avg(quantized)
+        classifier_outputs = self.classifier(features.view(features.size(0), -1))
 
         # 拼接到展平后的特征上
         # combined_features = torch.cat((feature,one_hot_cup_sizes), dim=1)
 
-        classifier_outputs = self.classifier(feature)
+        # classifier_outputs = self.classifier(feature)
 
         x_recon1 = self._decoder1(quantized1)
         x_recon2 = self._decoder2(quantized2)
@@ -343,7 +344,7 @@ if __name__ == '__main__':
         transforms.ToTensor(),
         transforms.Normalize((0.3281,), (0.2366,))  # 设置均值和标准差
     ])
-    fold_data = "一期+二期"
+    fold_data = "二期数据"
     test_benign_data = DoubleTreeChannels("../data/" + fold_data + "/test/wave1/benign",
                                           "../data/" + fold_data + "/test/wave2/benign",
                                           "../data/" + fold_data + "/test/wave3/benign",
@@ -458,14 +459,14 @@ if __name__ == '__main__':
         np.mean(total_test_loss[-10:])))
 
     df = pd.DataFrame(test_results)
-    # filename = '../models1/result/一期+二期.xlsx'
-    #
-    # # # 检查文件是否存在
-    # if not os.path.isfile(filename):
-    #     # 如果文件不存在，创建新文件并保存数据到 Sheet1
-    #     df.to_excel(filename, sheet_name='test', index=False)
-    # else:
-    #     # 如果文件已经存在，打开现有文件并保存数据到 Sheet2
-    #     with pd.ExcelWriter(filename, engine='openpyxl', mode='a') as writer:
-    #         df.to_excel(writer, sheet_name='test', index=False)
+    filename = '../models1/result/一期+二期.xlsx'
+
+    # # 检查文件是否存在
+    if not os.path.isfile(filename):
+        # 如果文件不存在，创建新文件并保存数据到 Sheet1
+        df.to_excel(filename, sheet_name='test', index=False)
+    else:
+        # 如果文件已经存在，打开现有文件并保存数据到 Sheet2
+        with pd.ExcelWriter(filename, engine='openpyxl', mode='a') as writer:
+            df.to_excel(writer, sheet_name='test', index=False)
 

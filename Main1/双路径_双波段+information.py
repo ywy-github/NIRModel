@@ -396,7 +396,7 @@ if __name__ == '__main__':
         transforms.Normalize((0.3281,), (0.2366,))  # 设置均值和标准差
     ])
 
-    fold_data = "一期+二期"
+    fold_data = "二期双十+双十五"
 
     train_benign_data = DoubleTreeChannels("../data/"+fold_data+"/train/wave1/benign",
                                                            "../data/"+fold_data+"/train/wave2/benign",
@@ -406,11 +406,11 @@ if __name__ == '__main__':
                                                            transform=transform)
 
     train_malignant_data = DoubleTreeChannels(
-        "../data/"+fold_data+"/train/wave1/benign",
-        "../data/"+fold_data+"/train/wave2/benign",
-        "../data/"+fold_data+"/train/wave3/benign",
-        "../data/"+fold_data+"/train/wave4/benign",
-        "benign",
+        "../data/"+fold_data+"/train/wave1/malignant",
+        "../data/"+fold_data+"/train/wave2/malignant",
+        "../data/"+fold_data+"/train/wave3/malignant",
+        "../data/"+fold_data+"/train/wave4/malignant",
+        "malignant",
         transform=transform)
 
     train_data = train_benign_data + train_malignant_data
@@ -423,11 +423,11 @@ if __name__ == '__main__':
                                                          transform=transform)
 
     val_malignant_data = DoubleTreeChannels(
-        "../data/"+fold_data+"/val/wave1/benign",
-        "../data/"+fold_data+"/val/wave2/benign",
-        "../data/"+fold_data+"/val/wave3/benign",
-        "../data/"+fold_data+"/val/wave4/benign",
-        "benign",
+        "../data/"+fold_data+"/val/wave1/malignant",
+        "../data/"+fold_data+"/val/wave2/malignant",
+        "../data/"+fold_data+"/val/wave3/malignant",
+        "../data/"+fold_data+"/val/wave4/malignant",
+        "malignant",
         transform=transform)
 
     val_data = val_benign_data + val_malignant_data
@@ -440,11 +440,11 @@ if __name__ == '__main__':
                                                           transform=transform)
 
     test_malignant_data = DoubleTreeChannels(
-        "../data/"+fold_data+"/test/wave1/benign",
-        "../data/"+fold_data+"/test/wave2/benign",
-        "../data/"+fold_data+"/test/wave3/benign",
-        "../data/"+fold_data+"/test/wave4/benign",
-        "benign",
+        "../data/"+fold_data+"/test/wave1/malignant",
+        "../data/"+fold_data+"/test/wave2/malignant",
+        "../data/"+fold_data+"/test/wave3/malignant",
+        "../data/"+fold_data+"/test/wave4/malignant",
+        "malignant",
         transform=transform)
 
     test_data = test_benign_data + test_malignant_data
@@ -507,7 +507,7 @@ if __name__ == '__main__':
     model = Model(encoder1,encoder2,num_embeddings, embedding_dim, commitment_cost, decay).to(device)
 
 
-    criterion = WeightedBinaryCrossEntropyLoss(1.6)
+    criterion = WeightedBinaryCrossEntropyLoss(1.1)
     # criterion = WeightedBinaryCrossEntropyLossWithRegularization(2, 0.01)
     criterion.to(device)
     optimizer = optim.Adam(filter(lambda p: p.requires_grad, model.parameters()), lr=learning_rate, amsgrad=False)
@@ -641,8 +641,8 @@ if __name__ == '__main__':
 
         # writer.add_scalar('Loss/Val', total_val_loss, epoch)
 
-        if ((epoch + 1) == 100):
-            torch.save(model.state_dict(), "../models1/package/一期+二期-{}.pth".format(epoch + 1))
+        if ((epoch + 1) == 20):
+            torch.save(model.state_dict(), "../document/models/SRCNet/SRCNet_data2-{}.pth".format(epoch + 1))
         print('%d epoch' % (epoch + 1))
 
         train_acc, train_sen, train_spe = all_metrics(train_targets, train_pred)

@@ -11,9 +11,9 @@ if __name__ == "__main__":
 
     # 设置文件夹路径
 
-    source_dir = '../data/二期双十wave1'  # 原始图片所在文件夹
-    nir1_dir = '../data/qc前二期双十数据/test/wave1/benign'  # NIR1图片所在文件夹
-    target_dir = '../data/qc前二期双十数据/test/wave5/benign'  # 目标文件夹，复制图片到这里
+    source_dir = '../data/czy_image/wave4'  # 原始图片所在文件夹
+    nir1_dir = '../data/二期双十+双十五/test/wave4/benign'  # NIR1图片所在文件夹
+    target_dir = '../data/二期数据/test/wave4/benign'  # 目标文件夹，复制图片到这里
 
     # 确保目标文件夹存在
     if not os.path.exists(target_dir):

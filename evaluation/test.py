@@ -6,7 +6,7 @@ from sklearn.metrics import accuracy_score, recall_score, precision_score, roc_a
 if __name__ == '__main__':
 
     # Read the Excel file
-    file_path = '../excels/SRCNet/一期+二期.xlsx'  # Replace with the actual file path
+    file_path = '../document/excels/SRCNet/一期+二期.xlsx'  # Replace with the actual file path
     data = pd.read_excel(file_path)
 
     # Extract the prediction probabilities and true labels

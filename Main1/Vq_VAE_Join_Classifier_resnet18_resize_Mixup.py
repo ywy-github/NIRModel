@@ -371,16 +371,16 @@ if __name__ == '__main__':
         transforms.Normalize((0.3281,), (0.2366,))  # 设置均值和标准差
     ])
 
-    train_benign_data = MyData("../data/一期数据/train/benign", "benign", transform=transform)
-    train_malignat_data = MyData("../data/一期数据/train/malignant", "malignant", transform=transform)
+    train_benign_data = MyData("../data/二期双十+双十五/train/wave1/benign", "benign", transform=transform)
+    train_malignat_data = MyData("../data/二期双十+双十五/train/wave1/malignant", "malignant", transform=transform)
     train_data = train_benign_data + train_malignat_data
 
-    val_benign_data = MyData("../data/一期数据/val/benign", "benign", transform=transform)
-    val_malignat_data = MyData("../data/一期数据/val/malignant", "malignant", transform=transform)
+    val_benign_data = MyData("../data/二期双十+双十五/val/wave1/benign", "benign", transform=transform)
+    val_malignat_data = MyData("../data/二期双十+双十五/val/wave1/malignant", "malignant", transform=transform)
     val_data = val_benign_data + val_malignat_data
 
-    test_benign_data = MyData("../data/一期数据/test/benign", "benign", transform=transform)
-    test_malignat_data = MyData("../data/一期数据/test/malignant", "malignant", transform=transform)
+    test_benign_data = MyData("../data/二期双十+双十五/val/wave1/benign", "benign", transform=transform)
+    test_malignat_data = MyData("../data/二期双十+双十五/val/wave1/malignant", "malignant", transform=transform)
     test_data = test_benign_data + test_malignat_data
 
 
