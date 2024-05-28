@@ -320,8 +320,8 @@ if __name__ == '__main__':
         transforms.Normalize((0.3281,), (0.2366,))  # 设置均值和标准差
     ])
 
-    test_benign_data = MyData("../data/一期数据/test/benign", "benign", transform=transform)
-    test_malignat_data = MyData("../data/一期数据/test/malignant", "malignant", transform=transform)
+    test_benign_data = MyData("../data/一期数据/new_test/benign", "benign", transform=transform)
+    test_malignat_data = MyData("../data/一期数据/new_test/malignant", "malignant", transform=transform)
     test_data = test_benign_data + test_malignat_data
 
     test_loader = DataLoader(test_data,
@@ -346,7 +346,7 @@ if __name__ == '__main__':
 
     model = Model(encoder, num_embeddings, embedding_dim, commitment_cost, decay).to(device)
 
-    model.load_state_dict(torch.load('../document/models/SRCNet/SRCNet_data1.pth'))
+    model.load_state_dict(torch.load('../document/models/CLAHE/data2.pth'))
 
     criterion = WeightedBinaryCrossEntropyLoss(2)
     criterion.to(device)
@@ -393,14 +393,14 @@ if __name__ == '__main__':
         np.mean(total_test_loss[-10:])))
 
     df = pd.DataFrame(test_results)
-    filename = '../document/excels/SRCNet/data1.xlsx'
-
-    # 检查文件是否存在
-    if not os.path.isfile(filename):
-        # 如果文件不存在，创建新文件并保存数据到 Sheet1
-        df.to_excel(filename, sheet_name='test', index=False)
-    else:
-        # 如果文件已经存在，打开现有文件并保存数据到 Sheet2
-        with pd.ExcelWriter(filename, engine='openpyxl', mode='a') as writer:
-            df.to_excel(writer, sheet_name='test', index=False)
+    # filename = '../document/excels/CLAHE/data1.xlsx'
+    #
+    # # 检查文件是否存在
+    # if not os.path.isfile(filename):
+    #     # 如果文件不存在，创建新文件并保存数据到 Sheet1
+    #     df.to_excel(filename, sheet_name='test', index=False)
+    # else:
+    #     # 如果文件已经存在，打开现有文件并保存数据到 Sheet2
+    #     with pd.ExcelWriter(filename, engine='openpyxl', mode='a') as writer:
+    #         df.to_excel(writer, sheet_name='test', index=False)
 

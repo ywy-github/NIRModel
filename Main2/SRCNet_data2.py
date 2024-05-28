@@ -396,7 +396,7 @@ if __name__ == '__main__':
         transforms.Normalize((0.3281,), (0.2366,))  # 设置均值和标准差
     ])
 
-    fold_data = "二期数据"
+    fold_data = "二期数据CLAHE"
 
     train_benign_data = DoubleTreeChannels("../data/"+fold_data+"/train/wave1/benign",
                                                            "../data/"+fold_data+"/train/wave2/benign",
@@ -641,8 +641,8 @@ if __name__ == '__main__':
 
         # writer.add_scalar('Loss/Val', total_val_loss, epoch)
 
-        if ((epoch + 1) == 31):
-            torch.save(model.state_dict(), "../document/models/SRCNet/SRCNet_data2-{}.pth".format(epoch + 1))
+        if ((epoch + 1) == 40):
+            torch.save(model.state_dict(), "../document/models/CLAHE/data2-{}.pth".format(epoch + 1))
         print('%d epoch' % (epoch + 1))
 
         train_acc, train_sen, train_spe = all_metrics(train_targets, train_pred)

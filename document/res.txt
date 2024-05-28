@@ -25,10 +25,10 @@ data1
 
 data2
 31 epoch
-训练集 .5746
-acc: 0.5460 sen: 0.8698 spe: 0.2970 auc: 0.6713 loss: 40.9567
+训练集 acc: 0.5460 sen: 0.8698 spe: 0.2970 auc: 0.6713 loss: 40.9567
 验证集 acc: 0.6422 sen: 0.5486 spe: 0.7158 auc: 0.6597 loss: 14.3158
 测试集 acc: 0.6299 sen: 0.4863 spe: 0.7407 auc: 0.6543 loss: 14
+
 data1+data2
 20 epoch
 训练集 acc: 0.6218 sen: 0.7666 spe: 0.5326 auc: 0.7337 loss: 80.9023
@@ -44,9 +44,23 @@ data2
 验证集 acc: 0.5229 sen: 0.5764 spe: 0.4809 auc: 0.5230
 测试集 acc: 0.5313 sen: 0.6233 spe: 0.4603 auc: 0.5694
 
+data1+data2
+3 epoch
+训练集 acc: 0.5028 sen: 0.4980 spe: 0.5059 auc: 0.4981 loss: 98.0661
+验证集 acc: 0.5997 sen: 0.2735 spe: 0.8010 auc: 0.6118
+测试集 acc: 0.6117 sen: 0.3090 spe: 0.7974 auc: 0.5916
 
+CLAHE:
+data1
+测试集 acc: 0.7636sen: 0.6092spe: 0.8351 auc: 0.7717loss: 1.6473
 
+data2
+40 epoch
+训练集 acc: 0.5238 sen: 0.9302 spe: 0.2111 auc: 0.5602 loss: 40.5421
+验证集 acc: 0.5566 sen: 0.6389 spe: 0.4918 auc: 0.5817 loss: 14.0869
+测试集 acc: 0.5612 sen: 0.6233 spe: 0.5132 auc: 0.5826 loss: 13.9540
 
+data1+data2
 
 
 

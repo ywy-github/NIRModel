@@ -393,7 +393,7 @@ if __name__ == '__main__':
         transforms.Normalize((0.3281,), (0.2366,))  # 设置均值和标准差
     ])
 
-    fold_data = "二期数据"
+    fold_data = "一期+二期"
 
     train_benign_data = DoubleTreeChannels("../data/" + fold_data + "/train/wave1/benign",
                                            "../data/" + fold_data + "/train/wave2/benign",
@@ -504,7 +504,7 @@ if __name__ == '__main__':
     model = Model(encoder1,encoder2,num_embeddings, embedding_dim, commitment_cost, decay).to(device)
 
 
-    criterion = WeightedBinaryCrossEntropyLoss(1.3)
+    criterion = WeightedBinaryCrossEntropyLoss(1.4)
     # criterion = WeightedBinaryCrossEntropyLossWithRegularization(2, 0.01)
     criterion.to(device)
     optimizer = optim.Adam(filter(lambda p: p.requires_grad, model.parameters()), lr=learning_rate, amsgrad=False)
@@ -618,8 +618,8 @@ if __name__ == '__main__':
 
         # writer.add_scalar('Loss/Val', total_val_loss, epoch)
 
-        if ((epoch + 1) == 30 or (epoch + 1) == 40 or (epoch + 1) == 50):
-            torch.save(model.state_dict(), "../document/models/MixUp/data2-{}.pth".format(epoch + 1))
+        if ((epoch + 1) == 3):
+            torch.save(model.state_dict(), "../document/models/MixUp/data1+data2-{}.pth".format(epoch + 1))
         print('%d epoch' % (epoch + 1))
 
         train_acc, train_sen, train_spe = all_metrics(train_targets, train_pred)
