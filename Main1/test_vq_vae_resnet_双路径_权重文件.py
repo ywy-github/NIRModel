@@ -345,18 +345,18 @@ if __name__ == '__main__':
         transforms.Normalize((0.3281,), (0.2366,))  # 设置均值和标准差
     ])
     fold_data = "二期数据"
-    test_benign_data = DoubleTreeChannels("../data/" + fold_data + "/test/wave1/benign",
-                                          "../data/" + fold_data + "/test/wave2/benign",
-                                          "../data/" + fold_data + "/test/wave3/benign",
-                                          "../data/" + fold_data + "/test/wave4/benign",
+    test_benign_data = DoubleTreeChannels("../data/" + fold_data + "/val/wave1/benign",
+                                          "../data/" + fold_data + "/val/wave2/benign",
+                                          "../data/" + fold_data + "/val/wave3/benign",
+                                          "../data/" + fold_data + "/val/wave4/benign",
                                           "benign",
                                           transform=transform)
 
     test_malignant_data = DoubleTreeChannels(
-        "../data/" + fold_data + "/test/wave1/malignant",
-        "../data/" + fold_data + "/test/wave2/malignant",
-        "../data/" + fold_data + "/test/wave3/malignant",
-        "../data/" + fold_data + "/test/wave4/malignant",
+        "../data/" + fold_data + "/val/wave1/malignant",
+        "../data/" + fold_data + "/val/wave2/malignant",
+        "../data/" + fold_data + "/val/wave3/malignant",
+        "../data/" + fold_data + "/val/wave4/malignant",
         "malignant",
         transform=transform)
 
@@ -459,14 +459,14 @@ if __name__ == '__main__':
         np.mean(total_test_loss[-10:])))
 
     df = pd.DataFrame(test_results)
-    filename = '../models1/result/一期+二期.xlsx'
+    filename = '../models1/result/二期数据.xlsx'
 
     # # 检查文件是否存在
     if not os.path.isfile(filename):
         # 如果文件不存在，创建新文件并保存数据到 Sheet1
-        df.to_excel(filename, sheet_name='test', index=False)
+        df.to_excel(filename, sheet_name='val', index=False)
     else:
         # 如果文件已经存在，打开现有文件并保存数据到 Sheet2
         with pd.ExcelWriter(filename, engine='openpyxl', mode='a') as writer:
-            df.to_excel(writer, sheet_name='test', index=False)
+            df.to_excel(writer, sheet_name='val', index=False)
 

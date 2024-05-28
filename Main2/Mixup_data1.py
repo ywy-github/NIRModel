@@ -22,9 +22,8 @@ from PIL import Image
 import glob
 import random
 
-from Main1.Metrics import all_metrics
-from Main1.data_loader import DoubleTreeChannels
-
+from Metrics import all_metrics
+from data_loader import MyData
 
 class VectorQuantizer(nn.Module):
     def __init__(self, num_embeddings, embedding_dim, commitment_cost):
@@ -235,8 +234,6 @@ class Decoder(nn.Module):
         x = self.deconv5(x)
         return x
 
-
-
 class Classifier(nn.Module):
     def __init__(self, input_dim, hidden_dim, num_classes):
         super(Classifier, self).__init__()
@@ -255,60 +252,42 @@ class Classifier(nn.Module):
         return x
 
 class Model(nn.Module):
-    def __init__(self,encoder1,encoder2,num_embeddings, embedding_dim, commitment_cost, decay=0):
+    def __init__(self,encoder,num_embeddings, embedding_dim, commitment_cost, decay=0):
         super(Model, self).__init__()
 
-        self._encoder1 = encoder1
-        self._encoder2 = encoder2
+        self._encoder = encoder
         # self._pre_vq_conv = nn.Conv2d(in_channels=num_hiddens,
         #                               out_channels=embedding_dim,
         #                               kernel_size=1,
         #                               stride=1)
         if decay > 0.0:
-            self._vq_vae1 = VectorQuantizerEMA(num_embeddings, embedding_dim,
-                                              commitment_cost, decay)
-            self._vq_vae2 = VectorQuantizerEMA(num_embeddings, embedding_dim,
+            self._vq_vae = VectorQuantizerEMA(num_embeddings, embedding_dim,
                                               commitment_cost, decay)
         else:
-            self._vq_vae1 = VectorQuantizer(num_embeddings, embedding_dim,
+            self._vq_vae = VectorQuantizer(num_embeddings, embedding_dim,
                                            commitment_cost)
-            self._vq_vae2 = VectorQuantizer(num_embeddings, embedding_dim,
-                                            commitment_cost)
 
-        self.classifier = Classifier(200704,512,1)
+        self.classifier = Classifier(512,256,1)
 
-        self._decoder1 = Decoder()
-        self._decoder2 = Decoder()
+        self._decoder = Decoder()
 
         self.Avg = nn.AdaptiveMaxPool2d(1)
 
-    def forward(self, data1,data2):
-        z1 = self._encoder1(data1)
-        z2 = self._encoder2(data2)
-
+    def forward(self, x):
+        z = self._encoder(x)
         # z = self._pre_vq_conv(z)
-        loss1, quantized1, perplexity1, _ = self._vq_vae1(z1)
-        loss2, quantized2, perplexity2, _ = self._vq_vae2(z2)
-        quantized = torch.cat([quantized1, quantized2], dim=1)
+        loss, quantized, perplexity, _ = self._vq_vae(z)
 
-        feature = quantized.view(quantized.size(0), -1)
+        features = self.Avg(quantized)
+        classifier_outputs = self.classifier(features.view(features.size(0),-1))
+        x_recon = self._decoder(quantized)
 
-        # 拼接到展平后的特征上
-        # combined_features = torch.cat((feature,one_hot_cup_sizes), dim=1)
-
-        classifier_outputs = self.classifier(feature)
-
-        x_recon1 = self._decoder1(quantized1)
-        x_recon2 = self._decoder2(quantized2)
-
-        return loss1,loss2,x_recon1,x_recon2,perplexity1,perplexity2,classifier_outputs
+        return loss, x_recon, perplexity, classifier_outputs
 
 # 定义联合模型的损失函数
-def joint_loss_function(recon_loss1,recon_loss2, vq_loss1,vq_loss2, classifier_loss,
-                        lambda_recon1,lambda_recon2, lambda_vq1,lambda_vq2,lambda_classifier):
+def joint_loss_function(recon_loss,vq_loss,classifier_loss,lambda_recon,lambda_vq,lambda_classifier):
     # 总损失
-    total_loss = lambda_recon1 * recon_loss1 + lambda_vq1 * vq_loss1 + lambda_classifier * classifier_loss + \
-                 lambda_recon2 * recon_loss2 + lambda_vq2 * vq_loss2
+    total_loss = lambda_recon * recon_loss + lambda_vq*vq_loss + lambda_classifier * classifier_loss
 
     return total_loss
 
@@ -381,13 +360,9 @@ if __name__ == '__main__':
 
     learning_rate = 1e-5
 
-    lambda_recon1 = 0.1
-    lambda_vq1 = 0.1
+    lambda_recon = 0.2
+    lambda_vq = 0.2
     lambda_classifier = 0.6
-
-    lambda_recon2 = 0.1
-    lambda_vq2 = 0.1
-
 
     # 读取数据集
     transform = transforms.Compose([
@@ -396,63 +371,23 @@ if __name__ == '__main__':
         transforms.Normalize((0.3281,), (0.2366,))  # 设置均值和标准差
     ])
 
-    fold_data = "二期数据"
+    train_benign_data = MyData("../data/二期双十+双十五/train/wave1/benign", "benign", transform=transform)
+    train_malignat_data = MyData("../data/二期双十+双十五/train/wave1/malignant", "malignant", transform=transform)
+    train_data = train_benign_data + train_malignat_data
 
-    train_benign_data = DoubleTreeChannels("../data/"+fold_data+"/train/wave1/benign",
-                                                           "../data/"+fold_data+"/train/wave2/benign",
-                                                           "../data/"+fold_data+"/train/wave3/benign",
-                                                           "../data/"+fold_data+"/train/wave4/benign",
-                                                           "benign",
-                                                           transform=transform)
+    val_benign_data = MyData("../data/二期双十+双十五/val/wave1/benign", "benign", transform=transform)
+    val_malignat_data = MyData("../data/二期双十+双十五/val/wave1/malignant", "malignant", transform=transform)
+    val_data = val_benign_data + val_malignat_data
 
-    train_malignant_data = DoubleTreeChannels(
-        "../data/"+fold_data+"/train/wave1/malignant",
-        "../data/"+fold_data+"/train/wave2/malignant",
-        "../data/"+fold_data+"/train/wave3/malignant",
-        "../data/"+fold_data+"/train/wave4/malignant",
-        "malignant",
-        transform=transform)
+    test_benign_data = MyData("../data/二期双十+双十五/val/wave1/benign", "benign", transform=transform)
+    test_malignat_data = MyData("../data/二期双十+双十五/val/wave1/malignant", "malignant", transform=transform)
+    test_data = test_benign_data + test_malignat_data
 
-    train_data = train_benign_data + train_malignant_data
-
-    val_benign_data = DoubleTreeChannels("../data/"+fold_data+"/val/wave1/benign",
-                                                         "../data/"+fold_data+"/val/wave2/benign",
-                                                         "../data/"+fold_data+"/val/wave3/benign",
-                                                         "../data/"+fold_data+"/val/wave4/benign",
-                                                         "benign",
-                                                         transform=transform)
-
-    val_malignant_data = DoubleTreeChannels(
-        "../data/"+fold_data+"/val/wave1/malignant",
-        "../data/"+fold_data+"/val/wave2/malignant",
-        "../data/"+fold_data+"/val/wave3/malignant",
-        "../data/"+fold_data+"/val/wave4/malignant",
-        "malignant",
-        transform=transform)
-
-    val_data = val_benign_data + val_malignant_data
-
-    test_benign_data = DoubleTreeChannels("../data/"+fold_data+"/test/wave1/benign",
-                                                          "../data/"+fold_data+"/test/wave2/benign",
-                                                          "../data/"+fold_data+"/test/wave3/benign",
-                                                          "../data/"+fold_data+"/test/wave4/benign",
-                                                          "benign",
-                                                          transform=transform)
-
-    test_malignant_data = DoubleTreeChannels(
-        "../data/"+fold_data+"/test/wave1/malignant",
-        "../data/"+fold_data+"/test/wave2/malignant",
-        "../data/"+fold_data+"/test/wave3/malignant",
-        "../data/"+fold_data+"/test/wave4/malignant",
-        "malignant",
-        transform=transform)
-
-    test_data = test_benign_data + test_malignant_data
 
     training_loader = DataLoader(train_data,
                                  batch_size=batch_size,
                                  shuffle=True,
-                                 num_workers=4,
+                                 num_workers=5,
                                  persistent_workers=True,
                                  pin_memory=True
                                  )
@@ -460,27 +395,26 @@ if __name__ == '__main__':
     validation_loader = DataLoader(val_data,
                                    batch_size=batch_size,
                                    shuffle=True,
-                                   num_workers=4,
+                                   num_workers=5,
                                    persistent_workers=True,
                                    pin_memory=True
-                                   )
+                                  )
 
     test_loader = DataLoader(test_data,
                                    batch_size=batch_size,
                                    shuffle=True,
-                                   num_workers=4,
+                                   num_workers=5,
                                    persistent_workers=True,
                                    pin_memory=True
                                    )
 
 
-
     #设置encoder
-    encoder1 = models.resnet18(pretrained=True)
-    for param in encoder1.parameters():
+    encoder = models.resnet18(pretrained=True)
+    for param in encoder.parameters():
         param.requires_grad = False
 
-    for name, param in encoder1.named_parameters():
+    for name, param in encoder.named_parameters():
         if "layer3" in name:
             param.requires_grad = True
         if "layer4" in name:
@@ -488,26 +422,12 @@ if __name__ == '__main__':
         if "fc" in name:
             param.requires_grad = True
 
-    encoder1 = nn.Sequential(*list(encoder1.children())[:-2])
+    encoder = nn.Sequential(*list(encoder.children())[:-2])
 
-    encoder2 = models.resnet18(pretrained=True)
-    for param in encoder2.parameters():
-        param.requires_grad = False
-
-    for name, param in encoder2.named_parameters():
-        if "layer3" in name:
-            param.requires_grad = True
-        if "layer4" in name:
-            param.requires_grad = True
-        if "fc" in name:
-            param.requires_grad = True
-
-    encoder2 = nn.Sequential(*list(encoder2.children())[:-2])
-
-    model = Model(encoder1,encoder2,num_embeddings, embedding_dim, commitment_cost, decay).to(device)
+    model = Model(encoder,num_embeddings, embedding_dim, commitment_cost, decay).to(device)
 
 
-    criterion = WeightedBinaryCrossEntropyLoss(1.5)
+    criterion = WeightedBinaryCrossEntropyLoss(2)
     # criterion = WeightedBinaryCrossEntropyLossWithRegularization(2, 0.01)
     criterion.to(device)
     optimizer = optim.Adam(filter(lambda p: p.requires_grad, model.parameters()), lr=learning_rate, amsgrad=False)
@@ -517,6 +437,9 @@ if __name__ == '__main__':
 
     val_res_recon_error = []
     val_res_perplexity = []
+
+    test_res_recon_error = []
+    test_res_perplexity = []
 
     start_time = time.time()  # 记录训练开始时间
     # writer = SummaryWriter("../Logs")
@@ -530,30 +453,21 @@ if __name__ == '__main__':
         train_targets = []
         total_train_loss = 0.0
         for batch in training_loader:
-            data1, data2, data3, data4, targets, name = batch
-
-            data_path1 = torch.cat([data1, data3, data1-data3], dim=1)
-            data_path2 = torch.cat([data2, data4, data2-data4],dim=1)
-            data_path1 = data_path1.to(device)
-            data_path2 = data_path2.to(device)
+            data, targets, dcm_names = batch
+            data = torch.cat([data] * 3, dim=1)
+            data = data.to(device)
             targets = targets.to(device)
+            data, target_a, target_b, lam = mixup_data(data, targets)
 
             optimizer.zero_grad()
 
-            vq_loss1,vq_loss2,data_recon1, data_recon2,perplexity1, perplexity2,classifier_outputs = model(data_path1,data_path2)
+            vq_loss, data_recon, perplexity, classifier_outputs = model(data)
 
-            data_variance1 = torch.var(data_path1)
-            recon_loss1 = F.mse_loss(data_recon1, data_path1) / data_variance1
-
-            classifier_loss = criterion(targets.view(-1, 1), classifier_outputs)
-
-            data_variance2 = torch.var(data_path2)
-            recon_loss2 = F.mse_loss(data_recon2, data_path2) / data_variance2
-
-
-            total_loss = joint_loss_function(recon_loss1,recon_loss2, vq_loss1,vq_loss2, classifier_loss,
-                                             lambda_recon1,lambda_recon2, lambda_vq1,lambda_vq2,lambda_classifier
-                                             )
+            data_variance = torch.var(data)
+            recon_loss = F.mse_loss(data_recon, data) / data_variance
+            classifier_loss = lam * criterion(target_a.view(-1, 1), classifier_outputs)+ (1 - lam) * criterion(target_b.view(-1, 1), classifier_outputs)
+            total_loss = joint_loss_function(recon_loss, vq_loss, classifier_loss, lambda_recon, lambda_vq,
+                                             lambda_classifier)
             total_loss.backward()
             optimizer.step()
             # scheduler.step()
@@ -564,7 +478,8 @@ if __name__ == '__main__':
             train_targets.extend(targets.cpu().numpy())
 
             total_train_loss += total_loss
-
+            train_res_recon_error.append(recon_loss.item())
+            train_res_perplexity.append(perplexity.item())
         # writer.add_scalar('Loss/Train', total_train_loss, epoch)
         val_score = []
         val_pred = []
@@ -573,27 +488,16 @@ if __name__ == '__main__':
         model.eval()
         with torch.no_grad():
             for batch in validation_loader:
-                data1, data2, data3, data4, targets, name = batch
-
-                data_path1 = torch.cat([data1, data3, data1 - data3], dim=1)
-                data_path2 = torch.cat([data2, data4, data2 - data4], dim=1)
-                data_path1 = data_path1.to(device)
-                data_path2 = data_path2.to(device)
+                data, targets, names = batch
+                data = torch.cat([data] * 3, dim=1)
+                data = data.to(device)
                 targets = targets.to(device)
-
-                vq_loss1, vq_loss2, data_recon1, data_recon2, perplexity1, perplexity2, classifier_outputs = model(data_path1, data_path2)
-
-                data_variance1 = torch.var(data_path1)
-                recon_loss1 = F.mse_loss(data_recon1, data_path1) / data_variance1
-
+                vq_loss, data_recon, perplexity, classifier_outputs = model(data)
+                data_variance = torch.var(data)
+                recon_loss = F.mse_loss(data_recon, data) / data_variance
                 classifier_loss = criterion(targets.view(-1, 1), classifier_outputs)
-
-                data_variance2 = torch.var(data_path2)
-                recon_loss2 = F.mse_loss(data_recon2, data_path2) / data_variance2
-
-                total_loss = joint_loss_function(recon_loss1, recon_loss2, vq_loss1, vq_loss2, classifier_loss,
-                                                 lambda_recon1, lambda_recon2, lambda_vq1, lambda_vq2, lambda_classifier
-                                                 )
+                total_loss = joint_loss_function(recon_loss, vq_loss, classifier_loss, lambda_recon, lambda_vq,
+                                                 lambda_classifier)
 
                 predicted_labels = (classifier_outputs >= 0.5).int().view(-1)
                 val_score.append(classifier_outputs.flatten().cpu().numpy())
@@ -601,6 +505,8 @@ if __name__ == '__main__':
                 val_targets.extend(targets.cpu().numpy())
 
                 total_val_loss += total_loss
+                val_res_recon_error.append(recon_loss.item())
+                val_res_perplexity.append(perplexity.item())
 
         test_score = []
         test_pred = []
@@ -609,27 +515,16 @@ if __name__ == '__main__':
         model.eval()
         with torch.no_grad():
             for batch in test_loader:
-                data1, data2, data3, data4, targets, name = batch
-
-                data_path1 = torch.cat([data1, data3, data1 - data3], dim=1)
-                data_path2 = torch.cat([data2, data4, data2 - data4], dim=1)
-                data_path1 = data_path1.to(device)
-                data_path2 = data_path2.to(device)
+                data, targets, names = batch
+                data = torch.cat([data] * 3, dim=1)
+                data = data.to(device)
                 targets = targets.to(device)
-
-                vq_loss1, vq_loss2, data_recon1, data_recon2, perplexity1, perplexity2, classifier_outputs = model(data_path1, data_path2)
-
-                data_variance1 = torch.var(data_path1)
-                recon_loss1 = F.mse_loss(data_recon1, data_path1) / data_variance1
-
+                vq_loss, data_recon, perplexity, classifier_outputs = model(data)
+                data_variance = torch.var(data)
+                recon_loss = F.mse_loss(data_recon, data) / data_variance
                 classifier_loss = criterion(targets.view(-1, 1), classifier_outputs)
-
-                data_variance2 = torch.var(data_path2)
-                recon_loss2 = F.mse_loss(data_recon2, data_path2) / data_variance2
-
-                total_loss = joint_loss_function(recon_loss1, recon_loss2, vq_loss1, vq_loss2, classifier_loss,
-                                                 lambda_recon1, lambda_recon2, lambda_vq1, lambda_vq2, lambda_classifier
-                                                 )
+                total_loss = joint_loss_function(recon_loss, vq_loss, classifier_loss, lambda_recon, lambda_vq,
+                                                 lambda_classifier)
 
                 predicted_labels = (classifier_outputs >= 0.5).int().view(-1)
                 test_score.append(classifier_outputs.flatten().cpu().numpy())
@@ -637,12 +532,12 @@ if __name__ == '__main__':
                 test_targets.extend(targets.cpu().numpy())
 
                 total_test_loss += total_loss
-
-
+                test_res_recon_error.append(recon_loss.item())
+                test_res_perplexity.append(perplexity.item())
         # writer.add_scalar('Loss/Val', total_val_loss, epoch)
-
-        if ((epoch + 1) == 31):
-            torch.save(model.state_dict(), "../document/models/SRCNet/SRCNet_data2-{}.pth".format(epoch + 1))
+        #
+        # if ((epoch + 1) == 167):
+        #     torch.save(model.state_dict(), "../models1/qc/VQ-VAE-resnet18-qc-第二波段增强图-{}.pth".format(epoch + 1))
         print('%d epoch' % (epoch + 1))
 
         train_acc, train_sen, train_spe = all_metrics(train_targets, train_pred)
@@ -675,6 +570,10 @@ if __name__ == '__main__':
               " spe: {:.4f}".format(test_spe) + " auc: {:.4f}".format(test_auc) +
               " loss: {:.4f}".format(total_test_loss))
 
+        print('train_recon_error: %.3f' % np.mean(train_res_recon_error[-10:]))
+        print('train_perplexity: %.3f' % np.mean(train_res_perplexity[-10:]))
+        print('val_recon_error: %.3f' % np.mean(val_res_recon_error[-10:]))
+        print('val_perplexity: %.3f' % np.mean(val_res_perplexity[-10:]))
 
     # writer.close()
     # 结束训练时间
