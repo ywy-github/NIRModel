@@ -26,7 +26,7 @@ def Multi_ROC_Curve_对比():
     data_TransPath = pd.read_excel(filepath + "/TransPath.xlsx")
     data_TSBN = pd.read_excel(filepath + "/TSBN.xlsx")
     data_MobileNet = pd.read_excel(filepath + "/MobileNet.xlsx")
-    data_Resnet18 = pd.read_excel(filepath + "/Resnet18.xlsx")
+    data_Resnet18 = pd.read_excel(filepath + "/二期数据.xlsx")
     data_Resnet50 = pd.read_excel(filepath + "/Resnet50.xlsx")
     data_SelfPath = pd.read_excel(filepath + "/SelfPath.xlsx")
     data_SSL = pd.read_excel(filepath + "/SSL.xlsx")
@@ -101,7 +101,7 @@ def Multi_ROC_Curve_对比():
 def Multi_ROC_Curve_消融():
     filepath = "../models3/excels3"
 
-    data_Resnet18 = pd.read_excel(filepath + "/Resnet18.xlsx")
+    data_Resnet18 = pd.read_excel(filepath + "/二期数据.xlsx")
     data_TResnet = pd.read_excel(filepath + "/TResnet.xlsx")
     data_SRCNet = pd.read_excel(filepath + "/SRCNet.xlsx")
     data_our = pd.read_excel(filepath + "/our.xlsx")
@@ -168,7 +168,7 @@ def Multi_PR_Curve():
     data_SSL = pd.read_excel(filepath + "/SSL.xlsx")
     data_TSBN = pd.read_excel(filepath + "/TSBN.xlsx")
     data_MobileNet = pd.read_excel(filepath + "/MobileNet.xlsx")
-    data_Resnet18 = pd.read_excel(filepath + "/Resnet18.xlsx")
+    data_Resnet18 = pd.read_excel(filepath + "/二期数据.xlsx")
     data_Resnet50 = pd.read_excel(filepath + "/Resnet50.xlsx")
     data_SelfPath = pd.read_excel(filepath + "/SelfPath.xlsx.xlsx")
     data_TransPath = pd.read_excel(filepath + "/TransPath.xlsx")
@@ -278,7 +278,7 @@ def compute(y_true,y_prob,y_pred):
 
 
 if __name__ == '__main__':
-    data = pd.read_excel("../evaluation/generated_data.xlsx")
+    data = pd.read_excel("../document/excels/TSRCNet/data1+data2.xlsx")
     y_true = data.loc[:,"label"]
     y_prob = data.loc[:,"prob"]
     y_pred = data.loc[:,"pred"]

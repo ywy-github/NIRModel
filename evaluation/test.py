@@ -6,7 +6,7 @@ from sklearn.metrics import accuracy_score, recall_score, precision_score, roc_a
 if __name__ == '__main__':
 
     # Read the Excel file
-    file_path = '../document/excels/SRCNet/一期+二期.xlsx'  # Replace with the actual file path
+    file_path = '../document/excels/SRCNet/data1.xlsx'  # Replace with the actual file path
     data = pd.read_excel(file_path)
 
     # Extract the prediction probabilities and true labels
@@ -48,6 +48,9 @@ if __name__ == '__main__':
     plt.plot(cutoffs, spes, label='SPE', color='green')
     plt.plot(cutoffs, aucs, label='AUC', color='red')
 
+    # 在图表中标注 AUC 值
+    plt.text(0.5, auc + 0.02, f'AUC={auc:.2f}', color='red')  # 调整文本位置和颜色
+
     # Set the x and y axis intervals
     plt.xticks(np.arange(0, 1.1, 0.2))
     plt.yticks(np.arange(0, 1.1, 0.2))
@@ -56,7 +59,7 @@ if __name__ == '__main__':
     plt.xlabel('Cutoff')
     plt.ylabel('Value')
     plt.title('Metrics with Cutoff')
-    plt.legend()
+    plt.legend(loc='lower right')
 
     # Show the plot
     plt.show()

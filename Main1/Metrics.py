@@ -19,7 +19,7 @@ def all_metrics(y_true, y_pred):
 
 if __name__ == '__main__':
     # Load data from Excel file
-    data = pd.read_excel("../excels/TSRCNet/一期数据.xlsx")
+    data = pd.read_excel("../excels/CLAHE/二期.xlsx")
 
     # Extract relevant columns
     pred = data["pred"]

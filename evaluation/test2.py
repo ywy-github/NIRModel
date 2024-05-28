@@ -4,26 +4,8 @@ import matplotlib.pyplot as plt
 from sklearn.metrics import accuracy_score, recall_score, precision_score, roc_auc_score
 
 if __name__ == '__main__':
-    # Define cutoff values
-    cutoffs = np.linspace(0, 1, 21)
+    data1 = pd.read_excel("../data/一期单10(1539例)+二期双10(974例)+二期双15(726例)-3239例_20240511.xlsx",sheet_name="all")
+    data2 = pd.read_excel("../document/excels/TSRCNet/一期+二期.xlsx",sheet_name="test")
 
-    # Dummy values for the trends based on provided average values
-    acc = [0.73 for _ in cutoffs]
-    sen = [0.54 for _ in cutoffs]
-    spe = [0.82 for _ in cutoffs]
-    auc = [0.76 for _ in cutoffs]
-
-    # Plotting 一期数据集
-    plt.figure(figsize=(10, 6))
-    plt.plot(cutoffs, acc, label='ACC', color='blue')
-    plt.plot(cutoffs, sen, label='SEN', color='orange')
-    plt.plot(cutoffs, spe, label='SPE', color='green')
-    plt.plot(cutoffs, auc, label='AUC', color='red')
-
-    plt.xticks(np.arange(0, 1.1, 0.2))
-    plt.yticks(np.arange(0, 1.1, 0.2))
-    plt.xlabel('Cutoff')
-    plt.ylabel('Value')
-    plt.title('Metrics with Cutoff for 一期数据集')
-    plt.legend()
-    plt.show()
+    data = pd.merge(data2,data1,on="dcm_name",how="left")
+    data.to_excel("../document/excels/TSRCNet/data1+data2.xlsx",index=False)
