@@ -343,7 +343,7 @@ if __name__ == '__main__':
         transforms.ToTensor(),
         transforms.Normalize((0.3281,), (0.2366,))  # 设置均值和标准差
     ])
-    fold_data = "一期+二期CLAHE"
+    fold_data = "一期+二期"
     test_benign_data = DoubleTreeChannels("../data/" + fold_data + "/test/wave1/benign",
                                           "../data/" + fold_data + "/test/wave2/benign",
                                           "../data/" + fold_data + "/test/wave3/benign",
@@ -398,7 +398,7 @@ if __name__ == '__main__':
 
     model = Model(encoder1, encoder2, num_embeddings, embedding_dim, commitment_cost, decay).to(device)
 
-    model.load_state_dict(torch.load('../document/models/CLAHE/data1+data2.pth'))
+    model.load_state_dict(torch.load('../document/models/GAN/data1+data2.pth'))
 
     criterion = WeightedBinaryCrossEntropyLoss(2)
     criterion.to(device)
@@ -458,7 +458,7 @@ if __name__ == '__main__':
         np.mean(total_test_loss[-10:])))
 
     df = pd.DataFrame(test_results)
-    filename = '../document/excels/CLAHE/data1+data2.xlsx'
+    filename = '../document/excels/GAN/data1+data2.xlsx'
 
     # # 检查文件是否存在
     if not os.path.isfile(filename):

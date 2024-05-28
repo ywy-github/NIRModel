@@ -67,9 +67,23 @@ data1+data2
 测试集 acc: 0.6574 sen: 0.6309 spe: 0.6737 auc: 0.7080 loss: 25.7146
 
 
+GAN:
+data1
+训练集 acc: 0.8761 sen: 0.8893 spe: 0.8697 auc: 0.9473 loss: 42.9833
+验证集 acc: 0.7111 sen: 0.6139 spe: 0.7570 auc: 0.7426 loss: 19.1032
+测试集 acc: 0.7230 sen: 0.6437 spe: 0.7592 auc: 0.7495 loss: 17.0477
 
+data2
+22 epoch
+训练集 acc: 0.5359 sen: 0.5581 spe: 0.5188 auc: 0.5572 loss: 40.0291
+验证集 acc: 0.5657 sen: 0.4097 spe: 0.6885 auc: 0.5684 loss: 13.3178
+测试集 acc: 0.5701 sen: 0.4178 spe: 0.6878 auc: 0.5858 loss: 13.3905
 
-
+data1+data2
+13 epoch
+训练集 acc: 0.5059 sen: 0.7341 spe: 0.3654 auc: 0.6003 loss: 89.8646
+验证集 acc: 0.5919 sen: 0.7469 spe: 0.4962 auc: 0.6525 loss: 29.8137
+测试集 acc: 0.5710sen: 0.7124spe: 0.4842 auc: 0.6460loss: 0.7835
 
 
 
