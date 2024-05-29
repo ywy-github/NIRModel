@@ -25,7 +25,7 @@ data1
 
 data2
 31 epoch
-训练集 acc: 0.5460 sen: 0.8698 spe: 0.2970 auc: 0.6713 loss: 40.9567
+训练集 acc: 0.9090sen: 0.8116spe: 0.9839 auc: 0.9328loss: 0.6268
 验证集 acc: 0.6422 sen: 0.5486 spe: 0.7158 auc: 0.6597 loss: 14.3158
 测试集 acc: 0.6299 sen: 0.4863 spe: 0.7407 auc: 0.6543 loss: 14
 

@@ -323,7 +323,7 @@ def pred(NIR_path,origin_img1_path,enhanced_img2_path,origin_img2_path,work_dir)
     encoder2 = nn.Sequential(*list(encoder2.children())[:-2])
 
     model = Model(encoder1, encoder2, num_embeddings, embedding_dim, commitment_cost, decay).to(device)
-    model_path = work_dir + '一期+二期-100.pth'
+    model_path = work_dir + 'SRCNet_data2.pth'
     model.load_state_dict(torch.load(model_path,map_location=device))
 
     # 读取四种图片，分别是第一波段增强图，第一波段原始图，第二波段增强图，第二波段原始图
@@ -353,15 +353,15 @@ def pred(NIR_path,origin_img1_path,enhanced_img2_path,origin_img2_path,work_dir)
 
 
 if __name__ == '__main__':
-    image_name = "020-ZSSYX-00305-CWME-202203240949-双波段-L-D.bmp"
+    image_name = "020-ZSSYX-00339-HJYU-202203301011-双波段-R-D.bmp"
     # 读取四种图片，分别是第一波段增强图，第一波段原始图，第二波段增强图，第二波段原始图
 
-    NIR_path = "../data/一期+二期/test/wave1/benign/" + image_name
-    origin_img1_path = "../data/一期+二期/test/wave2/benign/" + image_name
-    enhanced_img2_path = "../data/一期+二期/test/wave3/benign/" + image_name
-    origin_img2_path = "../data/一期+二期/test/wave4/benign/" + image_name
+    NIR_path = "../data/二期数据/test/wave1/benign/" + image_name
+    origin_img1_path = "../data/二期数据/test/wave2/benign/" + image_name
+    enhanced_img2_path = "../data/二期数据/test/wave3/benign/" + image_name
+    origin_img2_path = "../data/二期数据/test/wave4/benign/" + image_name
 
-    work_dir = "../models1/package/"
+    work_dir = "../document/models/SRCNet/"
 
     classifier_outputs = pred(NIR_path,origin_img1_path,enhanced_img2_path,origin_img2_path,work_dir)
     print("Predicted Probability:", "{:.6f}".format(classifier_outputs))
