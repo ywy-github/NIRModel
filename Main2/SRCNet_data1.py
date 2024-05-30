@@ -346,7 +346,7 @@ if __name__ == '__main__':
     torch.backends.cudnn.benchmark = False
 
     batch_size = 16
-    epochs = 1000
+    epochs = 200
 
     embedding_dim = 64
     num_embeddings = 512  # 和encoder输出维度相同，和decoder输入维度相同

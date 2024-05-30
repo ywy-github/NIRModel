@@ -331,7 +331,7 @@ if __name__ == '__main__':
     ])
 
     test_benign_data = MyData("../data/一期数据/train/benign", "benign", transform=transform)
-    test_malignat_data = MyData("../data/一期数据/train/malignant", "benign", transform=transform)
+    test_malignat_data = MyData("../data/一期数据/train/malignant", "malignant", transform=transform)
     test_data = test_benign_data + test_malignat_data
 
     test_loader = DataLoader(test_data,
@@ -402,7 +402,7 @@ if __name__ == '__main__':
           "spe: {:.4f}".format(test_spe)+ " auc: {:.4f}".format(test_auc) + "loss: {:.4f}".format(np.mean(total_test_loss[-10:])))
 
     df = pd.DataFrame(test_results)
-    filename = '../models1/result/一期数据.xlsx'
+    filename = '../document/excels/TSRCNet/data1.xlsx'
 
     # # 检查文件是否存在
     if not os.path.isfile(filename):
