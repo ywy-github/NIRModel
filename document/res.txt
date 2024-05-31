@@ -89,8 +89,20 @@ data1+data2
 
 
 
+coral
+训练集 acc: 0.5434 sen: 0.4072 spe: 0.6091 auc: 0.5273 loss: 47.1869 train_recon_loss: 125.6975 train_perplexity: 6495.7256
+验证集 acc: 0.5046 sen: 0.4931 spe: 0.5137 auc: 0.5310
+测试集 acc: 0.5224 sen: 0.5205 spe: 0.5238 auc: 0.5181
 
-
+mmd
+14 epoch
+训练集 acc: 0.8019 sen: 0.7752 spe: 0.8148 auc: 0.8730 loss: 31.4427 train_recon_loss: 124.9717 train_perplexity: 18409.0547
+验证集 acc: 0.5535 sen: 0.2847 spe: 0.7650 auc: 0.5622
+测试集 acc: 0.5642 sen: 0.3151 spe: 0.7566 auc: 0.5668
+21 epoch
+训练集 acc: 0.9767 sen: 0.9772 spe: 0.9765 auc: 0.9973 loss: 5.0396 train_recon_loss: 126.2858 train_perplexity: 19122.7598
+验证集 acc: 0.5872 sen: 0.1806 spe: 0.9071 auc: 0.5784
+测试集 acc: 0.6179 sen: 0.2055 spe: 0.9365 auc: 0.6170
 
 
 

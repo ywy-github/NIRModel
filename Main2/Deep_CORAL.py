@@ -422,17 +422,17 @@ if __name__ == '__main__':
     source_train_malignat_data = MyData("../data/一期数据/train/malignant", "malignant", transform=transform)
     source_train_data = source_train_benign_data + source_train_malignat_data
 
-    target_train_benign_data = MyData("../data/qc后二期数据/train/wave1/benign", "benign", transform=transform)
-    target_train_malignat_data = MyData("../data/qc后二期数据/train/wave1/malignant", "malignant", transform=transform)
+    target_train_benign_data = MyData("../data/二期数据/train/wave1/benign", "benign", transform=transform)
+    target_train_malignat_data = MyData("../data/二期数据/train/wave1/malignant", "malignant", transform=transform)
     target_train_data = target_train_benign_data + target_train_malignat_data
 
 
-    val_benign_data = MyData("../data/qc后二期数据/val/wave1/benign", "benign", transform=transform)
-    val_malignat_data = MyData("../data/qc后二期数据/val/wave1/malignant", "malignant", transform=transform)
+    val_benign_data = MyData("../data/二期数据/val/wave1/benign", "benign", transform=transform)
+    val_malignat_data = MyData("../data/二期数据/val/wave1/malignant", "malignant", transform=transform)
     val_data = val_benign_data + val_malignat_data
 
-    test_benign_data = MyData("../data/qc后二期数据/test/wave1/benign", "benign", transform=transform)
-    test_malignat_data = MyData("../data/qc后二期数据/test/wave1/malignant", "malignant", transform=transform)
+    test_benign_data = MyData("../data/二期数据/test/wave1/benign", "benign", transform=transform)
+    test_malignat_data = MyData("../data/二期数据/test/wave1/malignant", "malignant", transform=transform)
     test_data = test_benign_data + test_malignat_data
 
     source_training_loader = DataLoader(source_train_data,
@@ -485,7 +485,7 @@ if __name__ == '__main__':
 
     coral_loss = CoralLoss()
     mmd_loss = MMDLoss()
-    criterion = WeightedBinaryCrossEntropyLoss(1.6)  # 调整这个权重以提高对灵敏度的重视
+    criterion = WeightedBinaryCrossEntropyLoss(1.5)  # 调整这个权重以提高对灵敏度的重视
     criterion.to(device)
     optimizer = optim.Adam(filter(lambda p: p.requires_grad, extendModel.parameters()), lr=learning_rate, amsgrad=False)
 
@@ -503,7 +503,7 @@ if __name__ == '__main__':
         target_iter = cycle(target_training_loader)
         for i in range(len(source_training_loader)):
             source_data, source_labels,_ = next(source_iter)
-            target_data, _,_ = next(target_iter)
+            target_data, target_labels,_ = next(target_iter)
 
             source_data = torch.cat([source_data] * 3, dim=1)
             source_data = source_data.to(device)
@@ -511,37 +511,42 @@ if __name__ == '__main__':
 
             target_data = torch.cat([target_data] * 3, dim=1)
             target_data = target_data.to(device)
+            target_labels = target_labels.to(device)
 
             optimizer.zero_grad()
 
-            vq_loss, source_features, source_data_recon, perplexity, classifier_outputs = extendModel(source_data)
-            _, target_features, _, _, _ = extendModel(target_data)
+            vq_loss1, source_features, source_data_recon, perplexity1, classifier_outputs1 = extendModel(source_data)
+            vq_loss2, target_features, target_data_recon, perplexity2, classifier_outputs2 = extendModel(target_data)
 
-            classifier_loss = criterion(source_labels.view(-1, 1), classifier_outputs)
-            # adaptation_loss = coral_loss(source_features.view(source_features.size(0), -1),
-            #                              target_features.view(target_features.size(0), -1))
-            adaptation_loss = mmd_loss(source_features.view(source_features.size(0), -1),
-                                          target_features.view(target_features.size(0), -1))
+            classifier_loss1 = criterion(source_labels.view(-1, 1), classifier_outputs1)
+            classifier_loss2 = criterion(target_labels.view(-1, 1), classifier_outputs2)
+            adaptation_loss = coral_loss(source_features.view(source_features.size(0), -1),
+                                         target_features.view(target_features.size(0), -1))
+            # adaptation_loss = mmd_loss(source_features.view(source_features.size(0), -1),
+            #                               target_features.view(target_features.size(0), -1))
 
 
-            data_variance = torch.var(source_data)
-            recon_loss = F.mse_loss(source_data_recon, source_data) / data_variance
+            data_variance1 = torch.var(source_data)
+            recon_loss1 = F.mse_loss(source_data_recon, source_data) / data_variance1
 
-            total_loss = joint_loss_function(recon_loss, vq_loss, classifier_loss,adaptation_loss,lambda_recon, lambda_vq,
-                                             lambda_classifier,lambda_adaptation)
+            data_variance2 = torch.var(source_data)
+            recon_loss2 = F.mse_loss(target_data_recon, target_data) / data_variance2
+
+            total_loss = vq_loss1+vq_loss2+classifier_loss1+classifier_loss2+adaptation_loss+recon_loss1+recon_loss2
+
             total_loss.backward()
             optimizer.step()
             # scheduler.step()
 
-            predicted_labels = (classifier_outputs >= 0.5).int().squeeze()
-            train_score.append(classifier_outputs.cpu().detach().numpy())
+            predicted_labels = (classifier_outputs1 >= 0.5).int().squeeze()
+            train_score.append(classifier_outputs1.cpu().detach().numpy())
             train_pred.extend(predicted_labels.cpu().numpy())
             train_targets.extend(source_labels.cpu().numpy())
 
             total_train_loss += total_loss
-            train_classifier_loss += classifier_loss
-            train_res_recon_error += recon_loss
-            train_res_perplexity += perplexity
+            train_classifier_loss += classifier_loss1
+            train_res_recon_error += recon_loss1
+            train_res_perplexity += perplexity1
         # writer.add_scalar('Loss/Train', total_train_loss, epoch)
         val_score = []
         val_pred = []
