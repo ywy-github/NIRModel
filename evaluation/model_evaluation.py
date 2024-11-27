@@ -1,5 +1,6 @@
 import numpy as np
 import pandas as pd
+from imblearn.metrics import sensitivity_score, specificity_score
 from matplotlib import pyplot as plt
 from sklearn.metrics import confusion_matrix, precision_recall_curve, roc_curve, auc, accuracy_score, precision_score, \
     recall_score, f1_score
@@ -276,17 +277,32 @@ def compute(y_true,y_prob,y_pred):
     print("Recall: %.4f" % recall)
     print("F1-score: %.4f" % f1)
 
+def all_metrics(y_true, y_pred):
+    cm = confusion_matrix(y_true, y_pred)
+    sen = np.round(sensitivity_score(y_true, y_pred), 4)
+    spe = np.round(specificity_score(y_true, y_pred), 4)
+    acc = np.round(accuracy_score(y_true, y_pred), 4)
+    TP = cm[1][1]
+    FP = cm[0][1]
+    FN = cm[1][0]
+    TN = cm[0][0]
+
+    print("Acc: %.4f" % acc)
+    print(("Sen: %.4f") % sen)
+    print("Spec: %.4f" % spe)
 
 if __name__ == '__main__':
-    data = pd.read_excel("../document/excels/TSRCNet/data1+data2.xlsx")
+    data = pd.read_excel("../models3/excels3/TResnet.xlsx")
     y_true = data.loc[:,"label"]
+    # y_prob = data.loc[:,"prob"]
     y_prob = data.loc[:,"prob"]
-    y_pred = data.loc[:,"pred"]
     # plot_confusion_matrix(y_true,y_prob)
     # PR_Curve(y_true,y_pred)
     # ROC_Curve(y_true,y_pred)
 
-    compute(y_true,y_prob,y_pred)
+    # compute(y_true,y_prob,y_pred)
 
     # Multi_ROC_Curve_消融()
     # Multi_ROC_Curve_对比()
+    all_metrics(y_true, y_prob)
+

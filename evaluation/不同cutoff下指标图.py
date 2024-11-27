@@ -6,7 +6,7 @@ from sklearn.metrics import accuracy_score, recall_score, precision_score, roc_a
 if __name__ == '__main__':
 
     # Read the Excel file
-    file_path = '../document/excels/SRCNet/data1.xlsx'  # Replace with the actual file path
+    file_path = '../models2/excels2/our.xlsx'  # Replace with the actual file path
     data = pd.read_excel(file_path)
 
     # Extract the prediction probabilities and true labels
@@ -58,7 +58,7 @@ if __name__ == '__main__':
     # Add labels and title
     plt.xlabel('Cutoff')
     plt.ylabel('Value')
-    plt.title('Metrics with Cutoff')
+    # plt.title('SRCNet ')
     plt.legend(loc='lower right')
 
     # Show the plot

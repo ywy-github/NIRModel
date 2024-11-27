@@ -18,10 +18,11 @@ class ChannelAttention(nn.Module):
     def forward(self, x):
         avg_out = self.fc2(self.relu1(self.fc1(self.avg_pool(x))))
         max_out = self.fc2(self.relu1(self.fc1(self.max_pool(x))))
-        out = avg_out + max_out
-        return self.sigmoid(out)
+        act = self.sigmoid(avg_out + max_out)
+        out = x * act
+        return out
 
-#空间注意力模块
+    #空间注意力模块
 class SpatialAttention(nn.Module):
     def __init__(self, kernel_size=7):
         super(SpatialAttention, self).__init__()
@@ -33,13 +34,15 @@ class SpatialAttention(nn.Module):
         self.sigmoid = nn.Sigmoid()
 
     def forward(self, x):
-        avg_out = torch.mean(x, dim=1, keepdim=True)
-        max_out, _ = torch.max(x, dim=1, keepdim=True)
-        x = torch.cat([avg_out, max_out], dim=1)
-        x = self.conv1(x)
-        return self.sigmoid(x)
+        avgout = torch.mean(x, dim=1, keepdim=True)
+        maxout, _ = torch.max(x, dim=1, keepdim=True)
+        x1 = torch.cat([avgout, maxout], dim=1)
+        x1 = self.conv(x1)
+        x1 = self.sigmoid(x1)
+        out = x * x1
+        return out
 
-#先接通道注意力模块、再接空间注意力模块
+    #先接通道注意力模块、再接空间注意力模块
 class CBAM(nn.Module):
     def __init__(self, inplanes, ratio=16, kernel_size=3):
         super(CBAM, self).__init__()
