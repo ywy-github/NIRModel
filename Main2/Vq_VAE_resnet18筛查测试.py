@@ -295,6 +295,7 @@ class Focal_Loss(nn.Module):
         loss_0 = -1 * (1 - self.alpha) * torch.pow(preds, self.gamma) * torch.log(1 - preds + eps) * (1 - labels)
         loss = loss_0 + loss_1
         return torch.mean(loss)
+
 def pred(image_path):
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
@@ -315,7 +316,7 @@ def pred(image_path):
         model.eval()  # 确保模型处于评估模式
         data = torch.cat([data] * 3, dim=1)
         vq_loss, data_recon, perplexity = model(data)
-        # concat = torch.cat((data[0][0], data_recon[0][0]), 1).detach().cpu().numpy()
+        concat = torch.cat((data[0][0], data_recon[0][0]), 1).detach().cpu().numpy()
         plt.imshow(data[0][0].detach().cpu().numpy(), cmap='gray')
         plt.show()
         plt.imshow(data_recon[0][0].detach().cpu().numpy(), cmap='gray')
@@ -323,7 +324,7 @@ def pred(image_path):
 
 if __name__ == '__main__':
 
-    image = "../data/筛查数据/train/benign/health_1.bmp"
+    image = "../data/筛查数据/train/benign/health_2.bmp"
 
     pred(image)
 

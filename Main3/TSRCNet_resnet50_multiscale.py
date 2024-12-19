@@ -142,27 +142,27 @@ class Decoder(nn.Module):
         super(Decoder, self).__init__()
 
         self.deconv1 = nn.Sequential(
-            nn.ConvTranspose2d(512, 256, kernel_size=4, stride=2, padding=1),
+            nn.ConvTranspose2d(2048, 1024, kernel_size=4, stride=2, padding=1),
             nn.ReLU(),
             nn.MaxPool2d(kernel_size=3, stride=1, padding=1)
         )
         self.deconv2 = nn.Sequential(
-            nn.ConvTranspose2d(256, 128, kernel_size=4, stride=2, padding=1),
+            nn.ConvTranspose2d(1024, 512, kernel_size=4, stride=2, padding=1),
             nn.ReLU(),
             nn.MaxPool2d(kernel_size=3, stride=1, padding=1)
         )
         self.deconv3 = nn.Sequential(
-            nn.ConvTranspose2d(128, 64, kernel_size=4, stride=2, padding=1),
+            nn.ConvTranspose2d(512, 256, kernel_size=4, stride=2, padding=1),
             nn.ReLU(),
             nn.MaxPool2d(kernel_size=3, stride=1, padding=1)
         )
         self.deconv4 = nn.Sequential(
-            nn.ConvTranspose2d(64, 32, kernel_size=4, stride=2, padding=1),
+            nn.ConvTranspose2d(256, 128, kernel_size=4, stride=2, padding=1),
             nn.ReLU(),
             nn.MaxPool2d(kernel_size=3, stride=1, padding=1)
         )
         self.deconv5 = nn.Sequential(
-            nn.ConvTranspose2d(32, 3, kernel_size=4, stride=2, padding=1),
+            nn.ConvTranspose2d(128, 3, kernel_size=4, stride=2, padding=1),
             nn.ReLU(),
             nn.MaxPool2d(kernel_size=3, stride=1, padding=1)
         )
@@ -451,7 +451,7 @@ class Bottleneck(nn.Module):
         # Both self.conv2 and self.downsample layers downsample the input when stride != 1
         self.conv1 = conv1x1(inplanes, width, stride=stride)
         self.bn1 = norm_layer(width)
-        self.conv2 = MSFEblock(width, atrous_rates=[1, 2, 3])
+        self.conv2 = MSFEblock(width, atrous_rates=[2, 4, 8])
         self.bn2 = norm_layer(width)
         self.conv3 = conv1x1(width, planes * self.expansion)
         self.bn3 = norm_layer(planes * self.expansion)
@@ -615,6 +615,21 @@ class ResNet50(ResNet):
             norm_layer=norm_layer
         )
 
+class ResNet18(ResNet):
+    def __init__(self, num_classes=2, zero_init_residual=False, groups=1,
+                 width_per_group=64, replace_stride_with_dilation=None, norm_layer=None):
+        # 调用父类 ResNet 的构造函数，使用 Bottleneck 作为 block，并固定层配置为 [3, 4, 6, 3]
+        super(ResNet18, self).__init__(
+            block=Bottleneck,
+            layers=[2, 2, 2, 2],
+            num_classes=num_classes,
+            zero_init_residual=zero_init_residual,
+            groups=groups,
+            width_per_group=width_per_group,
+            replace_stride_with_dilation=replace_stride_with_dilation,
+            norm_layer=norm_layer
+        )
+
 
 class MSFSSLModel(nn.Module):
     def __init__(self,encoder,num_embeddings, embedding_dim, commitment_cost, decay=0):
@@ -681,7 +696,7 @@ if __name__ == '__main__':
     torch.backends.cudnn.deterministic = True
     torch.backends.cudnn.benchmark = False
 
-    batch_size = 2
+    batch_size = 8
     epochs = 1000
 
     embedding_dim = 64
@@ -706,41 +721,47 @@ if __name__ == '__main__':
     ])
 
     train_benign_data = MyData("../data/一期数据/train/benign", "benign", transform=transform)
-    train_malignat_data = MyData("../data/一期数据/train/malignant", "benign", transform=transform)
+    train_malignat_data = MyData("../data/一期数据/train/malignant", "malignant", transform=transform)
     train_data = train_benign_data + train_malignat_data
 
     val_benign_data = MyData("../data/一期数据/val/benign", "benign", transform=transform)
-    val_malignat_data = MyData("../data/一期数据/val/malignant", "benign", transform=transform)
+    val_malignat_data = MyData("../data/一期数据/val/malignant", "malignant", transform=transform)
     val_data = val_benign_data + val_malignat_data
 
     test_benign_data = MyData("../data/一期数据/test/benign", "benign", transform=transform)
-    test_malignat_data = MyData("../data/一期数据/test/malignant", "benign", transform=transform)
+    test_malignat_data = MyData("../data/一期数据/test/malignant", "malignant", transform=transform)
     test_data = test_benign_data + test_malignat_data
 
     training_loader = DataLoader(train_data,
                                  batch_size=batch_size,
                                  shuffle=True,
-                                 num_workers=1
+                                 num_workers=4,
+                                 persistent_workers=True,
+                                 pin_memory=True
                                  )
 
     validation_loader = DataLoader(val_data,
                                    batch_size=batch_size,
                                    shuffle=True,
-                                   num_workers=1
-                                  )
+                                   num_workers=4,
+                                   persistent_workers=True,
+                                   pin_memory=True
+                                   )
 
     test_loader = DataLoader(test_data,
-                                   batch_size=batch_size,
-                                   shuffle=True,
-                                   num_workers=1
-                                   )
+                             batch_size=batch_size,
+                             shuffle=True,
+                             num_workers=4,
+                             persistent_workers=True,
+                             pin_memory=True
+                             )
 
 
     #设置encoder
     encoder = ResNet50(num_classes=2)
-    # for param in encoder.parameters():
-    #     param.requires_grad = False
-    #
+    for param in encoder.parameters():
+        param.requires_grad = True
+
     # for name, param in encoder.named_parameters():
     #     if "layer3" in name:
     #         param.requires_grad = True
