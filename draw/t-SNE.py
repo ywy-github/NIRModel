@@ -308,10 +308,11 @@ def tsne_visualization(model, dataloader, num_samples=500, perplexity=30):
             targets = targets.to(device)
 
             # 提取编码器的特征
-            encoded_features = model.model._encoder(data)  # 使用模型的编码器部分
-            encoded_features = encoded_features.view(encoded_features.size(0), -1).cpu().numpy()
+            z = model.model._encoder(data)  # 使用模型的编码器部分
+            loss, quantized, perplexity, _ = model.model._vq_vae(z)
+            quantized = quantized.view(quantized.size(0), -1).cpu().numpy()
 
-            features.append(encoded_features)
+            features.append(quantized)
             labels.extend(targets)
 
             # 如果达到样本数量限制则提前退出
