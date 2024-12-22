@@ -370,11 +370,11 @@ if __name__ == '__main__':
     filename = '../document/excels/CLAHE/data1.xlsx'
 
     # 检查文件是否存在
-    if not os.path.isfile(filename):
-        # 如果文件不存在，创建新文件并保存数据到 Sheet1
-        df.to_excel(filename, sheet_name='val', index=False)
-    else:
-        # 如果文件已经存在，打开现有文件并保存数据到 Sheet2
-        with pd.ExcelWriter(filename, engine='openpyxl', mode='a') as writer:
-            df.to_excel(writer, sheet_name='val', index=False)
+    # if not os.path.isfile(filename):
+    #     # 如果文件不存在，创建新文件并保存数据到 Sheet1
+    #     df.to_excel(filename, sheet_name='val', index=False)
+    # else:
+    #     # 如果文件已经存在，打开现有文件并保存数据到 Sheet2
+    #     with pd.ExcelWriter(filename, engine='openpyxl', mode='a') as writer:
+    #         df.to_excel(writer, sheet_name='val', index=False)
 

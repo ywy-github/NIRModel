@@ -78,17 +78,17 @@ def Multi_ROC_Curve_对比():
     # plt.plot(fpr_MobileNet, tpr_MobileNet, linewidth=2,
     #          label='MobileNet (area = %0.4f)' % roc_auc_MobileNet)
     plt.plot(fpr_SelfPath, tpr_SelfPath, linewidth=2,
-             label='Self-Path (area = %0.4f)' % roc_auc_SelfPath)
+             label='Self-Path (AUC = %0.4f)' % roc_auc_SelfPath)
     plt.plot(fpr_TransPath, tpr_TransPath, linewidth=2,
-             label='TransPath (area = %0.4f)' % roc_auc_TransPath)
+             label='TransPath (AUC = %0.4f)' % roc_auc_TransPath)
 
     plt.plot(fpr_TSBN, tpr_TSBN, linewidth=2,
-             label='TSBN (area = %0.4f)' % roc_auc_TSBN)
+             label='TSBN (AUC = %0.4f)' % roc_auc_TSBN)
 
     plt.plot(fpr_SSL, tpr_SSL, linewidth=2,color='black',
-             label='SSL (area = %0.4f)' % roc_auc_SSL)
+             label='SSL (AUC = %0.4f)' % roc_auc_SSL)
     plt.plot(fpr_our, tpr_our, linewidth=2,color='red',
-             label='the proposed model (area = %0.4f)' % roc_auc_our)
+             label='TSRCNet (AUC = %0.4f)' % roc_auc_our)
 
     plt.plot([0, 1], [0, 1], color='navy', linewidth=2, linestyle='--')
     plt.xlim([0.0, 1.0])
@@ -304,7 +304,7 @@ if __name__ == '__main__':
 
     # compute(y_true,y_prob,y_pred)
 
-    Multi_ROC_Curve_消融()
-    # Multi_ROC_Curve_对比()
+    # Multi_ROC_Curve_消融()
+    Multi_ROC_Curve_对比()
     # all_metrics(y_true, y_prob)
 
