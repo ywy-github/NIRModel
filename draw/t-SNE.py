@@ -307,13 +307,13 @@ def tsne_visualization(model, dataloader, num_samples=500, perplexity=30):
             data = torch.cat([data] * 3, dim=1).to(device)  # 扩展到 3 通道
             targets = targets.to(device)
 
-            # 提取编码器的特征
             z = model.model._encoder(data)  # 使用模型的编码器部分
             loss, quantized, perplexity, _ = model.model._vq_vae(z)
-            quantized = quantized.view(quantized.size(0), -1).cpu().numpy()
+            quantized = quantized.view(quantized.size(0), -1)  # 展平张量
 
-            features.append(quantized)
-            labels.extend(targets)
+            # 将特征移到CPU并转换为numpy
+            features.append(quantized.cpu().numpy())  # quantized 在 CPU 上进行处理
+            labels.extend(targets.cpu().numpy())  # 标签也移动到CPU
 
             # 如果达到样本数量限制则提前退出
             if len(labels) >= num_samples:
