@@ -45,7 +45,7 @@ def comfortproc(ds):
         dsout['WarningStringArray'] += strarr
         dsout['ErrorStatus'] = 2
     c=ds['MainTime'][1] - ds['MainTime'][0]
-    # Add one wave 700ms Scan mode for frames selecting
+    # Add MultiScale wave 700ms Scan mode for frames selecting
     if ds['MainTime'][1] - ds['MainTime'][0] > 0.6:#到这是对的上的
         ds['ProcessingModeds']['PressureTimeC'] = 2
 

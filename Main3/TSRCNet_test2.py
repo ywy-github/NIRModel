@@ -338,7 +338,7 @@ if __name__ == '__main__':
     torch.backends.cudnn.deterministic = True
     torch.backends.cudnn.benchmark = False
 
-    batch_size = 16
+    batch_size = 32
     epochs = 500
 
     embedding_dim = 64
@@ -361,19 +361,19 @@ if __name__ == '__main__':
         transforms.Normalize((0.3281,), (0.2366,))  # 设置均值和标准差
     ])
 
-    train_benign_data = MyData("../data/一期数据/train2/benign", "benign", transform=transform)
-    train_malignat_data = MyData("../data/一期数据/train2/malignant", "malignant", transform=transform)
+    train_benign_data = MyData("../data/二期数据单波段/train/wave1/benign", "benign", transform=transform)
+    train_malignat_data = MyData("../data/二期数据单波段/train/wave1/malignant", "malignant", transform=transform)
     train_data = train_benign_data + train_malignat_data
 
-    test_benign_data = MyData("../data/一期数据/test/benign", "benign", transform=transform)
-    test_malignat_data = MyData("../data/一期数据/test/malignant", "malignant", transform=transform)
+    test_benign_data = MyData("../data/二期数据单波段/test/wave1/benign", "benign", transform=transform)
+    test_malignat_data = MyData("../data/二期数据单波段/test/wave1/malignant", "malignant", transform=transform)
     test_data = test_benign_data + test_malignat_data
 
 
     training_loader = DataLoader(train_data,
                                  batch_size=batch_size,
                                  shuffle=True,
-                                 num_workers=6,
+                                 num_workers=4,
                                  persistent_workers=True,
                                  pin_memory=True
                                  )
@@ -382,7 +382,7 @@ if __name__ == '__main__':
     test_loader = DataLoader(test_data,
                                    batch_size=batch_size,
                                    shuffle=True,
-                                   num_workers=6,
+                                   num_workers=4,
                                    persistent_workers=True,
                                    pin_memory=True
                                    )
@@ -405,7 +405,7 @@ if __name__ == '__main__':
 
     extendModel = ExtendedModel(model).to(device)
 
-    criterion = WeightedBinaryCrossEntropyLoss(2)  # 调整这个权重以提高对灵敏度的重视
+    criterion = WeightedBinaryCrossEntropyLoss(1.3)  # 调整这个权重以提高对灵敏度的重视
     criterion.to(device)
     optimizer = optim.Adam(filter(lambda p: p.requires_grad, extendModel.parameters()), lr=learning_rate, amsgrad=False)
 
@@ -480,8 +480,8 @@ if __name__ == '__main__':
 
         # 训练的时候注释掉下边保存模型的代码，之后二次训练根据选择的epoch来保存模型
 
-        # if ((epoch + 1) == 64 or (epoch + 1) == 66):
-        #     torch.save(extendModel.state_dict(), "../models3/筛查重构+分类联合学习/筛查重构+分类联合学习-{}.pth".format(epoch + 1))
+        if ((epoch + 1) == 27 or  (epoch + 1) == 55 or  (epoch + 1) == 57):
+            torch.save(extendModel.state_dict(), "../MultiScale/models2/TSRCNet-{}.pth".format(epoch + 1))
 
         print('%d epoch' % (epoch + 1))
         train_acc, train_sen, train_spe = all_metrics(train_targets, train_pred)

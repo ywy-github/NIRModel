@@ -284,9 +284,9 @@ class ExtendedModel(nn.Module):
 
         return loss, x_recon, perplexity, classifier_output
 
-def tsne_visualization(model, dataloader, num_samples=500, perplexity=30):
+def tsne_visualization(model, dataloader, num_samples=500, perplexity=30.0):
     """
-    对模型提取的特征使用 t-SNE 降维并进行可视化。
+    对模型提取的特征使用 t-SNE 降维并进行三维可视化。
 
     Args:
         model: 已训练好的模型。
@@ -308,7 +308,7 @@ def tsne_visualization(model, dataloader, num_samples=500, perplexity=30):
             targets = targets.to(device)
 
             z = model.model._encoder(data)  # 使用模型的编码器部分
-            loss, quantized, perplexity, _ = model.model._vq_vae(z)
+            loss, quantized, perplexity_tensor, _ = model.model._vq_vae(z)
             quantized = quantized.view(quantized.size(0), -1)  # 展平张量
 
             # 将特征移到CPU并转换为numpy
@@ -323,20 +323,32 @@ def tsne_visualization(model, dataloader, num_samples=500, perplexity=30):
     features = np.vstack(features)[:num_samples]
     labels = np.array(labels)[:num_samples]
 
-    # 使用 t-SNE 降维
-    tsne = TSNE(n_components=2, perplexity=perplexity, random_state=42)
-    features_2d = tsne.fit_transform(features)
+    # 确保 perplexity 是一个浮动类型的数值
+    perplexity = float(perplexity)
 
-    # 绘制降维后的特征点
-    plt.figure(figsize=(10, 8))
-    for label in np.unique(labels):
+    # 使用 t-SNE 降维为 3 维
+    tsne = TSNE(n_components=3, perplexity=50, learning_rate=200, n_iter=2000, random_state=42)
+    features_3d = tsne.fit_transform(features)
+
+    # 绘制三维散点图
+    fig = plt.figure(figsize=(12, 10))
+    ax = fig.add_subplot(111, projection='3d')
+
+    unique_labels = np.unique(labels)
+    # 根据实际情况指定每个标签对应的颜色，例如：红色恶性，蓝色良性
+    color_map = {0: 'blue', 1: 'red'}  # 假设标签为0是良性，1是恶性
+
+    # 使用不同颜色绘制不同类别的点
+    for label in unique_labels:
         indices = labels == label
-        plt.scatter(features_2d[indices, 0], features_2d[indices, 1], label=f'Class {int(label)}', s=20)
+        ax.scatter(features_3d[indices, 0], features_3d[indices, 1], features_3d[indices, 2],
+                   label=f'Class {int(label)}', color=color_map[label], s=30)
 
-    plt.legend()
-    plt.title('t-SNE Visualization of Extracted Features')
-    plt.xlabel('t-SNE Component 1')
-    plt.ylabel('t-SNE Component 2')
+    # ax.set_title('t-SNE Visualization of Extracted Features (3D)')
+    ax.set_xlabel('Dimension 1')
+    ax.set_ylabel('Dimension 2')
+    ax.set_zlabel('Dimension 3')
+    ax.legend()
     plt.show()
 
 if __name__ == '__main__':
@@ -345,7 +357,7 @@ if __name__ == '__main__':
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     model = torch.load("../models2/筛查重构/VQ-VAE-筛查重构-200.pth", map_location=device)
     extendModel = ExtendedModel(model).to(device)
-    extendModel.load_state_dict(torch.load('../models2/筛查重构+分类联合学习/筛查重构+分类-89.pth'))
+    extendModel.load_state_dict(torch.load('../MultiScale/models1/TSRCNet-17.pth'))
     extendModel.eval()  # 切换到评估模式
 
     batch_size = 16
@@ -355,8 +367,8 @@ if __name__ == '__main__':
         transforms.Normalize((0.3281,), (0.2366,))  # 设置均值和标准差
     ])
 
-    test_benign_data = MyData("../data/一期数据/test/benign", "benign", transform=transform)
-    test_malignat_data = MyData("../data/一期数据/test/malignant", "benign", transform=transform)
+    test_benign_data = MyData("../data/一期数据/train/benign", "benign", transform=transform)
+    test_malignat_data = MyData("../data/一期数据/train/malignant", "malignant", transform=transform)
     test_data = test_benign_data + test_malignat_data
 
     test_loader = DataLoader(test_data,

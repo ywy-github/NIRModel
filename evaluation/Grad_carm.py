@@ -303,11 +303,21 @@ def save_gradient(module, grad_input, grad_output):
 def save_activation(module, input, output):
     global activations
     activations = output  # 保存特征图
+class WeightedBinaryCrossEntropyLoss(nn.Module):
+    def __init__(self, weight_positive):
+        super(WeightedBinaryCrossEntropyLoss, self).__init__()
+        self.weight_positive = weight_positive
 
+    def forward(self, y_true, y_pred):
+        y_true = y_true.to(dtype=torch.float32)
+        loss = - (self.weight_positive * y_true * torch.log(y_pred + 1e-7) + (1 - y_true) * torch.log(1 - y_pred + 1e-7))
+        return torch.mean(loss)
 
 def generate_grad_cam(image_path, model, target_layer, output_path):
     global gradients, activations
 
+    criterion = WeightedBinaryCrossEntropyLoss(2)  # 调整这个权重以提高对灵敏度的重视
+    criterion.to(device)
     # 加载图像并预处理
     data = Image.open(image_path)
     transform = transforms.Compose([
@@ -317,6 +327,7 @@ def generate_grad_cam(image_path, model, target_layer, output_path):
     ])
     data = transform(data).unsqueeze(0).to(device)
     data = torch.cat([data] * 3, dim=1)  # 将数据重复3次，形成3通道（RGB）
+    target = torch.tensor([1]).to(device)  # 假设标签为1
 
     # 注册钩子到目标层
     target_layer.register_forward_hook(save_activation)
@@ -328,7 +339,10 @@ def generate_grad_cam(image_path, model, target_layer, output_path):
     pred_class = (classifier_output[0] >= 0.5).int().squeeze()
     # 反向传播
     model.zero_grad()
-    classifier_output[0].backward()  # 对目标类别进行反向传播
+
+    classifier_loss = criterion(target.view(-1, 1), classifier_output)
+
+    classifier_loss.backword()
 
     # 计算 Grad-CAM
     weights = torch.mean(gradients, dim=(2, 3), keepdim=True)  # 计算梯度的平均值作为权重

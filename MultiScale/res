@@ -1,0 +1,39 @@
+一期数据：
+
+17 epoch
+训练集 acc: 0.9221 sen: 0.9408 spe: 0.9121 auc: 0.9773 loss: 8.6131 train_recon_loss: 65.1217 train_perplexity: 5638.3369
+测试集 acc: 0.7986 sen: 0.6092 spe: 0.8848 auc: 0.8112 loss: 7.6692 test_recon_loss: 18.0517 test_perplexity: 1527.1022
+
+
+22 epoch
+训练集 acc: 0.9856 sen: 0.9911 spe: 0.9827 auc: 0.9985 loss: 2.5559 train_recon_loss: 64.4502 train_perplexity: 6087.7500
+测试集 acc: 0.8165 sen: 0.6552 spe: 0.8901 auc: 0.8111 loss: 11.0515 test_recon_loss: 17.7121 test_perplexity: 1722.9784
+
+42 epoch
+训练集 acc: 0.9928 sen: 0.9941 spe: 0.9922 auc: 0.9998 loss: 0.7574 train_recon_loss: 64.6299 train_perplexity: 8272.1748
+测试集 acc: 0.8201 sen: 0.6092 spe: 0.9162 auc: 0.8305 loss: 14.4689 test_recon_loss: 17.5800 test_perplexity: 2316.0120
+
+49 epoch
+训练集 acc: 1.0000 sen: 1.0000 spe: 1.0000 auc: 1.0000 loss: 0.0893 train_recon_loss: 63.8689 train_perplexity: 7934.2314
+测试集 acc: 0.8022 sen: 0.6667 spe: 0.8639 auc: 0.8240 loss: 16.1608 test_recon_loss: 17.7152 test_perplexity: 2372.6487
+
+56 epoch
+训练集 acc: 1.0000 sen: 1.0000 spe: 1.0000 auc: 1.0000 loss: 0.1148 train_recon_loss: 64.0376 train_perplexity: 8206.0332
+测试集 acc: 0.8022 sen: 0.6897 spe: 0.8534 auc: 0.8255 loss: 16.1886 test_recon_loss: 17.8835 test_perplexity: 2436.9805
+
+二期数据
+22 epoch
+训练集 acc: 0.8694 sen: 0.8864 spe: 0.8564 auc: 0.9429 loss: 12.7422 train_recon_loss: 85.2590 train_perplexity: 5807.6675
+测试集 acc: 0.7521 sen: 0.6727 spe: 0.8182 auc: 0.8132 loss: 2.4486 test_recon_loss: 8.8330 test_perplexity: 793.2255
+
+27 epoch
+训练集 acc: 0.9873 sen: 0.9864 spe: 0.9880 auc: 0.9992 loss: 2.7079 train_recon_loss: 84.9034 train_perplexity: 5988.2871
+测试集 acc: 0.7438 sen: 0.5636 spe: 0.8939 auc: 0.8179 loss: 3.6740 test_recon_loss: 8.8961 test_perplexity: 883.0843
+
+55 epoch
+训练集 acc: 0.9598 sen: 0.9523 spe: 0.9656 auc: 0.9925 loss: 3.9246 train_recon_loss: 84.8964 train_perplexity: 6098.7939
+测试集 acc: 0.7686 sen: 0.6909 spe: 0.8333 auc: 0.8207 loss: 4.2682 test_recon_loss: 8.8325 test_perplexity: 979.8787
+
+57 epoch
+训练集 acc: 0.9990 sen: 1.0000 spe: 0.9983 auc: 1.0000 loss: 0.2508 train_recon_loss: 84.8583 train_perplexity: 6357.5586
+测试集 acc: 0.8017 sen: 0.8182 spe: 0.7879 auc: 0.8545 loss: 3.7222 test_recon_loss: 8.9360 test_perplexity: 806.8768
