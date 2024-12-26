@@ -371,39 +371,39 @@ if __name__ == '__main__':
         transforms.Normalize((0.3281,), (0.2366,))  # 设置均值和标准差
     ])
 
-    train_benign_data = MyData("../data/二期双十+双十五/train/wave1/benign", "benign", transform=transform)
-    train_malignat_data = MyData("../data/二期双十+双十五/train/wave1/malignant", "malignant", transform=transform)
+    train_benign_data = MyData("../data/一期数据/train_3/benign", "benign", transform=transform)
+    train_malignat_data = MyData("../data/一期数据/train_3/malignant", "malignant", transform=transform)
     train_data = train_benign_data + train_malignat_data
 
-    val_benign_data = MyData("../data/二期双十+双十五/val/wave1/benign", "benign", transform=transform)
-    val_malignat_data = MyData("../data/二期双十+双十五/val/wave1/malignant", "malignant", transform=transform)
-    val_data = val_benign_data + val_malignat_data
+    # val_benign_data = MyData("../data/一期数据/val/benign", "benign", transform=transform)
+    # val_malignat_data = MyData("../data/一期数据/val/malignant", "malignant", transform=transform)
+    # val_data = val_benign_data + val_malignat_data
 
-    test_benign_data = MyData("../data/二期双十+双十五/val/wave1/benign", "benign", transform=transform)
-    test_malignat_data = MyData("../data/二期双十+双十五/val/wave1/malignant", "malignant", transform=transform)
+    test_benign_data = MyData("../data/一期数据/test/benign", "benign", transform=transform)
+    test_malignat_data = MyData("../data/一期数据/test/malignant", "malignant", transform=transform)
     test_data = test_benign_data + test_malignat_data
 
 
     training_loader = DataLoader(train_data,
                                  batch_size=batch_size,
                                  shuffle=True,
-                                 num_workers=5,
+                                 num_workers=3,
                                  persistent_workers=True,
                                  pin_memory=True
                                  )
 
-    validation_loader = DataLoader(val_data,
-                                   batch_size=batch_size,
-                                   shuffle=True,
-                                   num_workers=5,
-                                   persistent_workers=True,
-                                   pin_memory=True
-                                  )
+    # validation_loader = DataLoader(val_data,
+    #                                batch_size=batch_size,
+    #                                shuffle=True,
+    #                                num_workers=5,
+    #                                persistent_workers=True,
+    #                                pin_memory=True
+    #                               )
 
     test_loader = DataLoader(test_data,
                                    batch_size=batch_size,
                                    shuffle=True,
-                                   num_workers=5,
+                                   num_workers=3,
                                    persistent_workers=True,
                                    pin_memory=True
                                    )
@@ -481,32 +481,32 @@ if __name__ == '__main__':
             train_res_recon_error.append(recon_loss.item())
             train_res_perplexity.append(perplexity.item())
         # writer.add_scalar('Loss/Train', total_train_loss, epoch)
-        val_score = []
-        val_pred = []
-        val_targets = []
-        total_val_loss = 0.0
-        model.eval()
-        with torch.no_grad():
-            for batch in validation_loader:
-                data, targets, names = batch
-                data = torch.cat([data] * 3, dim=1)
-                data = data.to(device)
-                targets = targets.to(device)
-                vq_loss, data_recon, perplexity, classifier_outputs = model(data)
-                data_variance = torch.var(data)
-                recon_loss = F.mse_loss(data_recon, data) / data_variance
-                classifier_loss = criterion(targets.view(-1, 1), classifier_outputs)
-                total_loss = joint_loss_function(recon_loss, vq_loss, classifier_loss, lambda_recon, lambda_vq,
-                                                 lambda_classifier)
-
-                predicted_labels = (classifier_outputs >= 0.5).int().view(-1)
-                val_score.append(classifier_outputs.flatten().cpu().numpy())
-                val_pred.extend(predicted_labels.cpu().numpy())
-                val_targets.extend(targets.cpu().numpy())
-
-                total_val_loss += total_loss
-                val_res_recon_error.append(recon_loss.item())
-                val_res_perplexity.append(perplexity.item())
+        # val_score = []
+        # val_pred = []
+        # val_targets = []
+        # total_val_loss = 0.0
+        # model.eval()
+        # with torch.no_grad():
+        #     for batch in validation_loader:
+        #         data, targets, names = batch
+        #         data = torch.cat([data] * 3, dim=1)
+        #         data = data.to(device)
+        #         targets = targets.to(device)
+        #         vq_loss, data_recon, perplexity, classifier_outputs = model(data)
+        #         data_variance = torch.var(data)
+        #         recon_loss = F.mse_loss(data_recon, data) / data_variance
+        #         classifier_loss = criterion(targets.view(-1, 1), classifier_outputs)
+        #         total_loss = joint_loss_function(recon_loss, vq_loss, classifier_loss, lambda_recon, lambda_vq,
+        #                                          lambda_classifier)
+        #
+        #         predicted_labels = (classifier_outputs >= 0.5).int().view(-1)
+        #         val_score.append(classifier_outputs.flatten().cpu().numpy())
+        #         val_pred.extend(predicted_labels.cpu().numpy())
+        #         val_targets.extend(targets.cpu().numpy())
+        #
+        #         total_val_loss += total_loss
+        #         val_res_recon_error.append(recon_loss.item())
+        #         val_res_perplexity.append(perplexity.item())
 
         test_score = []
         test_pred = []
@@ -536,8 +536,8 @@ if __name__ == '__main__':
                 test_res_perplexity.append(perplexity.item())
         # writer.add_scalar('Loss/Val', total_val_loss, epoch)
         #
-        # if ((epoch + 1) == 167):
-        #     torch.save(model.state_dict(), "../models1/qc/VQ-VAE-resnet18-qc-第二波段增强图-{}.pth".format(epoch + 1))
+        # if ((epoch + 1) == 52 or (epoch + 1) == 87 or (epoch + 1) == 115  or (epoch + 1) == 125 or (epoch + 1) == 129):
+        #     torch.save(model.state_dict(), "../MultiScale/models3/对比-{}.pth".format(epoch + 1))
         print('%d epoch' % (epoch + 1))
 
         train_acc, train_sen, train_spe = all_metrics(train_targets, train_pred)
@@ -550,15 +550,15 @@ if __name__ == '__main__':
               " spe: {:.4f}".format(train_spe) + " auc: {:.4f}".format(train_auc) +
               " loss: {:.4f}".format(total_train_loss))
 
-        val_acc, val_sen, val_spe = all_metrics(val_targets, val_pred)
-
-        val_score = np.concatenate(val_score)  # 将列表转换为NumPy数组
-        val_targets = np.array(val_targets)
-        val_auc = roc_auc_score(val_targets, val_score)
-
-        print("验证集 acc: {:.4f}".format(val_acc) + " sen: {:.4f}".format(val_sen) +
-              " spe: {:.4f}".format(val_spe) + " auc: {:.4f}".format(val_auc) +
-              " loss: {:.4f}".format(total_val_loss))
+        # val_acc, val_sen, val_spe = all_metrics(val_targets, val_pred)
+        #
+        # val_score = np.concatenate(val_score)  # 将列表转换为NumPy数组
+        # val_targets = np.array(val_targets)
+        # val_auc = roc_auc_score(val_targets, val_score)
+        #
+        # print("验证集 acc: {:.4f}".format(val_acc) + " sen: {:.4f}".format(val_sen) +
+        #       " spe: {:.4f}".format(val_spe) + " auc: {:.4f}".format(val_auc) +
+        #       " loss: {:.4f}".format(total_val_loss))
 
         test_acc, test_sen, test_spe = all_metrics(test_targets, test_pred)
 
@@ -570,10 +570,10 @@ if __name__ == '__main__':
               " spe: {:.4f}".format(test_spe) + " auc: {:.4f}".format(test_auc) +
               " loss: {:.4f}".format(total_test_loss))
 
-        print('train_recon_error: %.3f' % np.mean(train_res_recon_error[-10:]))
-        print('train_perplexity: %.3f' % np.mean(train_res_perplexity[-10:]))
-        print('val_recon_error: %.3f' % np.mean(val_res_recon_error[-10:]))
-        print('val_perplexity: %.3f' % np.mean(val_res_perplexity[-10:]))
+        # print('train_recon_error: %.3f' % np.mean(train_res_recon_error[-10:]))
+        # print('train_perplexity: %.3f' % np.mean(train_res_perplexity[-10:]))
+        # print('val_recon_error: %.3f' % np.mean(val_res_recon_error[-10:]))
+        # print('val_perplexity: %.3f' % np.mean(val_res_perplexity[-10:]))
 
     # writer.close()
     # 结束训练时间

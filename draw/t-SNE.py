@@ -327,7 +327,7 @@ def tsne_visualization(model, dataloader, num_samples=500, perplexity=30.0):
     perplexity = float(perplexity)
 
     # 使用 t-SNE 降维为 3 维
-    tsne = TSNE(n_components=3, perplexity=50, learning_rate=200, n_iter=2000, random_state=42)
+    tsne = TSNE(n_components=3, perplexity=3, learning_rate=100, n_iter=2000, random_state=42)
     features_3d = tsne.fit_transform(features)
 
     # 绘制三维散点图
@@ -357,7 +357,7 @@ if __name__ == '__main__':
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     model = torch.load("../models2/筛查重构/VQ-VAE-筛查重构-200.pth", map_location=device)
     extendModel = ExtendedModel(model).to(device)
-    extendModel.load_state_dict(torch.load('../MultiScale/models1/TSRCNet-17.pth'))
+    extendModel.load_state_dict(torch.load('../MultiScale/models1/TSRCNet-42.pth'))
     extendModel.eval()  # 切换到评估模式
 
     batch_size = 16

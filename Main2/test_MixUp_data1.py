@@ -263,15 +263,19 @@ class Model(nn.Module):
             self._vq_vae = VectorQuantizer(num_embeddings, embedding_dim,
                                            commitment_cost)
 
-        self.classifier = Classifier(512*14*14,512,1)
+        self.classifier = Classifier(512,256,1)
 
         self._decoder = Decoder()
+
+        self.Avg = nn.AdaptiveMaxPool2d(1)
 
     def forward(self, x):
         z = self._encoder(x)
         # z = self._pre_vq_conv(z)
         loss, quantized, perplexity, _ = self._vq_vae(z)
-        classifier_outputs = self.classifier(quantized.view(quantized.size(0),-1))
+
+        features = self.Avg(quantized)
+        classifier_outputs = self.classifier(features.view(features.size(0),-1))
         x_recon = self._decoder(quantized)
 
         return loss, x_recon, perplexity, classifier_outputs
@@ -346,7 +350,7 @@ if __name__ == '__main__':
 
     model = Model(encoder, num_embeddings, embedding_dim, commitment_cost, decay).to(device)
 
-    model.load_state_dict(torch.load('../document/models/MixUp/data1.pth'))
+    model.load_state_dict(torch.load('../MultiScale/models3/对比-129.pth'))
 
     criterion = WeightedBinaryCrossEntropyLoss(2)
     criterion.to(device)
@@ -393,7 +397,7 @@ if __name__ == '__main__':
         np.mean(total_test_loss[-10:])))
 
     df = pd.DataFrame(test_results)
-    filename = '../document/excels/MixUp/data1.xlsx'
+    filename = '../MultiScale/excels对比/对比-129.xlsx'
 
     # 检查文件是否存在
     if not os.path.isfile(filename):
