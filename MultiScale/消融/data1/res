@@ -1,0 +1,12 @@
+Both
+Acc: 0.7842  Sen: 0.6092   Spec: 0.8639  AUC: 0.7722
+
+1
+Acc: 0.8165  Sen: 0.6552  Spec: 0.8901  AUC: 0.8112
+
+2
+Acc: 0.7986  Sen: 0.6092   Spec: 0.8848  AUC: 0.8113
+
+
+MSFEFNet
+Acc: 0.8345  Sen: 0.6552   Spec: 0.9162   AUC: 0.8391

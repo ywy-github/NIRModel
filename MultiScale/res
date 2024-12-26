@@ -4,7 +4,6 @@
 训练集 acc: 0.9221 sen: 0.9408 spe: 0.9121 auc: 0.9773 loss: 8.6131 train_recon_loss: 65.1217 train_perplexity: 5638.3369
 测试集 acc: 0.7986 sen: 0.6092 spe: 0.8848 auc: 0.8112 loss: 7.6692 test_recon_loss: 18.0517 test_perplexity: 1527.1022
 
-
 22 epoch
 训练集 acc: 0.9856 sen: 0.9911 spe: 0.9827 auc: 0.9985 loss: 2.5559 train_recon_loss: 64.4502 train_perplexity: 6087.7500
 测试集 acc: 0.8165 sen: 0.6552 spe: 0.8901 auc: 0.8111 loss: 11.0515 test_recon_loss: 17.7121 test_perplexity: 1722.9784

@@ -3,7 +3,7 @@ import pandas as pd
 from imblearn.metrics import sensitivity_score, specificity_score
 from matplotlib import pyplot as plt, rcParams
 from sklearn.metrics import confusion_matrix, precision_recall_curve, roc_curve, auc, accuracy_score, precision_score, \
-    recall_score, f1_score
+    recall_score, f1_score, roc_auc_score
 
 
 def ROC_Curve(y_true,y_pred):
@@ -134,15 +134,15 @@ def Multi_ROC_Curve_消融():
     rcParams['font.sans-serif'] = ['SimHei']  # 设置字体为黑体
     rcParams['axes.unicode_minus'] = False  # 正常显示负号
     plt.plot(fpr_Resnet18, tpr_Resnet18, linewidth=2,
-             label='模型一 (AUC = %0.4f)' % roc_auc_Resnet18)
+             label='w/o Both (AUC = %0.4f)' % roc_auc_Resnet18)
 
     plt.plot(fpr_TResnet, tpr_TResnet, linewidth=2,
-             label='模型二 (AUC = %0.4f)' % roc_auc_TResnet)
+             label='w/o 1 (AUC = %0.4f)' % roc_auc_TResnet)
 
     plt.plot(fpr_SRCNet, tpr_SRCNet, linewidth=2,
-             label='模型三 (AUC = %0.4f)' % roc_auc_SRCNet)
+             label='w/o 2 (AUC = %0.4f)' % roc_auc_SRCNet)
     plt.plot(fpr_our, tpr_our, linewidth=2,color='red',
-             label='模型四 (AUC = %0.4f)' % roc_auc_our)
+             label='TSRCNet (AUC = %0.4f)' % roc_auc_our)
 
     plt.plot([0, 1], [0, 1], color='navy', linewidth=2, linestyle='--')
     plt.xlim([0.0, 1.0])
@@ -222,7 +222,59 @@ def Multi_PR_Curve():
 
     plt.show()
 
+def Multi_ROC_Curve_消融2():
+    filepath = "../MultiScale/消融/data1"
 
+    data_Resnet18 = pd.read_excel(filepath + "/1.xlsx")
+    data_TResnet = pd.read_excel(filepath + "/2.xlsx")
+    data_SRCNet = pd.read_excel(filepath + "/Both.xlsx")
+    data_our = pd.read_excel(filepath + "/MSFEFNet.xlsx")
+
+    y_true_Resnet18 = data_Resnet18.loc[:, "label"]
+    y_true_TResnet = data_TResnet.loc[:, "label"]
+    y_true_SRCNet = data_SRCNet.loc[:, "label"]
+    y_true_our = data_our.loc[:, "label"]
+
+
+    y_scores_Resnet18 = data_Resnet18.loc[:, "pred"]
+    y_scores_TResnet = data_TResnet.loc[:, "pred"]
+    y_scores_SRCNet = data_SRCNet.loc[:, "pred"]
+    y_scores_our = data_our.loc[:, "pred"]
+
+
+    fpr_Resnet18, tpr_Resnet18, thresholds_Resnet18 = roc_curve(y_true_Resnet18,y_scores_Resnet18)
+    fpr_TResnet, tpr_TResnet, thresholds_TResnet = roc_curve(y_true_TResnet,y_scores_TResnet)
+    fpr_SRCNet, tpr_SRCNet, thresholds_SRCNet = roc_curve(y_true_SRCNet, y_scores_SRCNet)
+    fpr_our, tpr_our, thresholds_our = roc_curve(y_true_our, y_scores_our)
+
+    roc_auc_Resnet18 = auc(fpr_Resnet18, tpr_Resnet18)
+    roc_auc_TResnet = auc(fpr_TResnet, tpr_TResnet)
+    roc_auc_SRCNet = auc(fpr_SRCNet, tpr_SRCNet)
+    roc_auc_our = auc(fpr_our, tpr_our)
+
+    plt.figure()
+
+    rcParams['font.sans-serif'] = ['SimHei']  # 设置字体为黑体
+    rcParams['axes.unicode_minus'] = False  # 正常显示负号
+    plt.plot(fpr_Resnet18, tpr_Resnet18, linewidth=2,
+             label='w/o MSFEBlock (AUC = %0.4f)' % roc_auc_Resnet18)
+
+    plt.plot(fpr_TResnet, tpr_TResnet, linewidth=2,
+             label='w/o MSFFBlock (AUC = %0.4f)' % roc_auc_TResnet)
+
+    plt.plot(fpr_SRCNet, tpr_SRCNet, linewidth=2,
+             label='w/o Both (AUC = %0.4f)' % roc_auc_SRCNet)
+    plt.plot(fpr_our, tpr_our, linewidth=2,color='red',
+             label='MSFEFNet (AUC = %0.4f)' % roc_auc_our)
+
+    plt.plot([0, 1], [0, 1], color='navy', linewidth=2, linestyle='--')
+    plt.xlim([0.0, 1.0])
+    plt.ylim([0.0, 1.05])
+    plt.xlabel('False Positive Rate',fontsize=14)
+    plt.ylabel('True Positive Rate',fontsize=14)
+    plt.title('Receiver Operating Characteristic Curve',fontsize=14)
+    plt.legend(loc="lower right")
+    plt.show()
 
 # y_true:真实标签
 # y_prob:预测标签
@@ -279,32 +331,31 @@ def compute(y_true,y_prob,y_pred):
     print("Recall: %.4f" % recall)
     print("F1-score: %.4f" % f1)
 
-def all_metrics(y_true, y_pred):
-    cm = confusion_matrix(y_true, y_pred)
-    sen = np.round(sensitivity_score(y_true, y_pred), 4)
-    spe = np.round(specificity_score(y_true, y_pred), 4)
-    acc = np.round(accuracy_score(y_true, y_pred), 4)
-    TP = cm[1][1]
-    FP = cm[0][1]
-    FN = cm[1][0]
-    TN = cm[0][0]
+def all_metrics(y_true, y_prob, y_pred):
+    cm = confusion_matrix(y_true, y_prob)
+    sen = np.round(sensitivity_score(y_true, y_prob), 4)
+    spe = np.round(specificity_score(y_true, y_prob), 4)
+    acc = np.round(accuracy_score(y_true, y_prob), 4)
+
+    train_auc = roc_auc_score(y_true, y_pred)
 
     print("Acc: %.4f" % acc)
     print(("Sen: %.4f") % sen)
     print("Spec: %.4f" % spe)
+    print("AUC: %.4f" % train_auc)
 
 if __name__ == '__main__':
-    data = pd.read_excel("../models2/excels2/SSL.xlsx")
+    data = pd.read_excel("../MultiScale/消融/data2/MSFEFNet.xlsx")
     y_true = data.loc[:,"label"]
-    # y_prob = data.loc[:,"prob"]
+    y_pred = data.loc[:,"pred"]
     y_prob = data.loc[:,"prob"]
     # plot_confusion_matrix(y_true,y_prob)
     # PR_Curve(y_true,y_pred)
     # ROC_Curve(y_true,y_pred)
 
     # compute(y_true,y_prob,y_pred)
-
+    Multi_ROC_Curve_消融2()
     # Multi_ROC_Curve_消融()
-    Multi_ROC_Curve_对比()
-    # all_metrics(y_true, y_prob)
+    # Multi_ROC_Curve_对比()
+    # all_metrics(y_true, y_prob, y_pred)
 
