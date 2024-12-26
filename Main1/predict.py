@@ -298,7 +298,7 @@ class WeightedBinaryCrossEntropyLoss(nn.Module):
 if __name__ == '__main__':
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-    model = torch.load("../models1/argument/VQ-VAE-resnet18-resize448+clahe+加入训练集-20.pth", map_location=device)
+    model = torch.load("../models消融一期/argument/VQ-VAE-resnet18-resize448+clahe+加入训练集-20.pth", map_location=device)
 
     image = Image.open("../data/一期数据/test2/benign/clahe_0531-SDZL-00113-YR-202008251559-D.bmp")
 

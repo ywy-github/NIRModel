@@ -454,7 +454,7 @@ if __name__ == '__main__':
 
     model = Model(encoder1, encoder2, num_embeddings, embedding_dim, commitment_cost, decay).to(device)
 
-    model.load_state_dict(torch.load('../models1/qc_2/qc后二期常规灯板-10.pth'))
+    model.load_state_dict(torch.load('../models消融一期/qc_2/qc后二期常规灯板-10.pth'))
 
     criterion = WeightedBinaryCrossEntropyLoss(2)
     criterion.to(device)

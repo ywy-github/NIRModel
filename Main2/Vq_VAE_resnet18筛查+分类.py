@@ -409,7 +409,7 @@ if __name__ == '__main__':
 
 
 
-    model = torch.load("../models2/筛查重构/VQ-VAE-筛查重构-200.pth", map_location=device)
+    model = torch.load("../models消融二期/筛查重构/VQ-VAE-筛查重构-200.pth", map_location=device)
 
     for param in model.parameters():
         param.requires_grad = True
@@ -528,7 +528,7 @@ if __name__ == '__main__':
                                              'prob': predicted_labels[i].item(), 'label': targets[i].item()})
 
         if ((epoch + 1) == 32):
-            # torch.save(model.state_dict(), "../models2/Vq-VAE-resnet18仅重构+分类器/Vq-VAE-resnet18仅重构+分类器-{}.pth".format(epoch + 1))
+            # torch.save(model.state_dict(), "../models消融二期/Vq-VAE-resnet18仅重构+分类器/Vq-VAE-resnet18仅重构+分类器-{}.pth".format(epoch + 1))
             # 记录每个样本的dcm_name、预测概率值和标签
 
             df = pd.DataFrame(test_results)
@@ -546,7 +546,7 @@ if __name__ == '__main__':
         # writer.add_scalar('Loss/Val', total_val_loss, epoch)
 
         # if ((epoch + 1) == 64 or (epoch + 1) == 66 or (epoch + 1) == 67 or (epoch + 1) == 100 or (epoch + 1) == 102):
-        #     torch.save(extendModel.state_dict(), "../models3/筛查重构+分类联合学习/筛查重构+分类联合学习-{}.pth".format(epoch + 1))
+        #     torch.save(extendModel.state_dict(), "../models对比一期/筛查重构+分类联合学习/筛查重构+分类联合学习-{}.pth".format(epoch + 1))
         # if ((epoch + 1)%10 == 0):
         #     concat = torch.cat((data[0][0],data_recon[0][0]), 1)
         #     plt.matshow(concat.cpu().detach().numpy())

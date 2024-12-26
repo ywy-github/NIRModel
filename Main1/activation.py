@@ -301,7 +301,7 @@ class WeightedBinaryCrossEntropyLoss(nn.Module):
 if __name__ == '__main__':
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-    model = torch.load("../models1/VQ-Resnet/VQ-VAE-resnet18-data1-resize448.pth", map_location=device)
+    model = torch.load("../models消融一期/VQ-Resnet/VQ-VAE-resnet18-data1-resize448.pth", map_location=device)
 
     target_layer = model._encoder[7][1].relu
     # 定义一个变量来保存中间层的激活值

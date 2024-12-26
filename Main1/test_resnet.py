@@ -86,7 +86,7 @@ if __name__ == '__main__':
                              shuffle=True,
                              pin_memory=True)
 
-    model = torch.load("../models1/VQ-Resnet/resnet18-resize512.pth", map_location=device)
+    model = torch.load("../models消融一期/VQ-Resnet/resnet18-resize512.pth", map_location=device)
 
     criterion = WeightedBinaryCrossEntropyLoss(2)
     criterion.to(device)

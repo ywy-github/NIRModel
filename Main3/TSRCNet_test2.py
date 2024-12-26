@@ -389,7 +389,7 @@ if __name__ == '__main__':
 
 
 
-    model = torch.load("../models2/筛查重构/VQ-VAE-筛查重构-200.pth", map_location=device)
+    model = torch.load("../models消融二期/筛查重构/VQ-VAE-筛查重构-200.pth", map_location=device)
 
     for param in model.parameters():
         param.requires_grad = True
@@ -481,7 +481,7 @@ if __name__ == '__main__':
         # 训练的时候注释掉下边保存模型的代码，之后二次训练根据选择的epoch来保存模型
 
         if ((epoch + 1) == 17 or (epoch + 1) == 22 or (epoch + 1) == 42  or (epoch + 1) == 49 or (epoch + 1) == 56 ):
-            torch.save(extendModel.state_dict(), "../MultiScale/models1/TSRCNet-{}.pth".format(epoch + 1))
+            torch.save(extendModel.state_dict(), "../MultiScale/models消融一期/TSRCNet-{}.pth".format(epoch + 1))
 
         print('%d epoch' % (epoch + 1))
         train_acc, train_sen, train_spe = all_metrics(train_targets, train_pred)

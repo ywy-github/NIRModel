@@ -547,7 +547,7 @@ if __name__ == '__main__':
 
     model = Model(encoder1, encoder2, num_embeddings, embedding_dim, commitment_cost, decay).to(device)
 
-    model.load_state_dict(torch.load('../models1/qc_2/qc前二期双十小灯板-19.pth'))
+    model.load_state_dict(torch.load('../models消融一期/qc_2/qc前二期双十小灯板-19.pth'))
 
     criterion = WeightedBinaryCrossEntropyLoss(1.1)
     # criterion = WeightedBinaryCrossEntropyLossWithRegularization(2, 0.01)
@@ -684,7 +684,7 @@ if __name__ == '__main__':
         # writer.add_scalar('Loss/Val', total_val_loss, epoch)
 
         # if ((epoch + 1) == 19):
-        #     torch.save(model.state_dict(), "../models1/qc_2/qc前二期双十小灯板-{}.pth".format(epoch + 1))
+        #     torch.save(model.state_dict(), "../models消融一期/qc_2/qc前二期双十小灯板-{}.pth".format(epoch + 1))
         print('%d epoch' % (epoch + 1))
 
         train_acc, train_sen, train_spe = all_metrics(train_targets, train_pred)

@@ -246,7 +246,7 @@ class Decoder(nn.Module):
         return self._conv_trans_2(x)
 
 def generate_and_save_images(predictions, epoch):
-  # predictions = models1.sample(test_input)
+  # predictions = models消融一期.sample(test_input)
   predictions = predictions.permute(0,3,2,1)
   predictions = predictions.data.cpu().numpy()
   fig = plt.figure(figsize=(4,4))

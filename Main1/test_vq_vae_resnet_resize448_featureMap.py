@@ -362,7 +362,7 @@ if __name__ == '__main__':
                              shuffle=True,
                              pin_memory=True)
 
-    model = torch.load("../models1/argument/VQ-VAE-resnet18-resize448+clahe+加入训练集-20.pth", map_location=device)
+    model = torch.load("../models消融一期/argument/VQ-VAE-resnet18-resize448+clahe+加入训练集-20.pth", map_location=device)
 
     # 获取两个数据集的 feature map 和对应的标签
     feature_maps_dataset1 = get_feature_maps(val_benign_loader)

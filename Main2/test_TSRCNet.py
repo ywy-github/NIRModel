@@ -340,7 +340,7 @@ if __name__ == '__main__':
                              shuffle=True,
                              pin_memory=True)
 
-    model = torch.load("../models2/筛查重构/VQ-VAE-筛查重构-200.pth", map_location=device)
+    model = torch.load("../models消融二期/筛查重构/VQ-VAE-筛查重构-200.pth", map_location=device)
 
     for param in model.parameters():
         param.requires_grad = True
@@ -356,7 +356,7 @@ if __name__ == '__main__':
 
     extendModel = ExtendedModel(model).to(device)
 
-    extendModel.load_state_dict(torch.load('../MultiScale/models2/TSRCNet-57.pth'))
+    extendModel.load_state_dict(torch.load('../MultiScale/models消融二期/TSRCNet-57.pth'))
 
     criterion = WeightedBinaryCrossEntropyLoss(2)
     criterion.to(device)

@@ -637,7 +637,7 @@ if __name__ == '__main__':
         # writer.add_scalar('Loss/Val', total_val_loss, epoch)
 
         # if ((epoch + 1) == 100 or (epoch + 1) == 103):
-        #     torch.save(model.state_dict(), "../models1/resnet18/双路径-双波段-{}.pth".format(epoch + 1))
+        #     torch.save(model.state_dict(), "../models消融一期/resnet18/双路径-双波段-{}.pth".format(epoch + 1))
         print('%d epoch' % (epoch + 1))
 
         train_acc, train_sen, train_spe = all_metrics(train_targets, train_pred)

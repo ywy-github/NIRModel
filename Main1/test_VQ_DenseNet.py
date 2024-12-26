@@ -413,5 +413,5 @@ if __name__ == '__main__':
           "spe: {:.4f}".format(train_spe) + "loss: {:.4f}".format(np.mean(total_test_loss[-10:])))
 
     df = pd.DataFrame(test_results)
-    # df.to_excel("../models1/result/VQ-VAE-resnet18_data2_train.xlsx", index=False)
+    # df.to_excel("../models消融一期/result/VQ-VAE-resnet18_data2_train.xlsx", index=False)
 

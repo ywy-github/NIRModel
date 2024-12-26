@@ -397,7 +397,7 @@ if __name__ == '__main__':
 
 
         if ((epoch + 1)%50==0):
-            torch.save(model, "../models2/筛查重构/VQ-VAE-筛查重构-{}.pth".format(epoch + 1))
+            torch.save(model, "../models消融二期/筛查重构/VQ-VAE-筛查重构-{}.pth".format(epoch + 1))
             concat = torch.cat((data[0][0], data_recon[0][0]), 1)
             plt.matshow(concat.cpu().detach().numpy())
             plt.show()

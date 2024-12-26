@@ -85,10 +85,10 @@ if __name__ == '__main__':
                              shuffle=True,
                              pin_memory=True)
 
-    resnet = torch.load("../models1/result/resnet18-resize224.pth", map_location=device)
+    resnet = torch.load("../models消融一期/result/resnet18-resize224.pth", map_location=device)
     resnet = nn.Sequential(*list(resnet.children())[:-2])
 
-    vq_resnet = torch.load("../models1/result/VQ-VAE-resnet18.pth", map_location=device)
+    vq_resnet = torch.load("../models消融一期/result/VQ-VAE-resnet18.pth", map_location=device)
     vq_resnet = nn.Sequential(*list(vq_resnet.children())[:-2])
 
     criterion = WeightedBinaryCrossEntropyLoss(2)
@@ -128,4 +128,4 @@ if __name__ == '__main__':
           "spe: {:.4f}".format(train_spe) + "loss: {:.4f}".format(np.mean(total_test_loss[-10:])))
 
     df = pd.DataFrame(test_results)
-    # df.to_excel("../models1/result/resnet18-data2-train.xlsx", index=False)
+    # df.to_excel("../models消融一期/result/resnet18-data2-train.xlsx", index=False)

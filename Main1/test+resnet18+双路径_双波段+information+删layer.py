@@ -468,7 +468,7 @@ if __name__ == '__main__':
     encoder2 = nn.Sequential(*list(encoder2.children())[:-3])
 
     model = Model(encoder1,encoder2,num_embeddings, embedding_dim, commitment_cost, decay).to(device)
-    model.load_state_dict(torch.load('../models1/resnet18/qc前数据-删一个layer-82.pth'))
+    model.load_state_dict(torch.load('../models消融一期/resnet18/qc前数据-删一个layer-82.pth'))
 
     criterion = WeightedBinaryCrossEntropyLoss(1.1)
     # criterion = WeightedBinaryCrossEntropyLossWithRegularization(2, 0.01)

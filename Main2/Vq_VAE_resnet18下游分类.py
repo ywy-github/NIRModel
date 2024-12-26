@@ -409,7 +409,7 @@ if __name__ == '__main__':
 
 
 
-    model = torch.load("../models2/Vq-VAE-resnet18仅重构/Vq-VAE-resnet18仅重构-300.pth", map_location=device)
+    model = torch.load("../models消融二期/Vq-VAE-resnet18仅重构/Vq-VAE-resnet18仅重构-300.pth", map_location=device)
 
     for param in model.parameters():
         param.requires_grad = False
@@ -526,7 +526,7 @@ if __name__ == '__main__':
         # writer.add_scalar('Loss/Val', total_val_loss, epoch)
 
         if ((epoch + 1) == 71):
-            # torch.save(model.state_dict(), "../models2/Vq-VAE-resnet18仅重构+分类器/Vq-VAE-resnet18仅重构+分类器-{}.pth".format(epoch + 1))
+            # torch.save(model.state_dict(), "../models消融二期/Vq-VAE-resnet18仅重构+分类器/Vq-VAE-resnet18仅重构+分类器-{}.pth".format(epoch + 1))
             # 记录每个样本的dcm_name、预测概率值和标签
 
             df = pd.DataFrame(test_results)

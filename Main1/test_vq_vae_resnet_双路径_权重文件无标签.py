@@ -390,7 +390,7 @@ if __name__ == '__main__':
 
     model = Model(encoder1, encoder2, num_embeddings, embedding_dim, commitment_cost, decay).to(device)
 
-    model.load_state_dict(torch.load('../models1/qc/resnet18-双路径-增-增-相减-原-原-相减-57.pth'))
+    model.load_state_dict(torch.load('../models消融一期/qc/resnet18-双路径-增-增-相减-原-原-相减-57.pth'))
 
     criterion = WeightedBinaryCrossEntropyLoss(2)
     criterion.to(device)

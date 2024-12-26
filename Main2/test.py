@@ -405,7 +405,7 @@ if __name__ == '__main__':
 
     extendModel = ExtendedModel(model).to(device)
 
-    extendModel.load_state_dict(torch.load('../models2/筛查重构+分类联合学习/筛查重构+分类-89.pth'))
+    extendModel.load_state_dict(torch.load('../models消融二期/筛查重构+分类联合学习/筛查重构+分类-89.pth'))
 
     coral_loss = CoralLoss()
     criterion = WeightedBinaryCrossEntropyLoss(1.6)  # 调整这个权重以提高对灵敏度的重视

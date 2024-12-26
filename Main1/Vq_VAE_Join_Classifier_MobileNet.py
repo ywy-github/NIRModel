@@ -494,7 +494,7 @@ if __name__ == '__main__':
         writer.add_scalar('Loss/Test', total_test_loss, epoch)
 
         if ((epoch + 1)%50 == 0):
-            torch.save(model, "../models1/VQ-MobileNet/VQ-MobileNet{}.pth".format(epoch + 1))
+            torch.save(model, "../models消融一期/VQ-MobileNet/VQ-MobileNet{}.pth".format(epoch + 1))
             print('%d epoch' % (epoch + 1))
 
             train_acc, train_sen, train_spe = all_metrics(train_targets, train_pred)

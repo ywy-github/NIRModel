@@ -397,7 +397,7 @@ if __name__ == '__main__':
 
 
         if ((epoch + 1)%100==0):
-            torch.save(model, "../models2/Vq-VAE-resnet18仅重构/Vq-VAE-resnet18仅重构-{}.pth".format(epoch + 1))
+            torch.save(model, "../models消融二期/Vq-VAE-resnet18仅重构/Vq-VAE-resnet18仅重构-{}.pth".format(epoch + 1))
         print('%d epoch' % (epoch + 1))
 
         print('train_recon_error: %.3f' % train_res_recon_error[epoch])

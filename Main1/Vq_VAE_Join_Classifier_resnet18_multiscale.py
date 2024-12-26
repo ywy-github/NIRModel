@@ -515,7 +515,7 @@ if __name__ == '__main__':
         writer.add_scalar('Loss/Val', total_val_loss, epoch)
 
         # if ((epoch + 1) == 20):
-        #     torch.save(model, "../models1/result/VQ-VAE-resnet18-resize448+clahe+加入训练集-{}.pth".format(epoch + 1))
+        #     torch.save(model, "../models消融一期/result/VQ-VAE-resnet18-resize448+clahe+加入训练集-{}.pth".format(epoch + 1))
         print('%d epoch' % (epoch + 1))
 
         train_acc, train_sen, train_spe = all_metrics(train_targets, train_pred)

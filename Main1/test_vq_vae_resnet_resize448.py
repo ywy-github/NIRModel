@@ -319,7 +319,7 @@ if __name__ == '__main__':
                              shuffle=True,
                              pin_memory=True)
 
-    model = torch.load("../models1/argument/VQ-VAE-resnet18-resize448+clahe+加入训练集-20.pth", map_location=device)
+    model = torch.load("../models消融一期/argument/VQ-VAE-resnet18-resize448+clahe+加入训练集-20.pth", map_location=device)
 
     criterion = WeightedBinaryCrossEntropyLoss(2)
     criterion.to(device)

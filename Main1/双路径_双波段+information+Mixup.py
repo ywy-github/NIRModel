@@ -663,7 +663,7 @@ if __name__ == '__main__':
         # writer.add_scalar('Loss/Val', total_val_loss, epoch)
 
         # if ((epoch + 1) == 21):
-        #     torch.save(model.state_dict(), "../models1/qc_2/qc前二期双十常规灯板-{}.pth".format(epoch + 1))
+        #     torch.save(model.state_dict(), "../models消融一期/qc_2/qc前二期双十常规灯板-{}.pth".format(epoch + 1))
         print('%d epoch' % (epoch + 1))
 
         train_acc, train_sen, train_spe = all_metrics(train_targets, train_pred)

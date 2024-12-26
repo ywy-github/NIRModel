@@ -355,9 +355,9 @@ if __name__ == '__main__':
     # 假设已经加载了训练好的模型
     # extendModel 是已经训练好的模型
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    model = torch.load("../models2/筛查重构/VQ-VAE-筛查重构-200.pth", map_location=device)
+    model = torch.load("../models消融二期/筛查重构/VQ-VAE-筛查重构-200.pth", map_location=device)
     extendModel = ExtendedModel(model).to(device)
-    extendModel.load_state_dict(torch.load('../MultiScale/models1/TSRCNet-42.pth'))
+    extendModel.load_state_dict(torch.load('../MultiScale/models消融一期/TSRCNet-42.pth'))
     extendModel.eval()  # 切换到评估模式
 
     batch_size = 16

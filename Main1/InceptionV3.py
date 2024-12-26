@@ -157,7 +157,7 @@ if __name__ == '__main__':
         writer.add_scalar('Loss/Test', total_test_loss, epoch)
 
         # if ((epoch + 1) == 798):
-        #     torch.save(model, "../models1/VQ-Resnet/resnet18{}.pth".format(epoch + 1))
+        #     torch.save(model, "../models消融一期/VQ-Resnet/resnet18{}.pth".format(epoch + 1))
 
         print('%d epoch' % (epoch + 1))
 

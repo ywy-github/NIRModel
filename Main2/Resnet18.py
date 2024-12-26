@@ -201,7 +201,7 @@ if __name__ == '__main__':
                                              'prob': predicted_labels[i].item(), 'label': targets[i].item()})
 
         if ((epoch + 1) == 33):
-            # torch.save(model.state_dict(), "../models2/Vq-VAE-resnet18仅重构+分类器/Vq-VAE-resnet18仅重构+分类器-{}.pth".format(epoch + 1))
+            # torch.save(model.state_dict(), "../models消融二期/Vq-VAE-resnet18仅重构+分类器/Vq-VAE-resnet18仅重构+分类器-{}.pth".format(epoch + 1))
             # 记录每个样本的dcm_name、预测概率值和标签
 
             df = pd.DataFrame(test_results)

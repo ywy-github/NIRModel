@@ -365,9 +365,9 @@ def generate_grad_cam(image_path, model, target_layer, output_path):
 if __name__ == '__main__':
     # 假设你已经加载了模型并选择了目标层
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    model = torch.load("../models2/筛查重构/VQ-VAE-筛查重构-200.pth", map_location=device)
+    model = torch.load("../models消融二期/筛查重构/VQ-VAE-筛查重构-200.pth", map_location=device)
     extendModel = ExtendedModel(model).to(device)
-    extendModel.load_state_dict(torch.load('../models2/筛查重构+分类联合学习/筛查重构+分类-89.pth'))
+    extendModel.load_state_dict(torch.load('../models消融二期/筛查重构+分类联合学习/筛查重构+分类-89.pth'))
     target_layer = extendModel.model._encoder[7][1].conv2  # 假设目标层是 ResNet 最后一层的卷积层
     image_path = "../data/一期数据/train/malignant/021-SHZL-00043-SHWY-201708280835-D.bmp"
     output_path = "../Grad_cam_data1/021-SHZL-00043-SHWY-201708280835-D.png"

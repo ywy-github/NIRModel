@@ -430,7 +430,7 @@ if __name__ == '__main__':
                 val_targets.extend(targets.cpu().numpy())
 
         # if ((epoch + 1)%50 == 0):
-        #     torch.save(model, "../models1/result/resnet18-resize448{}.pth".format(epoch + 1))
+        #     torch.save(model, "../models消融一期/result/resnet18-resize448{}.pth".format(epoch + 1))
 
         print('%d epoch' % (epoch + 1))
 

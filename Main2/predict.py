@@ -329,8 +329,8 @@ if __name__ == '__main__':
 
     image_path = "../data/一期数据/test/benign/" + image_name
 
-    work_dir1 = "../models2/筛查重构/"
-    work_dir2 = "../models2/筛查重构+分类联合学习/"
+    work_dir1 = "../models消融二期/筛查重构/"
+    work_dir2 = "../models消融二期/筛查重构+分类联合学习/"
 
     classifier_outputs = pred(image_path,work_dir1,work_dir2)
     print("Predicted Probability:", "{:.6f}".format(classifier_outputs))

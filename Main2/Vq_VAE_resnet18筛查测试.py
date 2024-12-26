@@ -300,7 +300,7 @@ def pred(image_path):
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 
-    model = torch.load("../models2/筛查重构/VQ-VAE-筛查重构-200.pth", map_location=device)
+    model = torch.load("../models消融二期/筛查重构/VQ-VAE-筛查重构-200.pth", map_location=device)
 
     data = Image.open(image_path)
 
