@@ -284,7 +284,7 @@ class ExtendedModel(nn.Module):
 
         return loss, x_recon, perplexity, classifier_output
 
-def tsne_visualization(model, dataloader, num_samples=500, perplexity=30.0):
+def tsne_visualization(model, dataloader, num_samples=500, perplexity=30.0, save_path="tsne_visualization.png"):
     """
     对模型提取的特征使用 t-SNE 降维并进行三维可视化。
 
@@ -293,6 +293,7 @@ def tsne_visualization(model, dataloader, num_samples=500, perplexity=30.0):
         dataloader: 数据加载器。
         num_samples: 用于可视化的样本数量。
         perplexity: t-SNE 的 perplexity 参数。
+        save_path: 保存图像的路径。
 
     Returns:
         None
@@ -327,8 +328,11 @@ def tsne_visualization(model, dataloader, num_samples=500, perplexity=30.0):
     perplexity = float(perplexity)
 
     # 使用 t-SNE 降维为 3 维
-    tsne = TSNE(n_components=3, perplexity=3, learning_rate=100, n_iter=2000, random_state=42)
+    tsne = TSNE(n_components=3, perplexity=perplexity, learning_rate=100, n_iter=2000, random_state=42)
     features_3d = tsne.fit_transform(features)
+
+    # 设置字体大小
+    plt.rcParams.update({'font.size': 16})
 
     # 绘制三维散点图
     fig = plt.figure(figsize=(12, 10))
@@ -344,20 +348,23 @@ def tsne_visualization(model, dataloader, num_samples=500, perplexity=30.0):
         ax.scatter(features_3d[indices, 0], features_3d[indices, 1], features_3d[indices, 2],
                    label=f'Class {int(label)}', color=color_map[label], s=30)
 
-    # ax.set_title('t-SNE Visualization of Extracted Features (3D)')
-    ax.set_xlabel('Dimension 1')
-    ax.set_ylabel('Dimension 2')
-    ax.set_zlabel('Dimension 3')
-    ax.legend()
+    # 设置标题和坐标轴标签
+    ax.set_title('t-SNE Visualization of Extracted Features (3D)', fontsize=20)
+    ax.legend(fontsize=20)
+
+    # 保存图片
+    # plt.savefig(save_path, dpi=300)
+
+    # 显示图片
     plt.show()
 
 if __name__ == '__main__':
     # 假设已经加载了训练好的模型
     # extendModel 是已经训练好的模型
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    model = torch.load("../models消融二期/筛查重构/VQ-VAE-筛查重构-200.pth", map_location=device)
+    model = torch.load("../models2/筛查重构/VQ-VAE-筛查重构-200.pth", map_location=device)
     extendModel = ExtendedModel(model).to(device)
-    extendModel.load_state_dict(torch.load('../MultiScale/models消融一期/TSRCNet-42.pth'))
+    extendModel.load_state_dict(torch.load('../models2/筛查重构+分类联合学习/筛查重构+分类-89.pth'))
     extendModel.eval()  # 切换到评估模式
 
     batch_size = 16
@@ -367,8 +374,8 @@ if __name__ == '__main__':
         transforms.Normalize((0.3281,), (0.2366,))  # 设置均值和标准差
     ])
 
-    test_benign_data = MyData("../data/一期数据/train/benign", "benign", transform=transform)
-    test_malignat_data = MyData("../data/一期数据/train/malignant", "malignant", transform=transform)
+    test_benign_data = MyData("../data/一期数据/train_2/benign", "benign", transform=transform)
+    test_malignat_data = MyData("../data/一期数据/train_2/malignant", "malignant", transform=transform)
     test_data = test_benign_data + test_malignat_data
 
     test_loader = DataLoader(test_data,
@@ -379,6 +386,6 @@ if __name__ == '__main__':
                              pin_memory=True
                              )
     # 定义 t-SNE 的降维函数
-
+    # save_path = "D:\\PyCharm 2022.2.1\\workspace\\NIRModel\\picture\\model1.png"
     # 调用函数进行可视化
-    tsne_visualization(extendModel, test_loader, num_samples=500, perplexity=30)
+    tsne_visualization(extendModel, test_loader, num_samples=600, perplexity=30)
