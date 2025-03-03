@@ -135,9 +135,10 @@ def Multi_ROC_Curve_对比():
     axes[1].legend(loc="lower right", fontsize=12)
 
     plt.tight_layout()  # 调整布局
+    plt.savefig("../data/ROC/SRCNet对比.pdf")
     plt.show()
 
-    plt.savefig("../data/ROC/SRCNet对比.pdf")
+
 
 def Multi_ROC_Curve_对比2():
     filepath = "../MultiScale/对比/data1"
@@ -252,9 +253,10 @@ def Multi_ROC_Curve_对比2():
     axes[1].legend(loc="lower right", fontsize=12)
 
     plt.tight_layout()  # 调整布局
+    plt.savefig("../data/ROC/MSFEFNet.pdf")
     plt.show()
 
-    plt.savefig("../data/ROC/MSFEFNet.pdf")
+
 
 
 def Multi_ROC_Curve_消融():
@@ -359,9 +361,10 @@ def Multi_ROC_Curve_消融():
     axes[1].legend(loc="lower right", fontsize=12)
 
     plt.tight_layout()  # 调整布局
+    plt.savefig("../data/ROC/SRCNet消融.pdf")
     plt.show()
 
-    plt.savefig("../data/ROC/SRCNet消融.pdf")
+
 
 
 def PR_Curve(y_true,y_pred):
@@ -530,9 +533,10 @@ def Multi_ROC_Curve_消融2():
     axes[1].legend(loc="lower right", fontsize=12)
 
     plt.tight_layout()  # 调整布局
+    plt.savefig("../data/ROC/MSFEFNet消融.pdf")
     plt.show()
 
-    plt.savefig("../data/ROC/MSFEFNet消融.pdf")
+
 
 # y_true:真实标签
 # y_prob:预测标签
@@ -612,9 +616,9 @@ if __name__ == '__main__':
     # ROC_Curve(y_true,y_pred)
 
     # compute(y_true,y_prob,y_pred)
-    # Multi_ROC_Curve_消融2()
-    # Multi_ROC_Curve_消融()
-    # Multi_ROC_Curve_对比()
+    Multi_ROC_Curve_消融2()
+    Multi_ROC_Curve_消融()
+    Multi_ROC_Curve_对比()
     Multi_ROC_Curve_对比2()
     # all_metrics(y_true, y_prob, y_pred)
 
