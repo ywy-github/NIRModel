@@ -227,49 +227,89 @@ class oneConv(nn.Module):
         x = self.conv(x)
         return x
 
+
+class DepthwiseSeparableConv(nn.Module):
+    def __init__(self, in_channels, out_channels, kernel_size, stride=1, padding=0, dilation=1, bias=False):
+        super(DepthwiseSeparableConv, self).__init__()
+        # 逐通道卷积
+        self.depthwise = nn.Conv2d(in_channels, in_channels, kernel_size=kernel_size, stride=stride,
+                                   padding=padding, dilation=dilation, groups=in_channels, bias=bias)
+        # 逐点卷积
+        self.pointwise = nn.Conv2d(in_channels, out_channels, kernel_size=1, bias=bias)
+
+    def forward(self, x):
+        return self.pointwise(self.depthwise(x))
+
+
 class MSFEblock(nn.Module):
     def __init__(self, in_channels, atrous_rates):
         super(MSFEblock, self).__init__()
         out_channels = in_channels
-
         rate1, rate2, rate3 = tuple(atrous_rates)
+
+        # 使用深度可分离卷积替代普通卷积
         self.layer1 = nn.Sequential(
-            nn.Conv2d(in_channels, out_channels, 3, padding=1, dilation=1, bias=False),#groups = in_channels , bias=False
+            DepthwiseSeparableConv(in_channels, out_channels, 3, padding=1, dilation=1, bias=False),
             nn.BatchNorm2d(out_channels),
-            nn.ReLU())
-        self.layer2 = ASPPConv(in_channels, out_channels, rate1)
-        self.layer3 = ASPPConv(in_channels, out_channels, rate2)
-        self.layer4 = ASPPConv(in_channels, out_channels, rate3)
+            nn.ReLU()
+        )
+
+        # 使用深度可分离卷积和不同的膨胀率进行特征提取
+        self.layer2 = DepthwiseSeparableConv(in_channels, out_channels, 3, padding=rate1, dilation=rate1, bias=False)
+        self.layer3 = DepthwiseSeparableConv(in_channels, out_channels, 3, padding=rate2, dilation=rate2, bias=False)
+        self.layer4 = DepthwiseSeparableConv(in_channels, out_channels, 3, padding=rate3, dilation=rate3, bias=False)
+
+        # 投影层，用于将多个尺度的输出特征图进行融合
         self.project = nn.Sequential(
-            nn.Conv2d(out_channels, out_channels, 1, bias=False),
+            nn.Conv2d(out_channels * 4, out_channels, 1, bias=False),
             nn.BatchNorm2d(out_channels),
-            nn.ReLU(),)
-            #nn.Dropout(0.5))
+            nn.ReLU()
+        )
+
+        # 全局平均池化
         self.gap = nn.AdaptiveAvgPool2d(1)
-        self.softmax = nn.Softmax(dim = 2)
-        self.softmax_1 = nn.Sigmoid()
-        self.SE1 = oneConv(in_channels,in_channels,1,0,1)
-        self.SE2 = oneConv(in_channels,in_channels,1,0,1)
-        self.SE3 = oneConv(in_channels,in_channels,1,0,1)
-        self.SE4 = oneConv(in_channels,in_channels,1,0,1)
+
+        # SE模块，用于生成权重
+        self.SE = nn.Conv2d(out_channels, 4, kernel_size=1)  # 4表示不同尺度的数量
+
+        # 为每个尺度的输入加上卷积操作以统一特征图尺寸
+        self.match1 = nn.Conv2d(in_channels, out_channels, 1, bias=False)
+        self.match2 = nn.Conv2d(in_channels, out_channels, 1, bias=False)
+        self.match3 = nn.Conv2d(in_channels, out_channels, 1, bias=False)
+        self.match4 = nn.Conv2d(in_channels, out_channels, 1, bias=False)
+
     def forward(self, x):
+        # 对每个尺度的输入加上卷积操作使其特征图尺寸统一
         y0 = self.layer1(x)
-        y1 = self.layer2(y0+x)
-        y2 = self.layer3(y1+x)
-        y3 = self.layer4(y2+x)
-        #res = torch.cat([y0,y1,y2,y3], dim=1)
-        y0_weight = self.SE1(self.gap(y0))
-        y1_weight = self.SE2(self.gap(y1))
-        y2_weight = self.SE3(self.gap(y2))
-        y3_weight = self.SE4(self.gap(y3))
-        weight = torch.cat([y0_weight,y1_weight,y2_weight,y3_weight],2)
-        weight = self.softmax(self.softmax_1(weight))
-        y0_weight = torch.unsqueeze(weight[:,:,0],2)
-        y1_weight = torch.unsqueeze(weight[:,:,1],2)
-        y2_weight = torch.unsqueeze(weight[:,:,2],2)
-        y3_weight = torch.unsqueeze(weight[:,:,3],2)
-        x_att = y0_weight*y0+y1_weight*y1+y2_weight*y2+y3_weight*y3
-        return self.project(x_att+x)
+        y0 = self.match1(y0)  # 使用卷积统一尺寸
+
+        y1 = self.layer2(y0 + x)
+        y1 = self.match2(y1)  # 使用卷积统一尺寸
+
+        y2 = self.layer3(y1 + x)
+        y2 = self.match3(y2)  # 使用卷积统一尺寸
+
+        y3 = self.layer4(y2 + x)
+        y3 = self.match4(y3)  # 使用卷积统一尺寸
+
+        # 使用统一的SE模块生成各个尺度的权重
+        weights = self.SE(self.gap(torch.cat([y0, y1, y2, y3], dim=1)))  # 获取权重
+        y0_weight, y1_weight, y2_weight, y3_weight = torch.chunk(weights, 4, dim=1)
+
+        # 对权重进行Sigmoid归一化
+        weight = torch.cat([y0_weight, y1_weight, y2_weight, y3_weight], dim=2)
+        weight = torch.sigmoid(weight)  # 使用Sigmoid归一化权重
+
+        # 对特征图进行加权
+        y0_weight = torch.unsqueeze(weight[:, :, 0], 2)
+        y1_weight = torch.unsqueeze(weight[:, :, 1], 2)
+        y2_weight = torch.unsqueeze(weight[:, :, 2], 2)
+        y3_weight = torch.unsqueeze(weight[:, :, 3], 2)
+
+        x_att = y0_weight * y0 + y1_weight * y1 + y2_weight * y2 + y3_weight * y3
+
+        # 投影层
+        return self.project(x_att + x)
 
 class SKConv(nn.Module):
     def __init__(self, features, M: int = 2, G: int = 32, r: int = 16, stride: int = 1, L: int = 32):

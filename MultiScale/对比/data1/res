@@ -1,0 +1,14 @@
+FabNet:
+acc: 0.7410 sen: 0.5402 spe: 0.8325 auc: 0.7596
+
+MDAA:
+acc: 0.7626 sen: 0.5517 spe: 0.8586 auc: 0.7544
+
+M2S2-FNet:
+Acc: 0.7590 Sen: 0.5862 Spec: 0.8377  AUC: 0.7815
+
+RI-ViT:
+Acc: 0.7734 Sen: 0.6667 Spec: 0.8220  AUC: 0.7736
+
+MSFEFNet:
+Acc: 0.8345  Sen: 0.6552   Spec: 0.9162   AUC: 0.8391

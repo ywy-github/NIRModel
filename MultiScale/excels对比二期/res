@@ -1,14 +1,16 @@
 38 epoch
 训练集 acc: 0.6112 sen: 0.4523 spe: 0.7315 auc: 0.6070 loss: 69.2664
 测试集 acc: 0.7025 sen: 0.7818 spe: 0.6364 auc: 0.7791 loss: 7.3173
-39 epoch
+
+39 epoch  ***
 训练集 acc: 0.6004 sen: 0.5568 spe: 0.6334 auc: 0.6167 loss: 68.9633
 测试集 acc: 0.7438 sen: 0.6545 spe: 0.8182 auc: 0.7926 loss: 7.2174
-40 epoch
+
+40 epoch  ***
 训练集 acc: 0.5965 sen: 0.5182 spe: 0.6558 auc: 0.6251 loss: 68.6200
 测试集 acc: 0.7521 sen: 0.7636 spe: 0.7424 auc: 0.7650 loss: 7.1936
 
-69 epoch
+69 epoch  ***
 训练集 acc: 0.7473 sen: 0.7068 spe: 0.7780 auc: 0.7799 loss: 56.8594
 测试集 acc: 0.7355 sen: 0.6909 spe: 0.7727 auc: 0.8066 loss: 6.8142
 
