@@ -388,4 +388,4 @@ if __name__ == '__main__':
     # 定义 t-SNE 的降维函数
     # save_path = "D:\\PyCharm 2022.2.1\\workspace\\NIRModel\\picture\\model1.png"
     # 调用函数进行可视化
-    tsne_visualization(extendModel, test_loader, num_samples=600, perplexity=30)
+    tsne_visualization(extendModel, test_loader, num_samples=200, perplexity=30)

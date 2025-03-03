@@ -23,84 +23,242 @@ def ROC_Curve(y_true,y_pred):
     plt.show()
 
 def Multi_ROC_Curve_对比():
-    filepath = "../models3/excels2"
+    filepath = "../models2/excels2"
     data_TransPath = pd.read_excel(filepath + "/TransPath.xlsx")
     data_TSBN = pd.read_excel(filepath + "/TSBN.xlsx")
-    # data_MobileNet = pd.read_excel(filepath + "/MobileNet.xlsx")
-    # data_Resnet18 = pd.read_excel(filepath + "/二期数据.xlsx")
-    # data_Resnet50 = pd.read_excel(filepath + "/Resnet50.xlsx")
     data_SelfPath = pd.read_excel(filepath + "/SelfPath.xlsx")
     data_SSL = pd.read_excel(filepath + "/SSL.xlsx")
     data_our = pd.read_excel(filepath + "/our.xlsx")
 
     y_true_TransPath = data_TransPath.loc[:, "label"]
     y_true_TSBN = data_TSBN.loc[:, "label"]
-    # y_true_MobileNet = data_MobileNet.loc[:, "label"]
-    # y_true_Resnet18 = data_Resnet18.loc[:, "label"]
-    # y_true_Resnet50 = data_Resnet50.loc[:, "label"]
     y_true_SelfPath = data_SelfPath.loc[:, "label"]
     y_true_SSL = data_SSL.loc[:, "label"]
     y_true_our = data_our.loc[:, "label"]
 
     y_scores_TransPath = data_TransPath.loc[:, "pred"]
     y_scores_TSBN = data_TSBN.loc[:, "pred"]
-    # y_scores_MobileNet = data_MobileNet.loc[:, "pred"]
-    # y_scores_Resnet18 = data_Resnet18.loc[:, "pred"]
-    # y_scores_Resnet50 = data_Resnet50.loc[:, "pred"]
     y_scores_SelfPath = data_SelfPath.loc[:, "pred"]
     y_scores_SSL = data_SSL.loc[:, "pred"]
     y_scores_our = data_our.loc[:, "pred"]
 
     fpr_TransPath, tpr_TransPath, thresholds_TransPath = roc_curve(y_true_TransPath, y_scores_TransPath)
     fpr_TSBN, tpr_TSBN, thresholds_TSBN = roc_curve(y_true_TSBN,y_scores_TSBN)
-    # fpr_MobileNet, tpr_MobileNet, thresholds_MobileNet = roc_curve(y_true_MobileNet,y_scores_MobileNet)
-    # fpr_Resnet18, tpr_Resnet18, thresholds_Resnet18 = roc_curve(y_true_Resnet18,y_scores_Resnet18)
-    # fpr_Resnet50, tpr_Resnet50, thresholds_Resnet50 = roc_curve(y_true_Resnet50,y_scores_Resnet50)
     fpr_SelfPath, tpr_SelfPath, thresholds_SelfPath = roc_curve(y_true_SelfPath, y_scores_SelfPath)
     fpr_SSL, tpr_SSL, thresholds_SSL = roc_curve(y_true_SSL, y_scores_SSL)
     fpr_our, tpr_our, thresholds_our = roc_curve(y_true_our, y_scores_our)
 
     roc_auc_TransPath = auc(fpr_TransPath, tpr_TransPath)
     roc_auc_TSBN = auc(fpr_TSBN, tpr_TSBN)
-    # roc_auc_MobileNet = auc(fpr_MobileNet, tpr_MobileNet)
-    # roc_auc_Resnet18 = auc(fpr_Resnet18, tpr_Resnet18)
-    # roc_auc_Resnet50 = auc(fpr_Resnet50, tpr_Resnet50)
     roc_auc_SelfPath = auc(fpr_SelfPath, tpr_SelfPath)
     roc_auc_SSL = auc(fpr_SSL, tpr_SSL)
     roc_auc_our = auc(fpr_our, tpr_our)
 
-    plt.figure()
+    filepath2 = "../models3/excels2"
+    data_TransPath2 = pd.read_excel(filepath2 + "/TransPath.xlsx")
+    data_TSBN2 = pd.read_excel(filepath2 + "/TSBN.xlsx")
+    data_SelfPath2 = pd.read_excel(filepath2 + "/SelfPath.xlsx")
+    data_SSL2 = pd.read_excel(filepath2 + "/SSL.xlsx")
+    data_our2 = pd.read_excel(filepath2 + "/our.xlsx")
 
-    # plt.plot(fpr_Resnet18, tpr_Resnet18, linewidth=2,
-    #          label='ResNet18 (area = %0.4f)' % roc_auc_Resnet18)
-    # plt.plot(fpr_Resnet50, tpr_Resnet50, linewidth=2,
-    #          label='ResNet50 (area = %0.4f)' % roc_auc_Resnet50)
-    # plt.plot(fpr_MobileNet, tpr_MobileNet, linewidth=2,
-    #          label='MobileNet (area = %0.4f)' % roc_auc_MobileNet)
-    plt.plot(fpr_SelfPath, tpr_SelfPath, linewidth=2,
+    y_true_TransPath2 = data_TransPath2.loc[:, "label"]
+    y_true_TSBN2 = data_TSBN2.loc[:, "label"]
+    y_true_SelfPath2 = data_SelfPath2.loc[:, "label"]
+    y_true_SSL2 = data_SSL2.loc[:, "label"]
+    y_true_our2 = data_our2.loc[:, "label"]
+
+    y_scores_TransPath2 = data_TransPath2.loc[:, "pred"]
+    y_scores_TSBN2 = data_TSBN2.loc[:, "pred"]
+    y_scores_SelfPath2 = data_SelfPath2.loc[:, "pred"]
+    y_scores_SSL2 = data_SSL2.loc[:, "pred"]
+    y_scores_our2 = data_our2.loc[:, "pred"]
+
+    fpr_TransPath2, tpr_TransPath2, thresholds_TransPath2 = roc_curve(y_true_TransPath2, y_scores_TransPath2)
+    fpr_TSBN2, tpr_TSBN2, thresholds_TSBN2 = roc_curve(y_true_TSBN2, y_scores_TSBN2)
+    fpr_SelfPath2, tpr_SelfPath2, thresholds_SelfPath2 = roc_curve(y_true_SelfPath2, y_scores_SelfPath2)
+    fpr_SSL2, tpr_SSL2, thresholds_SSL2 = roc_curve(y_true_SSL2, y_scores_SSL2)
+    fpr_our2, tpr_our2, thresholds_our2 = roc_curve(y_true_our2, y_scores_our2)
+
+    roc_auc_TransPath2 = auc(fpr_TransPath2, tpr_TransPath2)
+    roc_auc_TSBN2 = auc(fpr_TSBN2, tpr_TSBN2)
+    roc_auc_SelfPath2 = auc(fpr_SelfPath2, tpr_SelfPath2)
+    roc_auc_SSL2 = auc(fpr_SSL2, tpr_SSL2)
+    roc_auc_our2 = auc(fpr_our2, tpr_our2)
+
+
+    rcParams['font.sans-serif'] = ['SimHei']  # 设置字体为黑体
+    rcParams['axes.unicode_minus'] = False  # 正常显示负号
+
+    fig, axes = plt.subplots(1, 2, figsize=(10, 4))  # 1行2列
+
+    # 第一张图
+    axes[0].plot(fpr_SelfPath, tpr_SelfPath, linewidth=2,
              label='Self-Path (AUC = %0.4f)' % roc_auc_SelfPath)
-    plt.plot(fpr_TransPath, tpr_TransPath, linewidth=2,
+
+    axes[0].plot(fpr_TransPath, tpr_TransPath, linewidth=2,
              label='TransPath (AUC = %0.4f)' % roc_auc_TransPath)
 
-    plt.plot(fpr_TSBN, tpr_TSBN, linewidth=2,
+    axes[0].plot(fpr_TSBN, tpr_TSBN, linewidth=2,
              label='TSBN (AUC = %0.4f)' % roc_auc_TSBN)
 
-    plt.plot(fpr_SSL, tpr_SSL, linewidth=2,color='black',
-             label='SSL (AUC = %0.4f)' % roc_auc_SSL)
-    plt.plot(fpr_our, tpr_our, linewidth=2,color='red',
-             label='TSRCNet (AUC = %0.4f)' % roc_auc_our)
+    axes[0].plot(fpr_SSL, tpr_SSL, linewidth=2,
+                 label='SSL (AUC = %0.4f)' % roc_auc_SSL)
 
-    plt.plot([0, 1], [0, 1], color='navy', linewidth=2, linestyle='--')
-    plt.xlim([0.0, 1.0])
-    plt.ylim([0.0, 1.05])
-    plt.xlabel('False Positive Rate',fontsize=16)
-    plt.ylabel('True Positive Rate',fontsize=16)
-    plt.title('Receiver Operating Characteristic Curve',fontsize=16)
-    plt.legend(loc="lower right", fontsize=12)
+    axes[0].plot(fpr_our, tpr_our, linewidth=2, color='red',
+             label='SRCNet (AUC = %0.4f)' % roc_auc_our)
+
+    axes[0].set_xlabel('FPR', fontsize=16)
+    axes[0].set_ylabel('TPR', fontsize=16)
+    axes[0].set_title('ROC曲线(一期数据)', fontsize=16)
+    axes[0].legend(loc="lower right", fontsize=12)
+
+
+    # 第二张图
+    axes[1].plot(fpr_SelfPath2, tpr_SelfPath2, linewidth=2,
+                 label='Self-Path (AUC = %0.4f)' % roc_auc_SelfPath2)
+
+    axes[1].plot(fpr_TransPath2, tpr_TransPath2, linewidth=2,
+                 label='TransPath (AUC = %0.4f)' % roc_auc_TransPath2)
+
+    axes[1].plot(fpr_TSBN2, tpr_TSBN2, linewidth=2,
+                 label='TSBN (AUC = %0.4f)' % roc_auc_TSBN2)
+
+    axes[1].plot(fpr_SSL2, tpr_SSL2, linewidth=2,
+                 label='SSL (AUC = %0.4f)' % roc_auc_SSL2)
+
+    axes[1].plot(fpr_our2, tpr_our2, linewidth=2, color='red',
+                 label='SRCNet (AUC = %0.4f)' % roc_auc_our2)
+
+    axes[1].set_xlabel('FPR', fontsize=16)
+    axes[1].set_ylabel('TPR', fontsize=16)
+    axes[1].set_title('ROC曲线(二期数据)', fontsize=16)
+    axes[1].legend(loc="lower right", fontsize=12)
+
+    plt.tight_layout()  # 调整布局
     plt.show()
 
+    plt.savefig("../data/ROC/SRCNet对比.pdf")
+
+def Multi_ROC_Curve_对比2():
+    filepath = "../MultiScale/对比/data1"
+    data_TransPath = pd.read_excel(filepath + "/FabNet.xlsx")
+    data_TSBN = pd.read_excel(filepath + "/M2S2-FNet.xlsx")
+    data_SelfPath = pd.read_excel(filepath + "/MDAA.xlsx")
+    data_SSL = pd.read_excel(filepath + "/RI-ViT.xlsx")
+    data_our = pd.read_excel(filepath + "/MSFEFNet.xlsx")
+
+    y_true_TransPath = data_TransPath.loc[:, "label"]
+    y_true_TSBN = data_TSBN.loc[:, "label"]
+    y_true_SelfPath = data_SelfPath.loc[:, "label"]
+    y_true_SSL = data_SSL.loc[:, "label"]
+    y_true_our = data_our.loc[:, "label"]
+
+    y_scores_TransPath = data_TransPath.loc[:, "pred"]
+    y_scores_TSBN = data_TSBN.loc[:, "pred"]
+    y_scores_SelfPath = data_SelfPath.loc[:, "pred"]
+    y_scores_SSL = data_SSL.loc[:, "pred"]
+    y_scores_our = data_our.loc[:, "pred"]
+
+    fpr_TransPath, tpr_TransPath, thresholds_TransPath = roc_curve(y_true_TransPath, y_scores_TransPath)
+    fpr_TSBN, tpr_TSBN, thresholds_TSBN = roc_curve(y_true_TSBN,y_scores_TSBN)
+    fpr_SelfPath, tpr_SelfPath, thresholds_SelfPath = roc_curve(y_true_SelfPath, y_scores_SelfPath)
+    fpr_SSL, tpr_SSL, thresholds_SSL = roc_curve(y_true_SSL, y_scores_SSL)
+    fpr_our, tpr_our, thresholds_our = roc_curve(y_true_our, y_scores_our)
+
+    roc_auc_TransPath = auc(fpr_TransPath, tpr_TransPath)
+    roc_auc_TSBN = auc(fpr_TSBN, tpr_TSBN)
+    roc_auc_SelfPath = auc(fpr_SelfPath, tpr_SelfPath)
+    roc_auc_SSL = auc(fpr_SSL, tpr_SSL)
+    roc_auc_our = auc(fpr_our, tpr_our)
+
+    filepath2 = "../MultiScale/对比/data2"
+    data_TransPath2 = pd.read_excel(filepath2 + "/FabNet.xlsx")
+    data_TSBN2 = pd.read_excel(filepath2 + "/M2S2-FNet.xlsx")
+    data_SelfPath2 = pd.read_excel(filepath2 + "/MDAA.xlsx")
+    data_SSL2 = pd.read_excel(filepath2 + "/RI-ViT.xlsx")
+    data_our2 = pd.read_excel(filepath2 + "/MSFEFNet.xlsx")
+
+    y_true_TransPath2 = data_TransPath2.loc[:, "label"]
+    y_true_TSBN2 = data_TSBN2.loc[:, "label"]
+    y_true_SelfPath2 = data_SelfPath2.loc[:, "label"]
+    y_true_SSL2 = data_SSL2.loc[:, "label"]
+    y_true_our2 = data_our2.loc[:, "label"]
+
+    y_scores_TransPath2 = data_TransPath2.loc[:, "pred"]
+    y_scores_TSBN2 = data_TSBN2.loc[:, "pred"]
+    y_scores_SelfPath2 = data_SelfPath2.loc[:, "pred"]
+    y_scores_SSL2 = data_SSL2.loc[:, "pred"]
+    y_scores_our2 = data_our2.loc[:, "pred"]
+
+    fpr_TransPath2, tpr_TransPath2, thresholds_TransPath2 = roc_curve(y_true_TransPath2, y_scores_TransPath2)
+    fpr_TSBN2, tpr_TSBN2, thresholds_TSBN2 = roc_curve(y_true_TSBN2, y_scores_TSBN2)
+    fpr_SelfPath2, tpr_SelfPath2, thresholds_SelfPath2 = roc_curve(y_true_SelfPath2, y_scores_SelfPath2)
+    fpr_SSL2, tpr_SSL2, thresholds_SSL2 = roc_curve(y_true_SSL2, y_scores_SSL2)
+    fpr_our2, tpr_our2, thresholds_our2 = roc_curve(y_true_our2, y_scores_our2)
+
+    roc_auc_TransPath2 = auc(fpr_TransPath2, tpr_TransPath2)
+    roc_auc_TSBN2 = auc(fpr_TSBN2, tpr_TSBN2)
+    roc_auc_SelfPath2 = auc(fpr_SelfPath2, tpr_SelfPath2)
+    roc_auc_SSL2 = auc(fpr_SSL2, tpr_SSL2)
+    roc_auc_our2 = auc(fpr_our2, tpr_our2)
+
+
+    rcParams['font.sans-serif'] = ['SimHei']  # 设置字体为黑体
+    rcParams['axes.unicode_minus'] = False  # 正常显示负号
+
+    fig, axes = plt.subplots(1, 2, figsize=(10, 4))  # 1行2列
+
+    # 第一张图
+    axes[0].plot(fpr_SelfPath, tpr_SelfPath, linewidth=2,
+             label='MDAA (AUC = %0.4f)' % roc_auc_SelfPath)
+
+    axes[0].plot(fpr_TransPath, tpr_TransPath, linewidth=2,
+             label='FabNet (AUC = %0.4f)' % roc_auc_TransPath)
+
+    axes[0].plot(fpr_TSBN, tpr_TSBN, linewidth=2,
+             label='M2S2-FNet (AUC = %0.4f)' % roc_auc_TSBN)
+
+    axes[0].plot(fpr_SSL, tpr_SSL, linewidth=2,
+                 label='RI-ViT (AUC = %0.4f)' % roc_auc_SSL)
+
+    axes[0].plot(fpr_our, tpr_our, linewidth=2, color='red',
+             label='MSFEFNet (AUC = %0.4f)' % roc_auc_our)
+
+    axes[0].set_xlabel('FPR', fontsize=16)
+    axes[0].set_ylabel('TPR', fontsize=16)
+    axes[0].set_title('ROC曲线(一期数据)', fontsize=16)
+    axes[0].legend(loc="lower right", fontsize=12)
+
+
+    # 第二张图
+    axes[1].plot(fpr_SelfPath2, tpr_SelfPath2, linewidth=2,
+                 label='MDAA (AUC = %0.4f)' % roc_auc_SelfPath2)
+
+    axes[1].plot(fpr_TransPath2, tpr_TransPath2, linewidth=2,
+                 label='FabNet (AUC = %0.4f)' % roc_auc_TransPath2)
+
+    axes[1].plot(fpr_TSBN2, tpr_TSBN2, linewidth=2,
+                 label='M2S2-FNet (AUC = %0.4f)' % roc_auc_TSBN2)
+
+    axes[1].plot(fpr_SSL2, tpr_SSL2, linewidth=2,
+                 label='RI-ViT (AUC = %0.4f)' % roc_auc_SSL2)
+
+    axes[1].plot(fpr_our2, tpr_our2, linewidth=2, color='red',
+                 label='MSFEFNet (AUC = %0.4f)' % roc_auc_our2)
+
+    axes[1].set_xlabel('FPR', fontsize=16)
+    axes[1].set_ylabel('TPR', fontsize=16)
+    axes[1].set_title('ROC曲线(二期数据)', fontsize=16)
+    axes[1].legend(loc="lower right", fontsize=12)
+
+    plt.tight_layout()  # 调整布局
+    plt.show()
+
+    plt.savefig("../data/ROC/MSFEFNet.pdf")
+
+
 def Multi_ROC_Curve_消融():
-    filepath = "../models3/excels3"
+    filepath = "../models2/excels3"
 
     data_Resnet18 = pd.read_excel(filepath + "/Resnet18.xlsx")
     data_TResnet = pd.read_excel(filepath + "/TResnet.xlsx")
@@ -129,29 +287,81 @@ def Multi_ROC_Curve_消融():
     roc_auc_SRCNet = auc(fpr_SRCNet, tpr_SRCNet)
     roc_auc_our = auc(fpr_our, tpr_our)
 
-    plt.figure()
+    filepath2 = "../models3/excels3"
+
+    data_Resnet182 = pd.read_excel(filepath2 + "/Resnet18.xlsx")
+    data_TResnet2 = pd.read_excel(filepath2 + "/TResnet.xlsx")
+    data_SRCNet2 = pd.read_excel(filepath2 + "/SRCNet.xlsx")
+    data_our2 = pd.read_excel(filepath2 + "/our.xlsx")
+
+    y_true_Resnet182 = data_Resnet182.loc[:, "label"]
+    y_true_TResnet2 = data_TResnet2.loc[:, "label"]
+    y_true_SRCNet2 = data_SRCNet2.loc[:, "label"]
+    y_true_our2 = data_our2.loc[:, "label"]
+
+    y_scores_Resnet182 = data_Resnet182.loc[:, "pred"]
+    y_scores_TResnet2 = data_TResnet2.loc[:, "pred"]
+    y_scores_SRCNet2 = data_SRCNet2.loc[:, "pred"]
+    y_scores_our2 = data_our2.loc[:, "pred"]
+
+    fpr_Resnet182, tpr_Resnet182, thresholds_Resnet182 = roc_curve(y_true_Resnet182, y_scores_Resnet182)
+    fpr_TResnet2, tpr_TResnet2, thresholds_TResnet2 = roc_curve(y_true_TResnet2, y_scores_TResnet2)
+    fpr_SRCNet2, tpr_SRCNet2, thresholds_SRCNet2 = roc_curve(y_true_SRCNet2, y_scores_SRCNet2)
+    fpr_our2, tpr_our2, thresholds_our2 = roc_curve(y_true_our2, y_scores_our2)
+
+    roc_auc_Resnet182 = auc(fpr_Resnet182, tpr_Resnet182)
+    roc_auc_TResnet2 = auc(fpr_TResnet2, tpr_TResnet2)
+    roc_auc_SRCNet2 = auc(fpr_SRCNet2, tpr_SRCNet2)
+    roc_auc_our2 = auc(fpr_our2, tpr_our2)
+
+
 
     rcParams['font.sans-serif'] = ['SimHei']  # 设置字体为黑体
     rcParams['axes.unicode_minus'] = False  # 正常显示负号
-    plt.plot(fpr_Resnet18, tpr_Resnet18, linewidth=2,
+
+    fig, axes = plt.subplots(1, 2, figsize=(10, 4))  # 1行2列
+
+    # 第一张图
+    axes[0].plot(fpr_Resnet18, tpr_Resnet18, linewidth=2,
              label='w/o Both (AUC = %0.4f)' % roc_auc_Resnet18)
 
-    plt.plot(fpr_TResnet, tpr_TResnet, linewidth=2,
+    axes[0].plot(fpr_TResnet, tpr_TResnet, linewidth=2,
              label='w/o 1 (AUC = %0.4f)' % roc_auc_TResnet)
 
-    plt.plot(fpr_SRCNet, tpr_SRCNet, linewidth=2,
+    axes[0].plot(fpr_SRCNet, tpr_SRCNet, linewidth=2,
              label='w/o 2 (AUC = %0.4f)' % roc_auc_SRCNet)
-    plt.plot(fpr_our, tpr_our, linewidth=2,color='red',
-             label='TSRCNet (AUC = %0.4f)' % roc_auc_our)
 
-    plt.plot([0, 1], [0, 1], color='navy', linewidth=2, linestyle='--')
-    plt.xlim([0.0, 1.0])
-    plt.ylim([0.0, 1.05])
-    plt.xlabel('False Positive Rate',fontsize=16)
-    plt.ylabel('True Positive Rate',fontsize=16)
-    plt.title('Receiver Operating Characteristic Curve',fontsize=16)
-    plt.legend(loc="lower right", fontsize=12)
+    axes[0].plot(fpr_our, tpr_our, linewidth=2,color='red',
+             label='SRCNet (AUC = %0.4f)' % roc_auc_our)
+
+    axes[0].set_xlabel('FPR', fontsize=16)
+    axes[0].set_ylabel('TPR', fontsize=16)
+    axes[0].set_title('ROC曲线(一期数据)', fontsize=16)
+    axes[0].legend(loc="lower right", fontsize=12)
+
+
+    # 第二张图
+    axes[1].plot(fpr_Resnet182, tpr_Resnet182, linewidth=2,
+                 label='w/o Both (AUC = %0.4f)' % roc_auc_Resnet182)
+
+    axes[1].plot(fpr_TResnet2, tpr_TResnet2, linewidth=2,
+                 label='w/o 1 (AUC = %0.4f)' % roc_auc_TResnet2)
+
+    axes[1].plot(fpr_SRCNet2, tpr_SRCNet2, linewidth=2,
+                 label='w/o 2 (AUC = %0.4f)' % roc_auc_SRCNet2)
+
+    axes[1].plot(fpr_our2, tpr_our2, linewidth=2, color='red',
+                 label='SRCNet (AUC = %0.4f)' % roc_auc_our2)
+
+    axes[1].set_xlabel('FPR', fontsize=16)
+    axes[1].set_ylabel('TPR', fontsize=16)
+    axes[1].set_title('ROC曲线(二期数据)', fontsize=16)
+    axes[1].legend(loc="lower right", fontsize=12)
+
+    plt.tight_layout()  # 调整布局
     plt.show()
+
+    plt.savefig("../data/ROC/SRCNet消融.pdf")
 
 
 def PR_Curve(y_true,y_pred):
@@ -223,7 +433,7 @@ def Multi_PR_Curve():
     plt.show()
 
 def Multi_ROC_Curve_消融2():
-    filepath = "../MultiScale/消融/data2"
+    filepath = "../MultiScale/消融/data1"
 
     data_Resnet18 = pd.read_excel(filepath + "/1.xlsx")
     data_TResnet = pd.read_excel(filepath + "/2.xlsx")
@@ -252,29 +462,77 @@ def Multi_ROC_Curve_消融2():
     roc_auc_SRCNet = auc(fpr_SRCNet, tpr_SRCNet)
     roc_auc_our = auc(fpr_our, tpr_our)
 
-    plt.figure()
+    filepath2 = "../MultiScale/消融/data2"
+    data_Resnet182 = pd.read_excel(filepath2 + "/1.xlsx")
+    data_TResnet2 = pd.read_excel(filepath2 + "/2.xlsx")
+    data_SRCNet2 = pd.read_excel(filepath2 + "/Both.xlsx")
+    data_our2 = pd.read_excel(filepath2 + "/MSFEFNet.xlsx")
+
+    y_true_Resnet182 = data_Resnet182.loc[:, "label"]
+    y_true_TResnet2 = data_TResnet2.loc[:, "label"]
+    y_true_SRCNet2 = data_SRCNet2.loc[:, "label"]
+    y_true_our2 = data_our2.loc[:, "label"]
+
+    y_scores_Resnet182 = data_Resnet182.loc[:, "pred"]
+    y_scores_TResnet2 = data_TResnet2.loc[:, "pred"]
+    y_scores_SRCNet2 = data_SRCNet2.loc[:, "pred"]
+    y_scores_our2 = data_our2.loc[:, "pred"]
+
+    fpr_Resnet182, tpr_Resnet182, thresholds_Resnet182 = roc_curve(y_true_Resnet182, y_scores_Resnet182)
+    fpr_TResnet2, tpr_TResnet2, thresholds_TResnet2 = roc_curve(y_true_TResnet2, y_scores_TResnet2)
+    fpr_SRCNet2, tpr_SRCNet2, thresholds_SRCNet2 = roc_curve(y_true_SRCNet2, y_scores_SRCNet2)
+    fpr_our2, tpr_our2, thresholds_our2 = roc_curve(y_true_our2, y_scores_our2)
+
+    roc_auc_Resnet182 = auc(fpr_Resnet182, tpr_Resnet182)
+    roc_auc_TResnet2 = auc(fpr_TResnet2, tpr_TResnet2)
+    roc_auc_SRCNet2 = auc(fpr_SRCNet2, tpr_SRCNet2)
+    roc_auc_our2 = auc(fpr_our2, tpr_our2)
 
     rcParams['font.sans-serif'] = ['SimHei']  # 设置字体为黑体
     rcParams['axes.unicode_minus'] = False  # 正常显示负号
-    plt.plot(fpr_Resnet18, tpr_Resnet18, linewidth=2,
-             label='w/o MSFEBlock (AUC = %0.4f)' % roc_auc_Resnet18)
 
-    plt.plot(fpr_TResnet, tpr_TResnet, linewidth=2,
-             label='w/o MSFFBlock (AUC = %0.4f)' % roc_auc_TResnet)
+    fig, axes = plt.subplots(1, 2, figsize=(10, 4))  # 1行2列
 
-    plt.plot(fpr_SRCNet, tpr_SRCNet, linewidth=2,
-             label='w/o Both (AUC = %0.4f)' % roc_auc_SRCNet)
-    plt.plot(fpr_our, tpr_our, linewidth=2,color='red',
-             label='MSFEFNet (AUC = %0.4f)' % roc_auc_our)
+    # 第一张图
+    axes[0].plot(fpr_Resnet18, tpr_Resnet18, linewidth=2,
+                 label='w/o Both (AUC = %0.4f)' % roc_auc_Resnet18)
 
-    plt.plot([0, 1], [0, 1], color='navy', linewidth=2, linestyle='--')
-    plt.xlim([0.0, 1.0])
-    plt.ylim([0.0, 1.05])
-    plt.xlabel('False Positive Rate',fontsize=16)
-    plt.ylabel('True Positive Rate',fontsize=16)
-    plt.title('Receiver Operating Characteristic Curve',fontsize=16)
-    plt.legend(loc="lower right",fontsize=12)
+    axes[0].plot(fpr_TResnet, tpr_TResnet, linewidth=2,
+                 label='w/o 1 (AUC = %0.4f)' % roc_auc_TResnet)
+
+    axes[0].plot(fpr_SRCNet, tpr_SRCNet, linewidth=2,
+                 label='w/o 2 (AUC = %0.4f)' % roc_auc_SRCNet)
+
+    axes[0].plot(fpr_our, tpr_our, linewidth=2, color='red',
+                 label='TSRCNet (AUC = %0.4f)' % roc_auc_our)
+
+    axes[0].set_xlabel('FPR', fontsize=16)
+    axes[0].set_ylabel('TPR', fontsize=16)
+    axes[0].set_title('ROC曲线(一期数据)', fontsize=16)
+    axes[0].legend(loc="lower right", fontsize=12)
+
+    # 第二张图
+    axes[1].plot(fpr_Resnet182, tpr_Resnet182, linewidth=2,
+                 label='w/o Both (AUC = %0.4f)' % roc_auc_Resnet182)
+
+    axes[1].plot(fpr_TResnet2, tpr_TResnet2, linewidth=2,
+                 label='w/o 1 (AUC = %0.4f)' % roc_auc_TResnet2)
+
+    axes[1].plot(fpr_SRCNet2, tpr_SRCNet2, linewidth=2,
+                 label='w/o 2 (AUC = %0.4f)' % roc_auc_SRCNet2)
+
+    axes[1].plot(fpr_our2, tpr_our2, linewidth=2, color='red',
+                 label='TSRCNet (AUC = %0.4f)' % roc_auc_our2)
+
+    axes[1].set_xlabel('FPR', fontsize=16)
+    axes[1].set_ylabel('TPR', fontsize=16)
+    axes[1].set_title('ROC曲线(二期数据)', fontsize=16)
+    axes[1].legend(loc="lower right", fontsize=12)
+
+    plt.tight_layout()  # 调整布局
     plt.show()
+
+    plt.savefig("../data/ROC/MSFEFNet消融.pdf")
 
 # y_true:真实标签
 # y_prob:预测标签
@@ -356,6 +614,7 @@ if __name__ == '__main__':
     # compute(y_true,y_prob,y_pred)
     # Multi_ROC_Curve_消融2()
     # Multi_ROC_Curve_消融()
-    Multi_ROC_Curve_对比()
+    # Multi_ROC_Curve_对比()
+    Multi_ROC_Curve_对比2()
     # all_metrics(y_true, y_prob, y_pred)
 
