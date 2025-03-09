@@ -393,8 +393,8 @@ if __name__ == '__main__':
     train_malignat_data = SinglePathAndInformation("../data/一期age_cupsize/train/malignant/images","benign", "../data/一期age_cupsize/train/benign/info.xlsx" ,transform=transform)
     train_data = train_benign_data + train_malignat_data
 
-    val_benign_data = SinglePathAndInformation("../data/一期age_cupsize/val/benign/images", "benign","../data/一期age_cupsize/val/benign/info.xlsx" , transform=transform)
-    val_malignat_data = SinglePathAndInformation("../data/一期age_cupsize/val/malignant/images", "benign","../data/一期age_cupsize/val/benign/info.xlsx" , transform=transform)
+    val_benign_data = SinglePathAndInformation("../data/一期age_cupsize/val/benign/images", "benign","../data/一期age_cupsize/train/benign/info.xlsx" , transform=transform)
+    val_malignat_data = SinglePathAndInformation("../data/一期age_cupsize/val/malignant/images", "benign","../data/一期age_cupsize/train/benign/info.xlsx" , transform=transform)
     val_data = val_benign_data + val_malignat_data
 
     test_benign_data = SinglePathAndInformation("../data/一期age_cupsize/test/benign/images", "benign","../data/一期age_cupsize/test/benign/info.xlsx" , transform=transform)

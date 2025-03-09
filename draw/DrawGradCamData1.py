@@ -63,13 +63,14 @@ if __name__ == '__main__':
             param.requires_grad = True
 
     resnet18 = nn.Sequential(*list(resnet18.children())[:-2])
-    model = Model(resnet18).to(device)
-
+    model1 = Model(resnet18).to(device)
+    model2 = Model(resnet18).to(device)
     # 加载训练好的权重
-    model.load_state_dict(torch.load("../models1/package/resnet18-18.pth", map_location=device))
-
+    model1.load_state_dict(torch.load("../models1/package/resnet18-18.pth", map_location=device))
+    model2.load_state_dict(torch.load("../models1/package/resnet18-50.pth", map_location=device))
     # 设置为评估模式
-    model.eval()
+    model1.eval()
+    model2.eval()
 
     transform = transforms.Compose([
         transforms.Resize([448, 448]),
@@ -89,16 +90,22 @@ if __name__ == '__main__':
                              pin_memory=True
                              )
 
-    grayscale_cam_list = []
-    cam_img_list = []
+    grayscale_cam_list1 = []
+    grayscale_cam_list2 = []
+    cam_img_list1 = []
+    cam_img_list2 = []
     image_list = []
     file_name_list = []
 
     for i, (imgs_s1, targets, dcm_names) in enumerate(test_loader):
         imgs_s1 = torch.cat([imgs_s1] * 3, dim=1)
-        target_layers = [model._encoder[-1][1].conv2]
-        cam = GradCAM(model=model, target_layers=target_layers)
-        grayscale_cam = cam(input_tensor=imgs_s1)
+        target_layers1 = [model1._encoder[-1][1].conv2]
+        target_layers2 = [model2._encoder[-1][1].conv2]
+
+        cam1 = GradCAM(model=model1, target_layers=target_layers1)
+        cam2 = GradCAM(model=model2, target_layers=target_layers2)
+        grayscale_cam1 = cam1(input_tensor=imgs_s1)
+        grayscale_cam2 = cam2(input_tensor=imgs_s1)
         # grayscale_cam = grayscale_cam[0, :]
         # grayscale_cam_list.append(grayscale_cam)
         # imgs = imgs_s1[:, 0, :, :].numpy()
@@ -113,11 +120,14 @@ if __name__ == '__main__':
             # img_normal = (img - min_val) / (max_val - min_val)
             file_name_list.append(dcm_names[i].replace('.bmp', ''))
             image_list.append(img)  # 取一个通道出来
-            cam_img = show_cam_on_image(img, grayscale_cam[i], use_rgb=True)
-            cam_img_list.append(cam_img)
+            cam_img1 = show_cam_on_image(img, grayscale_cam1[i], use_rgb=True)
+            cam_img2 = show_cam_on_image(img, grayscale_cam2[i], use_rgb=True)
+            cam_img_list1.append(cam_img1)
+            cam_img_list2.append(cam_img2)
             # enhanced_img_list.append(enhanced_img)
 
-            grayscale_cam_list.append(grayscale_cam[i])
+            grayscale_cam_list1.append(grayscale_cam1[i])
+            grayscale_cam_list2.append(grayscale_cam2[i])
 
         for i in range(len(image_list)):
             # test_excel = pd.read_excel(test_list, header=None)
@@ -132,13 +142,12 @@ if __name__ == '__main__':
             plt.style.use("classic")
             plt.axis('off')
             plt.subplot(1, 3, 2)
-            plt.imshow(grayscale_cam_list[i])
+            plt.imshow(cam_img_list1[i], cmap='gray')
             plt.axis('off')
             plt.subplot(1, 3, 3)
-            plt.imshow(cam_img_list[i])
+            plt.imshow(cam_img_list2[i], cmap='gray')
             plt.axis('off')
-            plt.colorbar()
-            plt.savefig("../data/camfig-val-18/"+ "/" + file_name_list[i] + ".png")
+            plt.savefig("../data/camfig/"+ "train/" + file_name_list[i] + ".png")
 
             plt.show()
             a=1

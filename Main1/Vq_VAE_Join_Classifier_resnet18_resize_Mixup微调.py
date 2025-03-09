@@ -373,8 +373,8 @@ if __name__ == '__main__':
     train_malignat_data = MyData("../data/qc前二期双十常规灯板/train/wave1/malignant", "benign", transform=transform)
     train_data = train_benign_data + train_malignat_data
 
-    val_benign_data = MyData("../data/qc前二期双十常规灯板/val/wave1/benign", "benign", transform=transform)
-    val_malignat_data = MyData("../data/qc前二期双十常规灯板/val/wave1/malignant", "benign", transform=transform)
+    val_benign_data = MyData("../data/qc前二期双十常规灯板/train/wave1/benign", "benign", transform=transform)
+    val_malignat_data = MyData("../data/qc前二期双十常规灯板/train/wave1/malignant", "benign", transform=transform)
     val_data = val_benign_data + val_malignat_data
 
     test_benign_data = MyData("../data/qc前二期双十常规灯板/test/wave1/benign", "benign", transform=transform)

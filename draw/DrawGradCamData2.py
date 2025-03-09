@@ -138,7 +138,7 @@ if __name__ == '__main__':
             plt.imshow(cam_img_list[i])
             plt.axis('off')
             plt.colorbar()
-            plt.savefig("../data/camfig-train-18-val-50/" + file_name_list[i] + ".png")
+            plt.savefig("../data/camfig-train-18-train-50/" + file_name_list[i] + ".png")
 
             plt.show()
             a=1

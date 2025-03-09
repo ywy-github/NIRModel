@@ -8,8 +8,8 @@ target_folder = "../data/ti_二期双十+双十五wave1原始图"
 # 获取原始图文件名列表
 source_images = os.listdir(source_folder)
 
-# 遍历 ti_二期双十+双十五wave1 中的 train、val 和 test 文件夹
-for set_folder in ["train", "val", "test"]:
+# 遍历 ti_二期双十+双十五wave1 中的 train、train 和 test 文件夹
+for set_folder in ["train", "train", "test"]:
     set_path = os.path.join("../data/ti_二期双十+双十五wave1", set_folder)
 
     # 遍历 benign 和 benign 文件夹

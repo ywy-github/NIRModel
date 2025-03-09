@@ -442,20 +442,20 @@ if __name__ == '__main__':
 
     train_data = train_benign_data + train_malignant_data
 
-    val_benign_data = DoubleTreeChannelsOtherInformation("../data/"+fold_data+"/val/wave1/benign",
-                                                         "../data/"+fold_data+"/val/wave2/benign",
-                                                         "../data/"+fold_data+"/val/wave3/benign",
-                                                         "../data/"+fold_data+"/val/wave4/benign",
-                                                         "../data/"+fold_data+"/val/benign.xlsx",
+    val_benign_data = DoubleTreeChannelsOtherInformation("../data/"+fold_data+"/train/wave1/benign",
+                                                         "../data/"+fold_data+"/train/wave2/benign",
+                                                         "../data/"+fold_data+"/train/wave3/benign",
+                                                         "../data/"+fold_data+"/train/wave4/benign",
+                                                         "../data/"+fold_data+"/train/benign.xlsx",
                                                          "benign",
                                                          transform=transform)
 
     val_malignant_data = DoubleTreeChannelsOtherInformation(
-        "../data/"+fold_data+"/val/wave1/benign",
-        "../data/"+fold_data+"/val/wave2/benign",
-        "../data/"+fold_data+"/val/wave3/benign",
-        "../data/"+fold_data+"/val/wave4/benign",
-        "../data/"+fold_data+"/val/benign.xlsx",
+        "../data/"+fold_data+"/train/wave1/benign",
+        "../data/"+fold_data+"/train/wave2/benign",
+        "../data/"+fold_data+"/train/wave3/benign",
+        "../data/"+fold_data+"/train/wave4/benign",
+        "../data/"+fold_data+"/train/benign.xlsx",
         "benign",
         transform=transform)
 

@@ -297,7 +297,21 @@ class ExtendedModel(nn.Module):
         x_recon = self.model._decoder(quantized)
 
 
-        return loss, x_recon, perplexity, classifier_output
+        return  classifier_output
+
+
+class Model(nn.Module):
+    def __init__(self, encoder):
+        super(Model, self).__init__()
+
+        self._encoder = encoder
+        self.classifier = Classifier(512*14*14, 512, 1)
+
+    def forward(self, x):
+        z = self._encoder(x)
+        classifier_outputs = self.classifier(z.view(z.size(0), -1))
+        return classifier_outputs
+
 if __name__ == '__main__':
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     # 加载训练好的模型
@@ -306,14 +320,33 @@ if __name__ == '__main__':
     extendModel.load_state_dict(torch.load('../models2/筛查重构+分类联合学习/筛查重构+分类-89.pth'))
     extendModel.eval()  # 切换到评估模式
 
+    resnet18 = models.resnet18(pretrained=True)
+
+    for param in resnet18.parameters():
+        param.requires_grad = False
+
+    for name, param in resnet18.named_parameters():
+        if "layer3" in name:
+            param.requires_grad = True
+        if "layer4" in name:
+            param.requires_grad = True
+        if "fc" in name:
+            param.requires_grad = True
+
+    resnet18 = nn.Sequential(*list(resnet18.children())[:-2])
+
+
     transform = transforms.Compose([
         transforms.Resize([448, 448]),
         transforms.ToTensor(),
         transforms.Normalize((0.3281,), (0.2366,))  # 使用相同的均值和标准差
     ])
+    model = Model(resnet18).to(device)
+    model.load_state_dict(torch.load("../models1/package/resnet18-18.pth", map_location=device))
+    model.eval()
 
     # test_benign_data = MyData("../data/一期数据/val2/benign", "benign", transform=transform)
-    test_malignat_data = MyData("../data/一期数据/train/malignant", "malignant", transform=transform)
+    test_malignat_data = MyData("../data/一期数据/val/malignant", "malignant", transform=transform)
     test_data = test_malignat_data
 
     test_loader = DataLoader(test_data,
@@ -324,16 +357,23 @@ if __name__ == '__main__':
                              pin_memory=True
                              )
 
-    grayscale_cam_list = []
-    cam_img_list = []
+    grayscale_cam_list1 = []
+    grayscale_cam_list2 = []
+    cam_img_list1 = []
+    cam_img_list2 = []
     image_list = []
     file_name_list = []
 
     for i, (imgs_s1, targets, dcm_names) in enumerate(test_loader):
         imgs_s1 = torch.cat([imgs_s1] * 3, dim=1)
-        target_layers = [extendModel.model._encoder[-1][1].conv2]
-        cam = GradCAM(model=extendModel, target_layers=target_layers)
-        grayscale_cam = cam(input_tensor=imgs_s1)
+        target_layers1 = [model._encoder[-1][1].conv2]
+        target_layers2 = [extendModel.model._encoder[-1][1].conv2]
+
+        cam1 = GradCAM(model=model, target_layers=target_layers1)
+        cam2 = GradCAM(model=extendModel, target_layers=target_layers2)
+
+        grayscale_cam1 = cam1(input_tensor=imgs_s1)
+        grayscale_cam2 = cam2(input_tensor=imgs_s1)
         # grayscale_cam = grayscale_cam[0, :]
         # grayscale_cam_list.append(grayscale_cam)
         # imgs = imgs_s1[:, 0, :, :].numpy()
@@ -348,11 +388,14 @@ if __name__ == '__main__':
             # img_normal = (img - min_val) / (max_val - min_val)
             file_name_list.append(dcm_names[i].replace('.bmp', ''))
             image_list.append(img)  # 取一个通道出来
-            cam_img = show_cam_on_image(img, grayscale_cam[i], use_rgb=True)
-            cam_img_list.append(cam_img)
+            cam_img1 = show_cam_on_image(img, grayscale_cam1[i], use_rgb=True)
+            cam_img2 = show_cam_on_image(img, grayscale_cam2[i], use_rgb=True)
+            cam_img_list1.append(cam_img1)
+            cam_img_list2.append(cam_img2)
             # enhanced_img_list.append(enhanced_img)
 
-            grayscale_cam_list.append(grayscale_cam[i])
+            grayscale_cam_list1.append(grayscale_cam1[i])
+            grayscale_cam_list2.append(grayscale_cam2[i])
 
         for i in range(len(image_list)):
             # test_excel = pd.read_excel(test_list, header=None)
@@ -363,17 +406,16 @@ if __name__ == '__main__':
             # f.suptitle('label=' + str(label_list[i]) + ' ' + filename_list[i])
 
             plt.subplot(1, 3, 1)
-            plt.imshow(image_list[i][:,:,0], cmap='gray')
+            plt.imshow(image_list[i][:, :, 0], cmap='gray')
             plt.style.use("classic")
             plt.axis('off')
             plt.subplot(1, 3, 2)
-            plt.imshow(grayscale_cam_list[i])
+            plt.imshow(cam_img_list1[i], cmap='gray')
             plt.axis('off')
             plt.subplot(1, 3, 3)
-            plt.imshow(cam_img_list[i])
+            plt.imshow(cam_img_list2[i], cmap='gray')
             plt.axis('off')
-            plt.colorbar()
-            plt.savefig("../data/camfig-train-18-val-50"+ "/" + file_name_list[i] + ".png")
+            plt.savefig("../data/camfig/" + "val/" + file_name_list[i] + ".png")
 
             plt.show()
-            a=1
+            a = 1

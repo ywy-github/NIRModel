@@ -376,27 +376,27 @@ if __name__ == '__main__':
         transforms.Normalize((0.3281,), (0.2366,))  # 设置均值和标准差
     ])
 
-    # test_benign_data = DoubleTreeChannelsOtherInformation("../data/NIR-lincls-D10-wave/val/wave1/benign/images",
-    #                                                       "../data/NIR-lincls-D10-wave/val/wave2/benign/images",
-    #                                                       "../data/NIR-lincls-D10-wave/val/wave3/benign/images",
-    #                                                       "../data/NIR-lincls-D10-wave/val/wave4/benign/images",
-    #                                                       "../data/NIR-lincls-D10-wave/val/benign.xlsx",
+    # test_benign_data = DoubleTreeChannelsOtherInformation("../data/NIR-lincls-D10-wave/train/wave1/benign/images",
+    #                                                       "../data/NIR-lincls-D10-wave/train/wave2/benign/images",
+    #                                                       "../data/NIR-lincls-D10-wave/train/wave3/benign/images",
+    #                                                       "../data/NIR-lincls-D10-wave/train/wave4/benign/images",
+    #                                                       "../data/NIR-lincls-D10-wave/train/benign.xlsx",
     #                                                       "benign",
     #                                                       transform=transform)
     #
     # test_malignant_data = DoubleTreeChannelsOtherInformation(
-    #     "../data/NIR-lincls-D10-wave/val/wave1/benign/images",
-    #     "../data/NIR-lincls-D10-wave/val/wave2/benign/images",
-    #     "../data/NIR-lincls-D10-wave/val/wave3/benign/images",
-    #     "../data/NIR-lincls-D10-wave/val/wave4/benign/images",
-    #     "../data/NIR-lincls-D10-wave/val/benign.xlsx",
+    #     "../data/NIR-lincls-D10-wave/train/wave1/benign/images",
+    #     "../data/NIR-lincls-D10-wave/train/wave2/benign/images",
+    #     "../data/NIR-lincls-D10-wave/train/wave3/benign/images",
+    #     "../data/NIR-lincls-D10-wave/train/wave4/benign/images",
+    #     "../data/NIR-lincls-D10-wave/train/benign.xlsx",
     #     "benign",
     #     transform=transform)
     #
     #
     # test_data = test_benign_data + test_malignant_data
 
-    fold_name = "qc前二期双十常规灯板/val"
+    fold_name = "qc前二期双十常规灯板/train"
 
     test_benign_data = DoubleTreeChannelsOtherInformation("../data/" + fold_name + "/wave1/benign",
                                                           "../data/" + fold_name + "/wave2/benign",

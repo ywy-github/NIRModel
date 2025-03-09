@@ -412,18 +412,18 @@ if __name__ == '__main__':
 
     train_data = train_benign_data + train_malignant_data
 
-    val_benign_data = DoubleTreeChannels("../data/" + fold_data + "/val/wave1/benign",
-                                         "../data/" + fold_data + "/val/wave2/benign",
-                                         "../data/" + fold_data + "/val/wave3/benign",
-                                         "../data/" + fold_data + "/val/wave4/benign",
+    val_benign_data = DoubleTreeChannels("../data/" + fold_data + "/train/wave1/benign",
+                                         "../data/" + fold_data + "/train/wave2/benign",
+                                         "../data/" + fold_data + "/train/wave3/benign",
+                                         "../data/" + fold_data + "/train/wave4/benign",
                                          "benign",
                                          transform=transform)
 
     val_malignant_data = DoubleTreeChannels(
-        "../data/" + fold_data + "/val/wave1/malignant",
-        "../data/" + fold_data + "/val/wave2/malignant",
-        "../data/" + fold_data + "/val/wave3/malignant",
-        "../data/" + fold_data + "/val/wave4/malignant",
+        "../data/" + fold_data + "/train/wave1/malignant",
+        "../data/" + fold_data + "/train/wave2/malignant",
+        "../data/" + fold_data + "/train/wave3/malignant",
+        "../data/" + fold_data + "/train/wave4/malignant",
         "malignant",
         transform=transform)
 
