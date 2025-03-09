@@ -241,7 +241,7 @@ if __name__ == '__main__':
 
         # writer.add_scalar('Loss/Val', total_val_loss, epoch)
 
-        if ((epoch + 1) == 18):
+        if ((epoch + 1) == 50):
             torch.save(model.state_dict(),"../models1/package/resnet18-{}.pth".format(epoch + 1))
         print('%d epoch' % (epoch + 1))
 

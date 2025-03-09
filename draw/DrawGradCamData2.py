@@ -41,7 +41,7 @@ class Model(nn.Module):
         super(Model, self).__init__()
 
         self._encoder = encoder
-        self.classifier = Classifier(512*14*14, 512, 1)
+        self.classifier = Classifier(512*7*7, 512, 1)
 
     def forward(self, x):
         z = self._encoder(x)
@@ -66,19 +66,19 @@ if __name__ == '__main__':
     model = Model(resnet18).to(device)
 
     # 加载训练好的权重
-    model.load_state_dict(torch.load("../models1/package/resnet18-18.pth", map_location=device))
+    model.load_state_dict(torch.load("../models1/package/resnet18-224-15.pth", map_location=device))
 
     # 设置为评估模式
     model.eval()
 
     transform = transforms.Compose([
-        transforms.Resize([448, 448]),
+        transforms.Resize([224, 224]),
         transforms.ToTensor(),
         transforms.Normalize((0.3281,), (0.2366,))  # 使用相同的均值和标准差
     ])
 
     # test_benign_data = MyData("../data/一期数据/val2/benign", "benign", transform=transform)
-    test_malignat_data = MyData("../data/一期数据/val/malignant", "malignant", transform=transform)
+    test_malignat_data = MyData("../data/一期数据/train/malignant", "malignant", transform=transform)
     test_data = test_malignat_data
 
     test_loader = DataLoader(test_data,
@@ -138,7 +138,7 @@ if __name__ == '__main__':
             plt.imshow(cam_img_list[i])
             plt.axis('off')
             plt.colorbar()
-            plt.savefig("../data/camfig-val-18/"+ "/" + file_name_list[i] + ".png")
+            plt.savefig("../data/camfig-train-18-val-50/" + file_name_list[i] + ".png")
 
             plt.show()
             a=1
